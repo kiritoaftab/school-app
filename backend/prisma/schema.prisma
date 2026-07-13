@@ -1,0 +1,354 @@
+// Greenwood School App — data model
+// Multi-school ready: every core table carries schoolId.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  PARENT
+  TEACHER
+  ADMIN
+}
+
+enum AttendanceStatus {
+  PRESENT
+  ABSENT
+  LATE
+  HOLIDAY
+}
+
+enum NoticeAudience {
+  SCHOOL
+  CLASS
+}
+
+enum LeaveType {
+  SICK
+  CASUAL
+  OTHER
+}
+
+enum LeaveStatus {
+  SUBMITTED
+  APPROVED
+  DECLINED
+}
+
+model School {
+  id        Int      @id @default(autoincrement())
+  name      String
+  timezone  String   @default("Asia/Kolkata")
+  createdAt DateTime @default(now())
+
+  users        User[]
+  students     Student[]
+  classes      Klass[]
+  attendance   Attendance[]
+  notices      Notice[]
+  diaryEntries DiaryEntry[]
+  leaveRequests LeaveRequest[]
+  events       Event[]
+  terms        Term[]
+  albums       PhotoAlbum[]
+}
+
+model User {
+  id        Int      @id @default(autoincrement())
+  schoolId  Int
+  phone     String
+  name      String
+  role      Role
+  createdAt DateTime @default(now())
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  // relations by role
+  parentLinks     ParentStudentLink[]
+  classesTaught   Klass[]             @relation("ClassTeacher")
+  attendanceMarks Attendance[]        @relation("AttendanceMarkedBy")
+  noticesCreated  Notice[]            @relation("NoticeCreatedBy")
+  noticeAcks      NoticeAck[]
+  diaryCreated    DiaryEntry[]        @relation("DiaryCreatedBy")
+  diaryDone       DiaryDone[]
+  leavesCreated   LeaveRequest[]      @relation("LeaveCreatedBy")
+  leavesReviewed  LeaveRequest[]      @relation("LeaveReviewedBy")
+  notifications   Notification[]
+
+  @@unique([schoolId, phone, role])
+  @@index([phone])
+}
+
+model OtpCode {
+  id        Int       @id @default(autoincrement())
+  phone     String
+  codeHash  String
+  expiresAt DateTime
+  consumedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([phone])
+}
+
+model Student {
+  id          Int      @id @default(autoincrement())
+  schoolId    Int
+  name        String
+  admissionNo String
+  dob         DateTime?
+  createdAt   DateTime @default(now())
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  enrollments   Enrollment[]
+  parentLinks   ParentStudentLink[]
+  attendance    Attendance[]
+  diaryDone     DiaryDone[]
+  leaveRequests LeaveRequest[]
+  results       Result[]
+  resultMeta    ResultMeta[]
+
+  @@index([schoolId])
+}
+
+model Klass {
+  id             Int    @id @default(autoincrement())
+  schoolId       Int
+  grade          String
+  section        String
+  classTeacherId Int?
+
+  school       School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  classTeacher User?  @relation("ClassTeacher", fields: [classTeacherId], references: [id])
+
+  enrollments  Enrollment[]
+  diaryEntries DiaryEntry[]
+  notices      Notice[]
+  albums       PhotoAlbum[]
+
+  @@unique([schoolId, grade, section])
+}
+
+model Enrollment {
+  id           Int    @id @default(autoincrement())
+  studentId    Int
+  klassId      Int
+  academicYear String
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  klass   Klass   @relation(fields: [klassId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, academicYear])
+}
+
+model ParentStudentLink {
+  id           Int    @id @default(autoincrement())
+  parentUserId Int
+  studentId    Int
+  relation     String @default("Parent")
+
+  parent  User    @relation(fields: [parentUserId], references: [id], onDelete: Cascade)
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  @@unique([parentUserId, studentId])
+}
+
+model Attendance {
+  id         Int              @id @default(autoincrement())
+  schoolId   Int
+  studentId  Int
+  date       DateTime         @db.Date
+  status     AttendanceStatus
+  markedById Int?
+
+  school   School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  student  Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  markedBy User?   @relation("AttendanceMarkedBy", fields: [markedById], references: [id])
+
+  @@unique([studentId, date])
+  @@index([schoolId, date])
+}
+
+model Notice {
+  id              Int            @id @default(autoincrement())
+  schoolId        Int
+  title           String
+  body            String         @db.Text
+  category        String         @default("General")
+  pinned          Boolean        @default(false)
+  audienceType    NoticeAudience @default(SCHOOL)
+  audienceClassId Int?
+  createdById     Int?
+  createdAt       DateTime       @default(now())
+
+  school         School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  audienceClass  Klass? @relation(fields: [audienceClassId], references: [id])
+  createdBy      User?  @relation("NoticeCreatedBy", fields: [createdById], references: [id])
+
+  acks NoticeAck[]
+
+  @@index([schoolId, pinned])
+}
+
+model NoticeAck {
+  id           Int      @id @default(autoincrement())
+  noticeId     Int
+  parentUserId Int
+  ackAt        DateTime @default(now())
+
+  notice Notice @relation(fields: [noticeId], references: [id], onDelete: Cascade)
+  parent User   @relation(fields: [parentUserId], references: [id], onDelete: Cascade)
+
+  @@unique([noticeId, parentUserId])
+}
+
+model DiaryEntry {
+  id          Int      @id @default(autoincrement())
+  schoolId    Int
+  klassId     Int
+  subject     String
+  date        DateTime @db.Date
+  task        String   @db.Text
+  note        String?  @db.Text
+  createdById Int?
+
+  school    School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  klass     Klass  @relation(fields: [klassId], references: [id], onDelete: Cascade)
+  createdBy User?  @relation("DiaryCreatedBy", fields: [createdById], references: [id])
+
+  done DiaryDone[]
+
+  @@index([klassId, date])
+}
+
+model DiaryDone {
+  id           Int      @id @default(autoincrement())
+  diaryEntryId Int
+  studentId    Int
+  parentUserId Int
+  doneAt       DateTime @default(now())
+
+  diaryEntry DiaryEntry @relation(fields: [diaryEntryId], references: [id], onDelete: Cascade)
+  student    Student    @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  parent     User       @relation(fields: [parentUserId], references: [id], onDelete: Cascade)
+
+  @@unique([diaryEntryId, studentId])
+}
+
+model LeaveRequest {
+  id             Int         @id @default(autoincrement())
+  schoolId       Int
+  studentId      Int
+  type           LeaveType
+  fromDate       DateTime    @db.Date
+  toDate         DateTime    @db.Date
+  reason         String      @db.Text
+  status         LeaveStatus @default(SUBMITTED)
+  createdByParentId Int
+  reviewedById   Int?
+  createdAt      DateTime    @default(now())
+
+  school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  createdBy User    @relation("LeaveCreatedBy", fields: [createdByParentId], references: [id])
+  reviewedBy User?  @relation("LeaveReviewedBy", fields: [reviewedById], references: [id])
+
+  @@index([schoolId, status])
+}
+
+model Event {
+  id          Int      @id @default(autoincrement())
+  schoolId    Int
+  title       String
+  description String?  @db.Text
+  date        DateTime @db.Date
+
+  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+
+  @@index([schoolId, date])
+}
+
+model Term {
+  id       Int    @id @default(autoincrement())
+  schoolId Int
+  name     String
+
+  school     School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  results    Result[]
+  resultMeta ResultMeta[]
+
+  @@unique([schoolId, name])
+}
+
+model Result {
+  id        Int    @id @default(autoincrement())
+  studentId Int
+  termId    Int
+  subject   String
+  score     Float
+  maxScore  Float  @default(100)
+  grade     String
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  term    Term    @relation(fields: [termId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, termId, subject])
+}
+
+model ResultMeta {
+  id             Int     @id @default(autoincrement())
+  studentId      Int
+  termId         Int
+  overallPct     Float
+  rank           Int?
+  teacherComment String? @db.Text
+
+  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  term    Term    @relation(fields: [termId], references: [id], onDelete: Cascade)
+
+  @@unique([studentId, termId])
+}
+
+model PhotoAlbum {
+  id        Int      @id @default(autoincrement())
+  schoolId  Int
+  title     String
+  coverUrl  String?
+  klassId   Int?
+  createdAt DateTime @default(now())
+
+  school School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  klass  Klass?  @relation(fields: [klassId], references: [id])
+  photos Photo[]
+
+  @@index([schoolId])
+}
+
+model Photo {
+  id      Int     @id @default(autoincrement())
+  albumId Int
+  url     String
+  caption String?
+
+  album PhotoAlbum @relation(fields: [albumId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        Int       @id @default(autoincrement())
+  userId    Int
+  type      String
+  title     String
+  body      String?   @db.Text
+  deeplink  String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+}
