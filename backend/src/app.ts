@@ -2,6 +2,7 @@ import express, { type NextFunction, type Request, type Response } from 'express
 import cors from 'cors';
 import { ZodError } from 'zod';
 import { config } from './config.js';
+import { prisma } from './db.js';
 import { HttpError } from './lib/http.js';
 import { authRouter } from './routes/auth.js';
 import { parentRouter } from './routes/parent.js';
@@ -13,7 +14,14 @@ export function createApp() {
   app.use(cors({ origin: config.corsOrigin }));
   app.use(express.json());
 
-  app.get('/health', (_req, res) => res.json({ ok: true }));
+  app.get('/health', async (_req, res) => {
+    try {
+      await prisma.$queryRaw`SELECT 1`;
+      res.json({ ok: true, db: 'up' });
+    } catch {
+      res.status(503).json({ ok: false, db: 'down' });
+    }
+  });
 
   app.use('/auth', authRouter);
   app.use('/parent', parentRouter);
