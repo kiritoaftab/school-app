@@ -17,20 +17,18 @@ export const authRouter = Router();
 
 const requestSchema = z.object({
   phone: z.string().min(6),
-  role: z.enum(['PARENT', 'TEACHER', 'ADMIN']),
 });
 
 authRouter.post(
   '/request-otp',
   ah(async (req, res) => {
-    const { phone, role } = requestSchema.parse(req.body);
+    const { phone } = requestSchema.parse(req.body);
 
-    // Role is authoritative from the user record. The selected role must match
-    // a real user with that phone, otherwise we reject (a parent can't log in
-    // as admin).
-    const user = await prisma.user.findFirst({ where: { phone, role } });
+    // Phone-only login: role is derived from the user record at verify time.
+    // We still require a matching account so we don't SMS arbitrary numbers.
+    const user = await prisma.user.findFirst({ where: { phone } });
     if (!user) {
-      throw new HttpError(404, `No ${role.toLowerCase()} account found for this phone`);
+      throw new HttpError(404, 'No account found for this phone');
     }
 
     const code = generateOtp();
@@ -49,14 +47,13 @@ authRouter.post(
 
 const verifySchema = z.object({
   phone: z.string().min(6),
-  role: z.enum(['PARENT', 'TEACHER', 'ADMIN']),
   otp: z.string().min(4),
 });
 
 authRouter.post(
   '/verify-otp',
   ah(async (req, res) => {
-    const { phone, role, otp } = verifySchema.parse(req.body);
+    const { phone, otp } = verifySchema.parse(req.body);
 
     const record = await prisma.otpCode.findFirst({
       where: { phone, consumedAt: null, expiresAt: { gt: new Date() } },
@@ -66,7 +63,9 @@ authRouter.post(
       throw new HttpError(400, 'Invalid or expired code');
     }
 
-    const user = await prisma.user.findFirst({ where: { phone, role } });
+    // Role is resolved from the account, not the request. The client routes
+    // on the returned user.role.
+    const user = await prisma.user.findFirst({ where: { phone } });
     if (!user) throw new HttpError(404, 'Account not found');
 
     await prisma.otpCode.update({

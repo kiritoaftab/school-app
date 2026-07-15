@@ -5,12 +5,6 @@ import { useAuth, type Role } from '../auth/AuthContext';
 import { Button, cx } from '../components/ui';
 import { Icon } from '../components/icons';
 
-const roles: { value: Role; label: string; desc: string }[] = [
-  { value: 'PARENT', label: 'Parent', desc: 'Track your child' },
-  { value: 'TEACHER', label: 'Teacher', desc: 'Manage your class' },
-  { value: 'ADMIN', label: 'Admin', desc: 'Run the school' },
-];
-
 const homeFor: Record<Role, string> = {
   PARENT: '/app/home',
   TEACHER: '/teacher',
@@ -20,8 +14,7 @@ const homeFor: Record<Role, string> = {
 export function LoginPage() {
   const navigate = useNavigate();
   const { loginWithToken } = useAuth();
-  const [step, setStep] = useState<'role' | 'phone' | 'otp'>('role');
-  const [role, setRole] = useState<Role>('PARENT');
+  const [step, setStep] = useState<'phone' | 'otp'>('phone');
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [devCode, setDevCode] = useState<string | null>(null);
@@ -32,7 +25,7 @@ export function LoginPage() {
     setError(null);
     setBusy(true);
     try {
-      const { data } = await api.post('/auth/request-otp', { phone, role });
+      const { data } = await api.post('/auth/request-otp', { phone });
       setDevCode(data.devCode ?? null);
       if (data.devCode) setOtp(data.devCode);
       setStep('otp');
@@ -47,7 +40,8 @@ export function LoginPage() {
     setError(null);
     setBusy(true);
     try {
-      const { data } = await api.post('/auth/verify-otp', { phone, role, otp });
+      const { data } = await api.post('/auth/verify-otp', { phone, otp });
+      // Role comes back from the server — we route on it, not on a pre-selected role.
       const user = await loginWithToken(data.token);
       navigate(homeFor[user.role]);
     } catch (e: any) {
@@ -68,34 +62,9 @@ export function LoginPage() {
         <p className="text-muted text-[13px] tracking-widest uppercase mt-1">School App</p>
       </div>
 
-      {step === 'role' && (
-        <div className="space-y-3">
-          <p className="text-center text-[14px] text-muted mb-2">I am a…</p>
-          {roles.map((r) => (
-            <button
-              key={r.value}
-              onClick={() => {
-                setRole(r.value);
-                setStep('phone');
-              }}
-              className="w-full bg-white border border-line rounded-2xl p-4 flex items-center gap-3 active:scale-[0.99] transition"
-            >
-              <div className="w-11 h-11 rounded-xl bg-mist grid place-items-center text-green">
-                {r.value === 'PARENT' ? <Icon.home size={22} /> : r.value === 'TEACHER' ? <Icon.book size={22} /> : <Icon.users size={22} />}
-              </div>
-              <div className="text-left flex-1">
-                <p className="font-semibold text-[15px]">{r.label}</p>
-                <p className="text-[12px] text-muted">{r.desc}</p>
-              </div>
-              <Icon.chevronRight size={20} className="text-muted" />
-            </button>
-          ))}
-        </div>
-      )}
-
       {step === 'phone' && (
         <div className="space-y-4">
-          <RoleTag role={role} onBack={() => setStep('role')} />
+          <p className="text-center text-[14px] text-muted">Sign in with your registered phone number</p>
           <div>
             <p className="text-[12px] font-semibold text-muted mb-2">Phone number</p>
             <input
@@ -116,7 +85,10 @@ export function LoginPage() {
 
       {step === 'otp' && (
         <div className="space-y-4">
-          <RoleTag role={role} onBack={() => setStep('phone')} />
+          <button onClick={() => setStep('phone')} className={cx('flex items-center gap-2 text-[13px] font-semibold text-green')}>
+            <Icon.chevronLeft size={18} />
+            {phone}
+          </button>
           <div>
             <p className="text-[12px] font-semibold text-muted mb-2">Enter the 6-digit code</p>
             <input
@@ -140,14 +112,5 @@ export function LoginPage() {
         </div>
       )}
     </div>
-  );
-}
-
-function RoleTag({ role, onBack }: { role: Role; onBack: () => void }) {
-  return (
-    <button onClick={onBack} className={cx('flex items-center gap-2 text-[13px] font-semibold text-green')}>
-      <Icon.chevronLeft size={18} />
-      Logging in as {role.charAt(0) + role.slice(1).toLowerCase()}
-    </button>
   );
 }
