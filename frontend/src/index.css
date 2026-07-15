@@ -49,3 +49,65 @@ body {
 .gw-scroll::-webkit-scrollbar {
   display: none;
 }
+
+/* focus + form polish carried over from the prototype */
+input,
+textarea,
+select {
+  outline: none;
+}
+input:focus,
+textarea:focus {
+  border-color: var(--color-green);
+}
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* animations from the Greenwood prototype */
+@keyframes gwpulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+@keyframes gwfade {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+@keyframes gwslideup {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+}
+@keyframes gwsheet {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+.gw-fade {
+  animation: gwfade 0.28s ease both;
+}
+.gw-sheet {
+  animation: gwsheet 0.28s ease both;
+}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+  }
+}

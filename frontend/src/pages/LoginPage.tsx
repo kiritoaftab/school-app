@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../api/client';
 import { useAuth, type Role } from '../auth/AuthContext';
-import { Button, cx } from '../components/ui';
-import { Icon } from '../components/icons';
+import { Glyph } from '../app/kit';
+import { GLYPH, maskPhone } from '../app/data';
 
 const homeFor: Record<Role, string> = {
-  PARENT: '/app/home',
+  PARENT: '/app',
   TEACHER: '/teacher',
   ADMIN: '/admin',
 };
@@ -21,11 +21,17 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  const digits = phone.replace(/\D/g, '');
+
   async function requestOtp() {
+    if (digits.length < 10) {
+      setError('Enter a 10-digit mobile number');
+      return;
+    }
     setError(null);
     setBusy(true);
     try {
-      const { data } = await api.post('/auth/request-otp', { phone });
+      const { data } = await api.post('/auth/request-otp', { phone: digits });
       setDevCode(data.devCode ?? null);
       if (data.devCode) setOtp(data.devCode);
       setStep('otp');
@@ -37,11 +43,14 @@ export function LoginPage() {
   }
 
   async function verifyOtp() {
+    if (otp.length < 4) {
+      setError('Enter the code');
+      return;
+    }
     setError(null);
     setBusy(true);
     try {
-      const { data } = await api.post('/auth/verify-otp', { phone, otp });
-      // Role comes back from the server — we route on it, not on a pre-selected role.
+      const { data } = await api.post('/auth/verify-otp', { phone: digits, otp });
       const user = await loginWithToken(data.token);
       navigate(homeFor[user.role]);
     } catch (e: any) {
@@ -52,65 +61,118 @@ export function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col justify-center px-6 max-w-[430px] mx-auto w-full">
-      {/* brand */}
-      <div className="text-center mb-8">
-        <div className="w-16 h-16 rounded-2xl bg-green grid place-items-center mx-auto mb-3">
-          <span className="font-serif text-white text-4xl leading-none">G</span>
-        </div>
-        <h1 className="font-serif text-[32px] leading-none">Greenwood</h1>
-        <p className="text-muted text-[13px] tracking-widest uppercase mt-1">School App</p>
+    <div className="min-h-screen w-full flex justify-center">
+      <div className="w-full max-w-[420px] min-h-screen bg-[#f6f7f3] flex flex-col px-7 md:my-6 md:min-h-[calc(100vh-3rem)] md:rounded-[32px] md:shadow-[0_20px_60px_-25px_rgba(20,40,30,0.35)]">
+        {step === 'phone' && (
+          <div className="flex-1 flex flex-col pt-16 pb-8">
+            <div className="w-[52px] h-[52px] rounded-full bg-green grid place-items-center mb-[22px] shadow-[0_0_0_1.5px_#c2a04e,0_0_0_4px_#f6f7f3,0_0_0_5px_#efe6cf]">
+              <span className="font-serif text-white text-[27px]">G</span>
+            </div>
+            <h2 className="font-serif text-[29px] leading-[1.05] mb-2">Welcome to Greenwood</h2>
+            <p className="text-[13px] text-muted leading-[1.55]">
+              Sign in with the mobile number your school has on record. No password to remember.
+            </p>
+
+            <div className="mt-[30px]">
+              <label className="block text-[11px] tracking-[0.1em] uppercase font-semibold text-muted mb-2">
+                Mobile number
+              </label>
+              <div className="flex items-center bg-white border-[1.5px] border-line rounded-[14px] overflow-hidden">
+                <span className="px-3 text-[14px] font-semibold border-r border-line h-12 flex items-center">+91</span>
+                <input
+                  value={phone}
+                  onChange={(e) => {
+                    setPhone(e.target.value);
+                    setError(null);
+                  }}
+                  inputMode="numeric"
+                  autoFocus
+                  placeholder="00000 00000"
+                  className="flex-1 min-w-0 border-none px-3.5 h-12 text-[15px] font-semibold tracking-[0.04em] bg-transparent"
+                />
+              </div>
+              {error && <div className="text-[11.5px] text-danger font-semibold mt-2">{error}</div>}
+            </div>
+
+            <button
+              onClick={requestOtp}
+              disabled={busy}
+              className="mt-[18px] w-full py-[15px] rounded-[14px] bg-green text-white font-bold text-[14.5px] disabled:opacity-60"
+            >
+              {busy ? 'Sending…' : 'Send code'}
+            </button>
+
+            <div className="flex-1" />
+            <div className="flex gap-[9px] items-start bg-[#eef3ee] border border-[#e0e7e0] rounded-[14px] px-[13px] py-3">
+              <span className="flex-none mt-0.5 text-green">
+                <Glyph d={GLYPH.info} size={15} stroke={1.9} />
+              </span>
+              <div className="text-[11px] text-[#3a4a41] leading-[1.5]">
+                There's nothing to sign up for. Your school registers your number — parents are added by the class
+                teacher, staff by the admin.
+              </div>
+            </div>
+          </div>
+        )}
+
+        {step === 'otp' && (
+          <div className="flex-1 flex flex-col pt-[52px] pb-8">
+            <button
+              onClick={() => {
+                setStep('phone');
+                setOtp('');
+                setError(null);
+              }}
+              className="w-9 h-9 rounded-[11px] bg-white border border-line grid place-items-center mb-5 text-green"
+              aria-label="Back"
+            >
+              <Glyph d={GLYPH.chevronLeft} size={18} stroke={2} />
+            </button>
+            <h2 className="font-serif text-[28px] leading-[1.05] mb-2">Enter the code</h2>
+            <p className="text-[13px] text-muted leading-[1.55]">
+              We sent a 6-digit code to <b className="text-ink">{maskPhone(digits)}</b>.
+            </p>
+
+            <div className="mt-7">
+              <input
+                value={otp}
+                onChange={(e) => {
+                  setOtp(e.target.value.replace(/\D/g, '').slice(0, 6));
+                  setError(null);
+                }}
+                inputMode="numeric"
+                maxLength={6}
+                autoFocus
+                placeholder="••••••"
+                className="w-full box-border text-center border-[1.5px] border-line rounded-[14px] p-4 text-[26px] font-bold tracking-[0.5em] bg-white"
+              />
+              {error && <div className="text-[11.5px] text-danger font-semibold mt-2 text-center">{error}</div>}
+            </div>
+
+            <div className="flex justify-between items-center mt-3.5">
+              <span className="text-[12px] text-muted">
+                Didn't get it? <b className="text-green">Resend</b>
+              </span>
+              {devCode && (
+                <button
+                  onClick={() => setOtp(devCode)}
+                  className="text-[12px] font-bold text-green bg-mist border border-[#dbe5db] rounded-[9px] px-[11px] py-1.5"
+                >
+                  Autofill (dev)
+                </button>
+              )}
+            </div>
+
+            <button
+              onClick={verifyOtp}
+              disabled={busy}
+              className="mt-5 w-full py-[15px] rounded-[14px] bg-green text-white font-bold text-[14.5px] disabled:opacity-60"
+            >
+              {busy ? 'Verifying…' : 'Verify & continue'}
+            </button>
+          </div>
+        )}
       </div>
-
-      {step === 'phone' && (
-        <div className="space-y-4">
-          <p className="text-center text-[14px] text-muted">Sign in with your registered phone number</p>
-          <div>
-            <p className="text-[12px] font-semibold text-muted mb-2">Phone number</p>
-            <input
-              type="tel"
-              autoFocus
-              value={phone}
-              onChange={(e) => setPhone(e.target.value.replace(/[^\d]/g, ''))}
-              placeholder="Enter your registered number"
-              className="w-full rounded-xl border border-line bg-white px-4 py-3.5 text-[15px]"
-            />
-          </div>
-          {error && <p className="text-danger text-[13px]">{error}</p>}
-          <Button onClick={requestOtp} disabled={phone.length < 6 || busy}>
-            {busy ? 'Sending…' : 'Send code'}
-          </Button>
-        </div>
-      )}
-
-      {step === 'otp' && (
-        <div className="space-y-4">
-          <button onClick={() => setStep('phone')} className={cx('flex items-center gap-2 text-[13px] font-semibold text-green')}>
-            <Icon.chevronLeft size={18} />
-            {phone}
-          </button>
-          <div>
-            <p className="text-[12px] font-semibold text-muted mb-2">Enter the 6-digit code</p>
-            <input
-              inputMode="numeric"
-              autoFocus
-              value={otp}
-              onChange={(e) => setOtp(e.target.value.replace(/[^\d]/g, '').slice(0, 6))}
-              placeholder="••••••"
-              className="w-full rounded-xl border border-line bg-white px-4 py-3.5 text-[22px] tracking-[0.4em] text-center font-semibold"
-            />
-            {devCode && (
-              <p className="text-[12px] text-muted mt-2 text-center">
-                Dev code auto-filled: <span className="font-semibold text-green">{devCode}</span>
-              </p>
-            )}
-          </div>
-          {error && <p className="text-danger text-[13px]">{error}</p>}
-          <Button onClick={verifyOtp} disabled={otp.length < 4 || busy}>
-            {busy ? 'Verifying…' : 'Verify & continue'}
-          </Button>
-        </div>
-      )}
     </div>
   );
 }

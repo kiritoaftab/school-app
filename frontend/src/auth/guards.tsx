@@ -1,10 +1,10 @@
 import { Navigate } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { useAuth, type Role } from './AuthContext';
-import { Spinner } from '../components/ui';
+import { Spinner } from '../app/kit';
 
 const homeFor: Record<Role, string> = {
-  PARENT: '/app/home',
+  PARENT: '/app',
   TEACHER: '/teacher',
   ADMIN: '/admin',
 };

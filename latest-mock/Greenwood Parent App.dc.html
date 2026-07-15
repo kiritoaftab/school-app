@@ -1,0 +1,1972 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<template id="__bundler_thumbnail" data-bg-color="#15412f">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="800" fill="#15412f"/>
+    <rect x="500" y="210" width="200" height="380" rx="34" fill="#fbf7ef" stroke="#c2a04e" stroke-width="4"/>
+    <rect x="524" y="250" width="152" height="26" rx="8" fill="#15412f" opacity="0.85"/>
+    <rect x="524" y="296" width="152" height="60" rx="12" fill="#e8efe9"/>
+    <rect x="524" y="372" width="152" height="60" rx="12" fill="#e8efe9"/>
+    <rect x="524" y="448" width="152" height="60" rx="12" fill="#e8efe9"/>
+    <circle cx="600" cy="560" r="10" fill="#c2a04e"/>
+  </svg>
+</template>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  body{margin:0;font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:#15211b;-webkit-font-smoothing:antialiased}
+  a{color:#15412f}a:hover{color:#1d5740}
+  .gw-scroll::-webkit-scrollbar{width:0;height:0;display:none}
+  .gw-scroll{scrollbar-width:none}
+  input,textarea,select{outline:none}
+  input:focus,textarea:focus{border-color:#15412f!important}
+  input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0}
+  @keyframes gwpulse{0%,100%{opacity:1}50%{opacity:.3}}
+  @keyframes gwfade{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes gwslideup{from{opacity:0;transform:translateY(20px)}}
+  @keyframes gwsheet{from{transform:translateY(100%)}to{transform:translateY(0)}}
+  @media(prefers-reduced-motion:reduce){*{animation:none!important}}
+</style>
+</helmet>
+
+<div style="min-height:100vh;background:radial-gradient(120% 80% at 15% 0%, #f3f6f1 0%, #e7ebe4 55%, #dde4d9 100%);padding:40px 18px 64px">
+<div style="max-width:1000px;margin:0 auto;display:flex;gap:48px;align-items:flex-start;justify-content:center;flex-wrap:wrap">
+
+  <!-- INTRO -->
+  <div style="flex:1;min-width:260px;max-width:340px;padding-top:30px">
+    <div style="font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:#15412f;font-weight:600;display:flex;align-items:center;gap:10px">
+      <span style="width:26px;height:1px;background:#c2a04e;display:inline-block"></span>Clickable Prototype
+    </div>
+    <h1 style="font-family:'Instrument Serif',Georgia,serif;font-weight:400;font-size:clamp(30px,4.5vw,44px);line-height:1.03;letter-spacing:-.01em;margin:14px 0 12px">One login. The right app.</h1>
+    <p style="color:#6c766f;font-size:14.5px;line-height:1.6;margin:0 0 18px">Everyone signs in the same way — a phone number and a one-time code. There's no “I'm a parent / teacher” screen: the account already knows who you are and opens straight to your view.</p>
+
+    <div style="font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:#6c766f;font-weight:600;margin-bottom:8px">Sign in as · demo</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:20px">
+      <sc-for list="{{ personaChips }}" as="p" hint-placeholder-count="6"><button onClick="{{ p.onClick }}" style="{{ p.style }}"><span style="{{ p.nameStyle }}">{{ p.name }}</span><span style="{{ p.tagStyle }}">{{ p.tag }}</span></button></sc-for>
+    </div>
+
+    <div style="display:inline-flex;align-items:center;gap:8px;background:#15412f;color:#fff;font-size:12.5px;font-weight:600;padding:9px 15px;border-radius:30px">
+      <span style="width:8px;height:8px;border-radius:50%;background:#c2a04e;animation:gwpulse 1.6s infinite"></span>{{ introChip }}
+    </div>
+
+    <div style="margin-top:24px;border-top:1px solid #e6e9e3;padding-top:18px">
+      <div style="font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:#6c766f;font-weight:600;margin-bottom:12px">{{ introListTitle }}</div>
+      <sc-for list="{{ featList }}" as="f" hint-placeholder-count="6">
+        <div style="display:flex;align-items:center;gap:10px;font-size:13px;padding:5px 0;color:#15211b">
+          <span style="width:18px;height:18px;border-radius:50%;background:#15412f;display:grid;place-items:center;flex:none">
+            <svg viewBox="0 0 24 24" width="11" fill="none" stroke="#fff" stroke-width="3"><path d="M5 12l5 5L20 6"/></svg>
+          </span>{{ f }}
+        </div>
+      </sc-for>
+    </div>
+  </div>
+
+  <!-- PHONE -->
+  <div style="width:330px;height:710px;background:#0e0f0d;border-radius:50px;padding:11px;box-shadow:0 26px 60px -20px rgba(20,40,30,.34), 0 5px 16px -8px rgba(20,40,30,.2);flex:none;position:relative">
+    <div style="position:absolute;top:10px;left:50%;transform:translateX(-50%);width:92px;height:25px;background:#0e0f0d;border-radius:20px;z-index:60"></div>
+
+    <!-- LOCK SCREEN -->
+    <sc-if value="{{ locked }}" hint-placeholder-val="{{ true }}">
+      <div onClick="{{ unlock }}" style="position:absolute;inset:11px;border-radius:39px;z-index:50;cursor:pointer;background:linear-gradient(165deg,#15412f,#0d2a1e);display:flex;flex-direction:column;align-items:center;color:#fff;padding-top:90px">
+        <div style="font-family:'Instrument Serif',serif;font-size:74px;line-height:1">9:41</div>
+        <div style="font-size:13px;color:#bcd2c5;margin-top:2px;letter-spacing:.02em">Wednesday, 25 June</div>
+        <div style="position:absolute;left:18px;right:18px;bottom:120px;background:rgba(255,255,255,.14);backdrop-filter:blur(16px);border:1px solid rgba(255,255,255,.18);border-radius:20px;padding:14px;display:flex;gap:11px;animation:gwslideup .6s .3s both">
+          <div style="width:34px;height:34px;border-radius:9px;background:#c2a04e;display:grid;place-items:center;flex:none"><svg viewBox="0 0 24 24" width="18" fill="none" stroke="#2a230d" stroke-width="2"><path d="{{ lockNote.icon }}"/></svg></div>
+          <div style="font-size:12px;line-height:1.4">
+            <div style="font-size:9.5px;text-transform:uppercase;letter-spacing:.08em;color:#bcd2c5;margin-bottom:3px;display:flex;justify-content:space-between"><span>Greenwood</span><span>now</span></div>
+            <b style="display:block">{{ lockNote.title }}</b>{{ lockNote.sub }}
+          </div>
+        </div>
+        <div style="position:absolute;bottom:30px;font-size:12px;color:#9fc0ad;font-weight:600">Tap to open ↑</div>
+      </div>
+    </sc-if>
+
+    <!-- LOGIN / AUTH OVERLAY -->
+    <sc-if value="{{ authActive }}" hint-placeholder-val="{{ false }}">
+      <div style="position:absolute;inset:11px;border-radius:39px;z-index:45;background:#f6f7f3;overflow:hidden;display:flex;flex-direction:column">
+
+        <!-- phone entry -->
+        <sc-if value="{{ authPhone }}" hint-placeholder-val="{{ true }}">
+          <div style="flex:1;display:flex;flex-direction:column;padding:64px 28px 30px">
+            <div style="width:52px;height:52px;border-radius:50%;background:#15412f;display:grid;place-items:center;box-shadow:0 0 0 1.5px #c2a04e,0 0 0 4px #f6f7f3,0 0 0 5px #efe6cf;margin-bottom:22px"><span style="font-family:'Instrument Serif',serif;color:#fff;font-size:27px">G</span></div>
+            <h2 style="font-family:'Instrument Serif',serif;font-weight:400;font-size:29px;line-height:1.05;margin:0 0 8px">Welcome to Greenwood</h2>
+            <p style="font-size:13px;color:#6c766f;line-height:1.55;margin:0">Sign in with the mobile number your school has on record. No password to remember.</p>
+            <div style="margin-top:30px">
+              <label style="display:block;font-size:11px;letter-spacing:.1em;text-transform:uppercase;font-weight:600;color:#6c766f;margin-bottom:8px">Mobile number</label>
+              <div style="display:flex;align-items:center;background:#fff;border:1.5px solid #e6e9e3;border-radius:14px;overflow:hidden">
+                <span style="padding:0 12px;font-size:14px;font-weight:600;color:#15211b;border-right:1px solid #e6e9e3;height:48px;display:flex;align-items:center">+91</span>
+                <input value="{{ phoneInput }}" onChange="{{ setPhoneInput }}" inputmode="numeric" placeholder="00000 00000" style="flex:1;min-width:0;border:none;padding:0 14px;height:48px;font-family:inherit;font-size:15px;font-weight:600;letter-spacing:.04em;background:transparent;color:#15211b">
+              </div>
+              <sc-if value="{{ hasLoginError }}" hint-placeholder-val="{{ false }}"><div style="font-size:11.5px;color:#c0392b;font-weight:600;margin-top:8px">{{ loginError }}</div></sc-if>
+            </div>
+            <button onClick="{{ submitPhone }}" style="margin-top:18px;width:100%;padding:15px;border-radius:14px;background:#15412f;color:#fff;font-weight:700;font-size:14.5px;border:none;cursor:pointer;font-family:inherit">Send code</button>
+            <div style="flex:1"></div>
+            <div style="display:flex;gap:9px;align-items:flex-start;background:#eef3ee;border:1px solid #e0e7e0;border-radius:14px;padding:12px 13px">
+              <svg viewBox="0 0 24 24" width="15" fill="none" stroke="#15412f" stroke-width="1.9" style="flex:none;margin-top:1px"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
+              <div style="font-size:11px;color:#3a4a41;line-height:1.5">There's nothing to sign up for. Your school registers your number — parents are added by the class teacher, staff by the admin.</div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- otp -->
+        <sc-if value="{{ authOtp }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:1;display:flex;flex-direction:column;padding:52px 28px 30px">
+            <button onClick="{{ backToPhone }}" style="width:36px;height:36px;border-radius:11px;background:#fff;border:1px solid #e6e9e3;display:grid;place-items:center;cursor:pointer;margin-bottom:20px"><svg viewBox="0 0 24 24" width="18" fill="none" stroke="#15412f" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button>
+            <h2 style="font-family:'Instrument Serif',serif;font-weight:400;font-size:28px;line-height:1.05;margin:0 0 8px">Enter the code</h2>
+            <p style="font-size:13px;color:#6c766f;line-height:1.55;margin:0">We sent a 6-digit code to <b style="color:#15211b">{{ otpTargetLabel }}</b>.</p>
+            <div style="margin-top:28px">
+              <input value="{{ otpInput }}" onChange="{{ setOtpInput }}" inputmode="numeric" maxlength="6" placeholder="••••••" style="width:100%;box-sizing:border-box;text-align:center;border:1.5px solid #e6e9e3;border-radius:14px;padding:16px;font-family:inherit;font-size:26px;font-weight:700;letter-spacing:.5em;background:#fff;color:#15211b">
+              <sc-if value="{{ hasLoginError }}" hint-placeholder-val="{{ false }}"><div style="font-size:11.5px;color:#c0392b;font-weight:600;margin-top:8px;text-align:center">{{ loginError }}</div></sc-if>
+            </div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px">
+              <span style="font-size:12px;color:#6c766f">Didn't get it? <b style="color:#15412f">Resend</b></span>
+              <button onClick="{{ autofillOtp }}" style="font-size:12px;font-weight:700;color:#15412f;background:#eef3ee;border:1px solid #dbe5db;border-radius:9px;padding:6px 11px;cursor:pointer;font-family:inherit">Autofill (demo)</button>
+            </div>
+            <button onClick="{{ verifyOtp }}" style="{{ verifyStyle }}">Verify & continue</button>
+            <div style="flex:1"></div>
+            <div style="font-size:11px;color:#9aa39b;text-align:center;line-height:1.5">Demo — tap Autofill or type any 6 digits.</div>
+          </div>
+        </sc-if>
+
+        <!-- not found -->
+        <sc-if value="{{ authNotFound }}" hint-placeholder-val="{{ false }}">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:40px 30px">
+            <div style="width:64px;height:64px;border-radius:50%;background:#f6ecec;display:grid;place-items:center;margin-bottom:20px"><svg viewBox="0 0 24 24" width="30" fill="none" stroke="#c0392b" stroke-width="2"><path d="M12 9v4M12 17h.01M10.3 3.9 2 18a2 2 0 0 0 1.7 3h16.6a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg></div>
+            <h2 style="font-family:'Instrument Serif',serif;font-weight:400;font-size:26px;line-height:1.1;margin:0 0 10px">We couldn't find that number</h2>
+            <p style="font-size:13px;color:#6c766f;line-height:1.6;margin:0 0 6px"><b style="color:#15211b">{{ notFoundNumber }}</b> isn't registered at any Greenwood school yet.</p>
+            <p style="font-size:12.5px;color:#6c766f;line-height:1.6;margin:0">Ask your school office — or your child's class teacher — to add your number, then try again.</p>
+            <button onClick="{{ backToPhone }}" style="margin-top:26px;width:100%;padding:14px;border-radius:14px;background:#15412f;color:#fff;font-weight:700;font-size:14px;border:none;cursor:pointer;font-family:inherit">Try a different number</button>
+          </div>
+        </sc-if>
+
+      </div>
+    </sc-if>
+
+    <div style="width:100%;height:100%;background:#f6f7f3;border-radius:39px;overflow:hidden;position:relative;display:flex;flex-direction:column">
+      <!-- status bar -->
+      <div style="display:flex;justify-content:space-between;align-items:center;padding:14px 24px 7px;font-size:12px;font-weight:600;background:#fff">
+        <span>9:41</span>
+        <span style="display:flex;gap:6px;align-items:center"><span>5G</span><span style="width:18px;height:10px;border:1.4px solid #15211b;border-radius:3px;opacity:.85;display:inline-block"></span></span>
+      </div>
+
+      <!-- app header -->
+      <div style="display:flex;align-items:center;gap:11px;padding:4px 16px 13px;background:#fff;border-bottom:1px solid #e6e9e3;z-index:10">
+        <sc-if value="{{ showBack }}" hint-placeholder-val="{{ false }}">
+          <button onClick="{{ goBack }}" style="width:36px;height:36px;border-radius:11px;background:#f1f5f1;display:grid;place-items:center;flex:none;border:none;cursor:pointer"><svg viewBox="0 0 24 24" width="18" fill="none" stroke="#15412f" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button>
+        </sc-if>
+        <sc-if value="{{ showCrest }}" hint-placeholder-val="{{ true }}">
+          <button onClick="{{ openAcct }}" style="width:38px;height:38px;border-radius:50%;background:#15412f;display:grid;place-items:center;flex:none;border:none;cursor:pointer;box-shadow:0 0 0 1.5px #c2a04e,0 0 0 4px #fff,0 0 0 5px #efe6cf"><span style="font-family:'Instrument Serif',serif;color:#fff;font-size:20px">G</span></button>
+        </sc-if>
+        <div style="flex:1;min-width:0">
+          <div style="font-family:'Instrument Serif',serif;font-size:19px;line-height:1">{{ hdrTitle }}</div>
+          <div style="font-size:10px;color:#6c766f;letter-spacing:.02em;margin-top:2px">{{ hdrSub }}</div>
+        </div>
+        <button onClick="{{ nav.notifs }}" style="width:34px;height:34px;border-radius:11px;background:#f1f5f1;display:grid;place-items:center;position:relative;flex:none;border:none;cursor:pointer">
+          <svg viewBox="0 0 24 24" width="18" fill="none" stroke="#15412f" stroke-width="1.8"><path d="M6 8a6 6 0 1112 0c0 7 3 8 3 8H3s3-1 3-8"/><path d="M10 21a2 2 0 004 0"/></svg>
+          <span style="position:absolute;top:7px;right:8px;width:7px;height:7px;border-radius:50%;background:#c2a04e;border:1.5px solid #fff"></span>
+        </button>
+      </div>
+
+      <!-- ACCOUNT BAR (multi-context) -->
+      <sc-if value="{{ showAcctBar }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:center;gap:8px;padding:9px 16px;background:#15412f;border-bottom:1px solid #0f3324">
+          <button onClick="{{ openAcct }}" style="display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.16);border-radius:30px;padding:5px 6px;cursor:pointer;font-family:inherit">
+            <span style="width:24px;height:24px;border-radius:50%;background:#c2a04e;color:#2a230d;font-size:10px;font-weight:700;display:grid;place-items:center">{{ personaInitials }}</span>
+            <span style="font-size:12px;font-weight:700;color:#fff">{{ personaName }}</span>
+            <span style="font-size:10.5px;font-weight:600;color:#9fc0ad">{{ acctRoleLabel }}</span>
+            <svg viewBox="0 0 24 24" width="13" fill="none" stroke="#9fc0ad" stroke-width="2.4" style="margin-right:4px"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <span style="margin-left:auto;font-size:10px;font-weight:600;color:#9fc0ad;letter-spacing:.06em">SWITCH VIEW</span>
+        </div>
+      </sc-if>
+
+      <!-- CLASS BAR (teacher) -->
+      <sc-if value="{{ showClassBar }}" hint-placeholder-val="{{ false }}">
+        <div style="display:flex;align-items:center;gap:8px;padding:9px 16px;background:#eef3ee;border-bottom:1px solid #e0e7e0">
+          <button onClick="{{ openClassPicker }}" style="display:flex;align-items:center;gap:7px;background:#fff;border:1px solid #d3ddd4;border-radius:30px;padding:6px 12px;cursor:pointer;font-family:inherit">
+            <span style="font-size:12.5px;font-weight:700;color:#15412f">{{ curClass.label }}</span>
+            <span style="font-size:10px;font-weight:600;color:#6c766f">{{ curClass.roleLabel }}</span>
+            <svg viewBox="0 0 24 24" width="13" fill="none" stroke="#6c766f" stroke-width="2.2"><path d="M6 9l6 6 6-6"/></svg>
+          </button>
+          <span style="margin-left:auto;font-size:11px;color:#6c766f;font-weight:600">{{ curClass.count }} students</span>
+        </div>
+      </sc-if>
+
+      <!-- SCROLL CONTENT -->
+      <div class="gw-scroll" ref="{{ setContentRef }}" style="flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;position:relative">
+
+        <!-- ============ HOME · PARENT ============ -->
+        <sc-if value="{{ homeParent }}" hint-placeholder-val="{{ true }}">
+          <div style="padding:16px 15px 22px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:15px">
+              <div style="width:38px;height:38px;border-radius:13px;display:grid;place-items:center;color:#15412f;font-weight:700;font-size:15px;flex:none;background:linear-gradient(140deg,#d7e4da,#a7c4b4)">A</div>
+              <div style="font-weight:600;font-size:14px;line-height:1.1">Aarav Mehta<small style="display:block;color:#6c766f;font-weight:500;font-size:11px;margin-top:2px">Grade 5 · Section B</small></div>
+              <div style="margin-left:auto;font-family:'Instrument Serif',serif;font-size:16px;color:#15412f">Good morning</div>
+            </div>
+            <div onClick="{{ nav.attendance }}" style="background:#15412f;color:#fff;border-radius:20px;padding:15px;margin-bottom:10px;display:flex;align-items:center;gap:13px;cursor:pointer">
+              <div style="width:44px;height:44px;border-radius:14px;background:rgba(255,255,255,.16);display:grid;place-items:center;flex:none"><svg viewBox="0 0 24 24" width="22" fill="none" stroke="#fff" stroke-width="2.2"><path d="M5 12l5 5L20 6"/></svg></div>
+              <div style="flex:1"><b style="font-family:'Instrument Serif',serif;font-size:20px;font-weight:400;display:block;line-height:1.1">Present today</b><small style="color:#cfe0d6;font-size:11.5px">Marked 8:42 AM · Ms. Rao</small></div>
+              <div style="color:#9fc0ad"><svg viewBox="0 0 24 24" width="18" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg></div>
+            </div>
+            <button onClick="{{ nav.leave }}" style="width:100%;margin-bottom:12px;padding:11px;border-radius:13px;background:#fff;border:1px solid #e6e9e3;color:#15412f;font-weight:600;font-size:12.5px;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:7px"><svg viewBox="0 0 24 24" width="16" fill="none" stroke="#15412f" stroke-width="1.8"><path d="M12 5v14M5 12h14"/></svg>Apply for leave</button>
+            <div style="background:#fff;border:1px solid #e6e9e3;border-radius:20px;padding:15px;margin-bottom:12px;box-shadow:0 1px 2px rgba(20,40,30,.04)">
+              <div style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;font-weight:600;color:#6c766f;display:flex;align-items:center;gap:7px;margin-bottom:2px"><span style="width:6px;height:6px;border-radius:50%;background:#c2a04e"></span>Notices · {{ homeNoticeLabel }}<span onClick="{{ nav.noticeBoard }}" style="margin-left:auto;color:#15412f;letter-spacing:.04em;cursor:pointer">View all ({{ noticeCount }}) →</span></div>
+              <sc-if value="{{ homeHasUnread }}" hint-placeholder-val="{{ true }}">
+                <sc-for list="{{ homeNotices }}" as="n" hint-placeholder-count="3">
+                  <div onClick="{{ n.onOpen }}" style="display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid #e6e9e3;cursor:pointer">
+                    <span style="width:30px;height:30px;border-radius:9px;background:#efe6cf;display:grid;place-items:center;flex:none"><svg viewBox="0 0 24 24" width="15" fill="none" stroke="#8a6d1f" stroke-width="1.8"><path d="{{ n.icon }}"/></svg></span>
+                    <div style="flex:1;min-width:0"><b style="font-size:12.5px;font-weight:600;display:block;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ n.title }}</b><small style="font-size:10.5px;color:#6c766f">{{ n.category }} · {{ n.date }}</small></div>
+                    <span style="width:8px;height:8px;border-radius:50%;background:#c2a04e;flex:none"></span>
+                  </div>
+                </sc-for>
+              </sc-if>
+              <sc-if value="{{ homeAllRead }}" hint-placeholder-val="{{ false }}">
+                <div style="display:flex;align-items:center;gap:9px;padding:11px 0 3px;border-top:1px solid #e6e9e3;color:#1f8a5b;font-size:12.5px;font-weight:600"><svg viewBox="0 0 24 24" width="16" fill="none" stroke="#1f8a5b" stroke-width="2.4"><path d="M5 12l5 5L20 6"/></svg>You're all caught up on notices</div>
+              </sc-if>
+            </div>
+            <div style="background:#fff;border:1px solid #e6e9e3;border-radius:20px;padding:15px;margin-bottom:12px;box-shadow:0 1px 2px rgba(20,40,30,.04)">
+              <div style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;font-weight:600;color:#6c766f;display:flex;align-items:center;gap:7px;margin-bottom:2px"><span style="width:6px;height:6px;border-radius:50%;background:#c2a04e"></span>Today's Homework · {{ doneCount }} of {{ todayTotal }} done<span onClick="{{ nav.diary }}" style="margin-left:auto;color:#15412f;letter-spacing:.04em;cursor:pointer">Open diary →</span></div>
+              <sc-for list="{{ todayTasks }}" as="item" hint-placeholder-count="3">
+                <div style="display:flex;align-items:center;gap:11px;padding:10px 0;border-top:1px solid #e6e9e3">
+                  <div onClick="{{ item.onToggle }}" style="{{ item.boxStyle }}"><sc-if value="{{ item.done }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 24 24" width="12" fill="none" stroke="#fff" stroke-width="3"><path d="M5 12l5 5L20 6"/></svg></sc-if></div>
+                  <div style="flex:1"><b style="{{ item.titleStyle }}">{{ item.subj }}</b><small style="display:block;color:#6c766f;font-size:11px;margin-top:1px">{{ item.note }}</small></div>
+                </div>
+              </sc-for>
+            </div>
+            <div onClick="{{ nav.calendar }}" style="background:#fff;border:1px solid #e6e9e3;border-radius:20px;padding:15px;margin-bottom:12px;box-shadow:0 1px 2px rgba(20,40,30,.04);cursor:pointer">
+              <div style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;font-weight:600;color:#6c766f;display:flex;align-items:center;gap:7px;margin-bottom:11px"><span style="width:6px;height:6px;border-radius:50%;background:#c2a04e"></span>Up Next<span style="margin-left:auto;color:#15412f;letter-spacing:.04em">Calendar →</span></div>
+              <div style="display:flex;gap:12px;align-items:center">
+                <div style="width:50px;flex:none;border-radius:14px;background:#f1f5f1;text-align:center;padding:8px 0"><span style="font-size:10px;font-weight:700;color:#c2a04e;letter-spacing:.06em;display:block">{{ upNext.m }}</span><span style="font-family:'Instrument Serif',serif;font-size:22px;line-height:1">{{ upNext.d }}</span></div>
+                <div style="flex:1"><b style="font-size:14px;font-weight:600;display:block">{{ upNext.title }}</b><small style="font-size:11.5px;color:#6c766f">{{ upNext.sub }}</small></div>
+              </div>
+            </div>
+            <div onClick="{{ nav.photos }}" style="background:#fff;border:1px solid #e6e9e3;border-radius:20px;padding:15px 15px 13px;margin-bottom:12px;box-shadow:0 1px 2px rgba(20,40,30,.04);cursor:pointer">
+              <div style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;font-weight:600;color:#6c766f;display:flex;align-items:center;gap:7px;margin-bottom:9px"><span style="width:6px;height:6px;border-radius:50%;background:#c2a04e"></span>New · School Moments</div>
+              <div style="border-radius:14px;aspect-ratio:2.1;position:relative;overflow:hidden;background:linear-gradient(150deg,#3d6b4e,#7fae8c)"><div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,rgba(0,0,0,.3))"></div><div style="position:absolute;left:11px;bottom:9px;color:#fff;font-size:11px;font-weight:600;z-index:2">Annual Sports Day · 142 photos</div></div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ============ HOME · TEACHER ============ -->
+        <sc-if value="{{ homeTeacher }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:16px 15px 22px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:15px">
+              <div style="width:38px;height:38px;border-radius:13px;display:grid;place-items:center;color:#15412f;font-weight:700;font-size:14px;flex:none;background:linear-gradient(140deg,#d7e4da,#a7c4b4)">AR</div>
+              <div style="font-weight:600;font-size:14px;line-height:1.1">Ms. Anjali Rao<small style="display:block;color:#6c766f;font-weight:500;font-size:11px;margin-top:2px">Mathematics · 3 classes</small></div>
+              <div style="margin-left:auto;font-family:'Instrument Serif',serif;font-size:16px;color:#15412f">Good morning</div>
+            </div>
+            <div style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;font-weight:600;color:#6c766f;margin-bottom:9px">Today · {{ curClass.label }}</div>
+            <sc-for list="{{ teacherActions }}" as="a" hint-placeholder-count="3">
+              <div onClick="{{ a.onClick }}" style="background:#fff;border:1px solid #e6e9e3;border-radius:18px;padding:14px;margin-bottom:10px;box-shadow:0 1px 2px rgba(20,40,30,.04);display:flex;gap:12px;align-items:center;cursor:pointer">
+                <div style="width:40px;height:40px;border-radius:12px;background:{{ a.iconBg }};display:grid;place-items:center;flex:none"><svg viewBox="0 0 24 24" width="20" fill="none" stroke="{{ a.iconStroke }}" stroke-width="1.9"><path d="{{ a.icon }}"/></svg></div>
+                <div style="flex:1;min-width:0"><b style="font-size:13.5px;font-weight:600;display:block">{{ a.title }}</b><small style="font-size:11.5px;color:#6c766f">{{ a.sub }}</small></div>
+                <sc-if value="{{ a.badge }}" hint-placeholder-val="{{ false }}"><span style="font-size:10px;font-weight:700;color:#8a6d1f;background:#efe6cf;padding:3px 8px;border-radius:7px;flex:none">{{ a.badge }}</span></sc-if>
+                <svg viewBox="0 0 24 24" width="17" fill="none" stroke="#c3ccc5" stroke-width="2.2" style="flex:none"><path d="M9 6l6 6-6 6"/></svg>
+              </div>
+            </sc-for>
+            <div style="display:flex;gap:10px;margin-top:6px">
+              <div style="flex:1;background:#fff;border:1px solid #e6e9e3;border-radius:16px;padding:13px;text-align:center"><div style="font-family:'Instrument Serif',serif;font-size:24px;line-height:1;color:#15412f">{{ curClass.count }}</div><small style="font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:#6c766f;font-weight:600">Students</small></div>
+              <div style="flex:1;background:#fff;border:1px solid #e6e9e3;border-radius:16px;padding:13px;text-align:center"><div style="font-family:'Instrument Serif',serif;font-size:24px;line-height:1;color:#15412f">{{ teacherPresent }}</div><small style="font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:#6c766f;font-weight:600">Present</small></div>
+              <div style="flex:1;background:#fff;border:1px solid #e6e9e3;border-radius:16px;padding:13px;text-align:center"><div style="font-family:'Instrument Serif',serif;font-size:24px;line-height:1;color:#15412f">{{ teacherHwCount }}</div><small style="font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:#6c766f;font-weight:600">Homework</small></div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ============ HOME · ADMIN ============ -->
+        <sc-if value="{{ homeAdmin }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:16px 15px 22px">
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px">
+              <div style="width:38px;height:38px;border-radius:13px;display:grid;place-items:center;color:#15412f;font-weight:700;font-size:14px;flex:none;background:linear-gradient(140deg,#d7e4da,#a7c4b4)">SM</div>
+              <div style="font-weight:600;font-size:14px;line-height:1.1">Sridevi Menon<small style="display:block;color:#6c766f;font-weight:500;font-size:11px;margin-top:2px">Principal · Admin</small></div>
+              <div style="margin-left:auto;font-family:'Instrument Serif',serif;font-size:16px;color:#15412f">Good morning</div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px">
+              <sc-for list="{{ adminStats }}" as="s" hint-placeholder-count="4">
+                <div style="background:#fff;border:1px solid #e6e9e3;border-radius:18px;padding:15px;box-shadow:0 1px 2px rgba(20,40,30,.04)"><div style="font-family:'Instrument Serif',serif;font-size:28px;line-height:1;color:#15412f">{{ s.n }}</div><small style="font-size:11px;color:#6c766f;font-weight:600;display:block;margin-top:4px">{{ s.label }}</small></div>
+              </sc-for>
+            </div>
+            <div onClick="{{ nav.staff }}" style="background:#15412f;color:#fff;border-radius:20px;padding:15px;margin-bottom:12px;display:flex;align-items:center;gap:13px;cursor:pointer">
+              <div style="width:44px;height:44px;border-radius:14px;background:rgba(255,255,255,.16);display:grid;place-items:center;flex:none"><svg viewBox="0 0 24 24" width="22" fill="none" stroke="#fff" stroke-width="1.9"><path d="M12 12a4 4 0 100-8 4 4 0 000 8M5 20a7 7 0 0114 0"/></svg></div>
+              <div style="flex:1"><b style="font-family:'Instrument Serif',serif;font-size:19px;font-weight:400;display:block;line-height:1.1">Manage staff</b><small style="color:#cfe0d6;font-size:11.5px">{{ staffCount }} teachers · {{ pendingCount }} invite pending</small></div>
+              <svg viewBox="0 0 24 24" width="18" fill="none" stroke="#9fc0ad" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
+            </div>
+            <div onClick="{{ nav.classes }}" style="background:#fff;border:1px solid #e6e9e3;border-radius:20px;padding:15px;margin-bottom:12px;box-shadow:0 1px 2px rgba(20,40,30,.04);display:flex;align-items:center;gap:13px;cursor:pointer">
+              <div style="width:44px;height:44px;border-radius:14px;background:#e8efe9;display:grid;place-items:center;flex:none"><svg viewBox="0 0 24 24" width="21" fill="none" stroke="#15412f" stroke-width="1.9"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg></div>
+              <div style="flex:1"><b style="font-family:'Instrument Serif',serif;font-size:19px;font-weight:400;display:block;line-height:1.1">Classes &amp; students</b><small style="color:#6c766f;font-size:11.5px">{{ classCount }} classes · add, view &amp; assign</small></div>
+              <svg viewBox="0 0 24 24" width="18" fill="none" stroke="#c3ccc5" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
+            </div>
+            <div style="background:#fff;border:1px solid #e6e9e3;border-radius:20px;padding:15px;box-shadow:0 1px 2px rgba(20,40,30,.04)">
+              <div style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;font-weight:600;color:#6c766f;margin-bottom:4px">Recent activity</div>
+              <sc-for list="{{ adminActivity }}" as="a" hint-placeholder-count="3">
+                <div style="display:flex;gap:11px;align-items:center;padding:10px 0;border-top:1px solid #e6e9e3"><span style="width:8px;height:8px;border-radius:50%;background:{{ a.dot }};flex:none"></span><div style="flex:1"><b style="font-size:12.5px;font-weight:600;display:block">{{ a.title }}</b><small style="font-size:11px;color:#6c766f">{{ a.sub }}</small></div><span style="font-size:10px;color:#6c766f;font-weight:600">{{ a.tm }}</span></div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ============ ATTENDANCE · PARENT ============ -->
+        <sc-if value="{{ attParent }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:16px 15px 22px">
+            <div style="display:flex;gap:10px;margin-bottom:14px">
+              <div style="flex:1;background:#fff;border:1px solid #e6e9e3;border-radius:16px;padding:13px;text-align:center"><div style="font-family:'Instrument Serif',serif;font-size:26px;line-height:1;color:#15412f">94%</div><small style="font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#6c766f;font-weight:600">This month</small></div>
+              <div style="flex:1;background:#fff;border:1px solid #e6e9e3;border-radius:16px;padding:13px;text-align:center"><div style="font-family:'Instrument Serif',serif;font-size:26px;line-height:1;color:#15412f">18</div><small style="font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#6c766f;font-weight:600">Present</small></div>
+              <div style="flex:1;background:#fff;border:1px solid #e6e9e3;border-radius:16px;padding:13px;text-align:center"><div style="font-family:'Instrument Serif',serif;font-size:26px;line-height:1;color:#15412f">1</div><small style="font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#6c766f;font-weight:600">Absent</small></div>
+            </div>
+            <div style="background:#fff;border:1px solid #e6e9e3;border-radius:20px;padding:15px;margin-bottom:12px;box-shadow:0 1px 2px rgba(20,40,30,.04)">
+              <div style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;font-weight:600;color:#6c766f;display:flex;align-items:center;gap:7px;margin-bottom:9px"><span style="width:6px;height:6px;border-radius:50%;background:#c2a04e"></span>June 2026</div>
+              <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;text-align:center">
+                <sc-for list="{{ weekdays }}" as="w" hint-placeholder-count="7"><div style="font-size:9px;color:#6c766f;font-weight:700">{{ w }}</div></sc-for>
+                <sc-for list="{{ attCells }}" as="cell" hint-placeholder-count="30">
+                  <div style="aspect-ratio:1;display:grid;place-items:center;font-size:11px;font-weight:600;border-radius:9px;position:relative;color:{{ cell.txt }}">{{ cell.d }}<sc-if value="{{ cell.showDot }}" hint-placeholder-val="{{ true }}"><span style="position:absolute;bottom:3px;width:5px;height:5px;border-radius:50%;background:{{ cell.color }}"></span></sc-if></div>
+                </sc-for>
+              </div>
+              <div style="display:flex;gap:14px;margin-top:14px;font-size:11px;color:#6c766f;font-weight:600">
+                <span style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:50%;background:#1f8a5b"></span>Present</span>
+                <span style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:50%;background:#c0392b"></span>Absent</span>
+                <span style="display:flex;align-items:center;gap:6px"><span style="width:10px;height:10px;border-radius:50%;background:#e6e9e3"></span>Holiday</span>
+              </div>
+            </div>
+            <button onClick="{{ nav.leave }}" style="width:100%;padding:14px;border-radius:14px;background:#15412f;color:#fff;font-weight:600;font-size:14px;border:none;cursor:pointer;font-family:inherit">Apply for leave</button>
+          </div>
+        </sc-if>
+
+        <!-- ============ ATTENDANCE · TEACHER (register) ============ -->
+        <sc-if value="{{ attTeacher }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:16px 15px 22px">
+            <sc-if value="{{ canMarkAtt }}" hint-placeholder-val="{{ true }}">
+              <div>
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+                  <div style="flex:1;background:#fff;border:1px solid #e6e9e3;border-radius:16px;padding:12px;text-align:center"><div style="font-family:'Instrument Serif',serif;font-size:24px;line-height:1;color:#1f8a5b">{{ regPresent }}</div><small style="font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:#6c766f;font-weight:600">Present</small></div>
+                  <div style="flex:1;background:#fff;border:1px solid #e6e9e3;border-radius:16px;padding:12px;text-align:center"><div style="font-family:'Instrument Serif',serif;font-size:24px;line-height:1;color:#c0392b">{{ regAbsent }}</div><small style="font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:#6c766f;font-weight:600">Absent</small></div>
+                  <button onClick="{{ markAllPresent }}" style="flex:1;background:#e8efe9;border:none;border-radius:16px;padding:12px 8px;cursor:pointer;font-family:inherit;color:#15412f;font-weight:600;font-size:11.5px;line-height:1.3">Mark all present</button>
+                </div>
+                <div style="background:#fff;border:1px solid #e6e9e3;border-radius:20px;padding:6px 15px;margin-bottom:12px;box-shadow:0 1px 2px rgba(20,40,30,.04)">
+                  <sc-for list="{{ register }}" as="r" hint-placeholder-count="8">
+                    <div style="display:flex;align-items:center;gap:11px;padding:10px 0;border-top:1px solid #f0f2ee">
+                      <span style="width:22px;font-size:11px;color:#6c766f;font-weight:600;flex:none">{{ r.roll }}</span>
+                      <span style="flex:1;font-size:13px;font-weight:600;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.name }}</span>
+                      <div style="display:flex;gap:4px;background:#f1f5f1;border-radius:10px;padding:3px">
+                        <button onClick="{{ r.onPresent }}" style="{{ r.presentStyle }}">P</button>
+                        <button onClick="{{ r.onAbsent }}" style="{{ r.absentStyle }}">A</button>
+                      </div>
+                    </div>
+                  </sc-for>
+                </div>
+                <button onClick="{{ saveRegister }}" style="width:100%;padding:14px;border-radius:14px;background:#15412f;color:#fff;font-weight:600;font-size:14px;border:none;cursor:pointer;font-family:inherit">{{ regSaved }}</button>
+              </div>
+            </sc-if>
+            <sc-if value="{{ cantMarkAtt }}" hint-placeholder-val="{{ false }}">
+              <div>
+                <div style="background:#eef3ee;border:1px solid #dbe5db;border-radius:16px;padding:12px 14px;margin-bottom:12px;display:flex;gap:9px;align-items:flex-start">
+                  <svg viewBox="0 0 24 24" width="16" fill="none" stroke="#15412f" stroke-width="1.9" style="flex:none;margin-top:1px"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
+                  <div style="font-size:11.5px;color:#15412f;line-height:1.5">Marked by <b>{{ roCtName }}</b> (class teacher) at 8:40 AM. You teach {{ curClass.roleLabel }} here, so the register is view-only.</div>
+                </div>
+                <div style="display:flex;gap:10px;margin-bottom:12px">
+                  <div style="flex:1;background:#fff;border:1px solid #e6e9e3;border-radius:16px;padding:12px;text-align:center"><div style="font-family:'Instrument Serif',serif;font-size:24px;line-height:1;color:#1f8a5b">{{ classPresent }}</div><small style="font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:#6c766f;font-weight:600">Present</small></div>
+                  <div style="flex:1;background:#fff;border:1px solid #e6e9e3;border-radius:16px;padding:12px;text-align:center"><div style="font-family:'Instrument Serif',serif;font-size:24px;line-height:1;color:#c0392b">{{ classAbsent }}</div><small style="font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:#6c766f;font-weight:600">Absent</small></div>
+                </div>
+                <div style="background:#fff;border:1px solid #e6e9e3;border-radius:20px;padding:6px 15px;box-shadow:0 1px 2px rgba(20,40,30,.04)">
+                  <sc-for list="{{ roRegister }}" as="r" hint-placeholder-count="8">
+                    <div style="display:flex;align-items:center;gap:11px;padding:10px 0;border-top:1px solid #f0f2ee">
+                      <span style="width:22px;font-size:11px;color:#6c766f;font-weight:600;flex:none">{{ r.roll }}</span>
+                      <span style="flex:1;font-size:13px;font-weight:600;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.name }}</span>
+                      <span style="{{ r.statusStyle }}">{{ r.statusLabel }}</span>
+                    </div>
+                  </sc-for>
+                </div>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <!-- ============ LEAVE (parent) ============ -->
+        <sc-if value="{{ isLeave }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:16px 15px 22px">
+            <sc-if value="{{ leaveForm }}" hint-placeholder-val="{{ true }}">
+              <div>
+                <div style="background:#fff;border:1px solid #e6e9e3;border-radius:20px;padding:15px;margin-bottom:14px;box-shadow:0 1px 2px rgba(20,40,30,.04);display:flex;align-items:center;gap:10px">
+                  <div style="width:38px;height:38px;border-radius:13px;display:grid;place-items:center;color:#15412f;font-weight:700;font-size:15px;flex:none;background:linear-gradient(140deg,#d7e4da,#a7c4b4)">A</div>
+                  <div style="font-weight:600;font-size:13px">Aarav Mehta<small style="display:block;color:#6c766f;font-weight:500;font-size:11px;margin-top:2px">Grade 5-B · Roll 14</small></div>
+                </div>
+                <div style="margin-bottom:14px"><label style="display:block;font-size:12px;font-weight:600;margin-bottom:7px">Type of leave</label>
+                  <div style="display:flex;gap:7px">
+                    <button onClick="{{ pickSick }}" style="{{ optSick }}">Sick</button>
+                    <button onClick="{{ pickCasual }}" style="{{ optCasual }}">Casual</button>
+                    <button onClick="{{ pickOther }}" style="{{ optOther }}">Other</button>
+                  </div>
+                </div>
+                <div style="margin-bottom:14px"><label style="display:block;font-size:12px;font-weight:600;margin-bottom:7px">Dates</label>
+                  <div style="display:flex;gap:9px">
+                    <input value="26 Jun" readonly style="width:100%;padding:11px 13px;border:1.5px solid #e6e9e3;border-radius:12px;font-family:inherit;font-size:13px;background:#fff;color:#15211b;text-align:center">
+                    <input value="27 Jun" readonly style="width:100%;padding:11px 13px;border:1.5px solid #e6e9e3;border-radius:12px;font-family:inherit;font-size:13px;background:#fff;color:#15211b;text-align:center">
+                  </div>
+                </div>
+                <div style="margin-bottom:14px"><label style="display:block;font-size:12px;font-weight:600;margin-bottom:7px">Reason for the class teacher</label>
+                  <textarea style="width:100%;padding:11px 13px;border:1.5px solid #e6e9e3;border-radius:12px;font-family:inherit;font-size:13px;background:#fff;color:#15211b;resize:none;height:74px">Mild fever, advised rest by the doctor.</textarea>
+                </div>
+                <button onClick="{{ submitLeave }}" style="width:100%;padding:14px;border-radius:14px;background:#15412f;color:#fff;font-weight:600;font-size:14px;border:none;cursor:pointer;font-family:inherit">Send request</button>
+              </div>
+            </sc-if>
+            <sc-if value="{{ leaveSent }}" hint-placeholder-val="{{ false }}">
+              <div style="text-align:center;padding:40px 16px">
+                <div style="width:66px;height:66px;border-radius:50%;background:#e8efe9;display:grid;place-items:center;margin:0 auto 18px"><svg viewBox="0 0 24 24" width="30" fill="none" stroke="#15412f" stroke-width="2.4"><path d="M5 12l5 5L20 6"/></svg></div>
+                <h3 style="font-family:'Instrument Serif',serif;font-size:24px;margin:0 0 8px">Request sent</h3>
+                <p style="font-size:13px;color:#6c766f;line-height:1.5;max-width:230px;margin:0 auto">Ms. Kapoor will see this right away. You'll get a notification once it's approved.</p>
+                <button onClick="{{ nav.home }}" style="width:100%;max-width:200px;padding:14px;border-radius:14px;background:#15412f;color:#fff;font-weight:600;font-size:14px;border:none;cursor:pointer;font-family:inherit;margin:22px auto 0">Back to home</button>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <!-- ============ NOTICE BOARD (shared) ============ -->
+        <sc-if value="{{ isNoticeBoard }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:16px 15px 22px">
+            <sc-if value="{{ isAdmin }}" hint-placeholder-val="{{ false }}">
+              <button onClick="{{ nav.noticeCompose }}" style="width:100%;padding:12px;border-radius:14px;background:#15412f;color:#fff;font-weight:600;font-size:13px;border:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:7px;margin-bottom:14px"><svg viewBox="0 0 24 24" width="17" fill="none" stroke="#fff" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Post a new notice</button>
+            </sc-if>
+            <sc-if value="{{ notAdmin }}" hint-placeholder-val="{{ true }}">
+              <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+                <div style="font-size:11.5px;color:#6c766f">All notices from the school</div>
+                <div style="font-size:11px;font-weight:700;color:#15412f;background:#e8efe9;padding:4px 10px;border-radius:30px">{{ unreadCount }} unread</div>
+              </div>
+            </sc-if>
+            <sc-for list="{{ board }}" as="n" hint-placeholder-count="6">
+              <div onClick="{{ n.onOpen }}" style="background:#fff;border:1px solid #e6e9e3;border-radius:18px;padding:14px;margin-bottom:10px;box-shadow:0 1px 2px rgba(20,40,30,.04);display:flex;gap:12px;align-items:flex-start;cursor:pointer">
+                <div style="width:38px;height:38px;border-radius:12px;background:#efe6cf;display:grid;place-items:center;flex:none"><svg viewBox="0 0 24 24" width="19" fill="none" stroke="#8a6d1f" stroke-width="1.8"><path d="{{ n.icon }}"/></svg></div>
+                <div style="flex:1;min-width:0">
+                  <div style="display:flex;align-items:center;gap:7px;margin-bottom:4px">
+                    <span style="font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#15412f;background:#e8efe9;padding:3px 7px;border-radius:6px">{{ n.category }}</span>
+                    <sc-if value="{{ n.pinned }}" hint-placeholder-val="{{ false }}"><span style="font-size:9.5px;font-weight:700;letter-spacing:.05em;color:#8a6d1f">PINNED</span></sc-if>
+                    <span style="margin-left:auto;font-size:10px;color:#6c766f;font-weight:600">{{ n.date }}</span>
+                  </div>
+                  <h4 style="font-family:'Instrument Serif',serif;font-size:17px;line-height:1.15;margin:0 0 3px">{{ n.title }}</h4>
+                  <p style="font-size:12px;color:#6c766f;line-height:1.45;margin:0;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:1;-webkit-box-orient:vertical">{{ n.preview }}</p>
+                </div>
+                <sc-if value="{{ n.showAckDot }}" hint-placeholder-val="{{ false }}"><div style="width:8px;height:8px;border-radius:50%;background:#1f8a5b;flex:none;margin-top:4px"></div></sc-if>
+                <sc-if value="{{ n.showUnreadDot }}" hint-placeholder-val="{{ true }}"><div style="width:8px;height:8px;border-radius:50%;background:#c2a04e;flex:none;margin-top:4px"></div></sc-if>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <!-- ============ NOTICE DETAIL (shared) ============ -->
+        <sc-if value="{{ isNotice }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:16px 15px 22px">
+            <div style="background:#fff;border:1px solid #e6e9e3;border-radius:20px;padding:15px;margin-bottom:12px;box-shadow:0 1px 2px rgba(20,40,30,.04)">
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:11px">
+                <span style="font-size:9.5px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:#15412f;background:#e8efe9;padding:3px 8px;border-radius:6px">{{ activeNotice.category }}</span>
+                <sc-if value="{{ activeNotice.pinned }}" hint-placeholder-val="{{ false }}"><span style="font-size:9.5px;font-weight:700;letter-spacing:.05em;color:#8a6d1f">PINNED</span></sc-if>
+                <span style="margin-left:auto;font-size:10.5px;color:#6c766f;font-weight:600">{{ activeNotice.date }}</span>
+              </div>
+              <h3 style="font-family:'Instrument Serif',serif;font-size:24px;line-height:1.1;margin:0 0 4px">{{ activeNotice.title }}</h3>
+              <div style="font-size:11px;color:#6c766f;font-weight:600;margin-bottom:12px">{{ activeNotice.from }}</div>
+              <p style="font-size:13.5px;color:#15211b;line-height:1.6;margin:0;white-space:pre-line">{{ activeNotice.body }}</p>
+            </div>
+            <sc-if value="{{ showAckButton }}" hint-placeholder-val="{{ true }}">
+              <sc-if value="{{ activeNoticeUnacked }}" hint-placeholder-val="{{ true }}">
+                <button onClick="{{ acknowledge }}" style="width:100%;padding:14px;border-radius:14px;background:#15412f;color:#fff;font-weight:600;font-size:14px;border:none;cursor:pointer;font-family:inherit">Acknowledge you've read this</button>
+              </sc-if>
+              <sc-if value="{{ activeNoticeAcked }}" hint-placeholder-val="{{ false }}">
+                <button style="width:100%;padding:14px;border-radius:14px;background:#e8efe9;color:#15412f;font-weight:600;font-size:14px;border:none;font-family:inherit">✓ Acknowledged · just now</button>
+              </sc-if>
+            </sc-if>
+            <div style="text-align:center;font-size:11.5px;color:#6c766f;font-weight:600;margin-top:12px">{{ activeNotice.ackStat }}</div>
+          </div>
+        </sc-if>
+
+        <!-- ============ NOTICE COMPOSE (admin) ============ -->
+        <sc-if value="{{ isNoticeCompose }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:16px 15px 22px">
+            <sc-if value="{{ composeForm }}" hint-placeholder-val="{{ true }}">
+              <div>
+                <div style="margin-bottom:14px"><label style="display:block;font-size:12px;font-weight:600;margin-bottom:7px">Category</label>
+                  <div style="display:flex;gap:7px;flex-wrap:wrap">
+                    <sc-for list="{{ catOptions }}" as="c" hint-placeholder-count="4"><button onClick="{{ c.onClick }}" style="{{ c.style }}">{{ c.label }}</button></sc-for>
+                  </div>
+                </div>
+                <div style="margin-bottom:14px"><label style="display:block;font-size:12px;font-weight:600;margin-bottom:7px">Title</label>
+                  <input value="{{ ncTitle }}" onChange="{{ setNcTitle }}" placeholder="e.g. Sports Day rescheduled" style="width:100%;padding:11px 13px;border:1.5px solid #e6e9e3;border-radius:12px;font-family:inherit;font-size:13px;background:#fff;color:#15211b;box-sizing:border-box">
+                </div>
+                <div style="margin-bottom:14px"><label style="display:block;font-size:12px;font-weight:600;margin-bottom:7px">Message to parents</label>
+                  <textarea value="{{ ncBody }}" onChange="{{ setNcBody }}" placeholder="Write the notice…" style="width:100%;padding:11px 13px;border:1.5px solid #e6e9e3;border-radius:12px;font-family:inherit;font-size:13px;background:#fff;color:#15211b;resize:none;height:120px;box-sizing:border-box"></textarea>
+                </div>
+                <button onClick="{{ postNotice }}" style="width:100%;padding:14px;border-radius:14px;background:#15412f;color:#fff;font-weight:600;font-size:14px;border:none;cursor:pointer;font-family:inherit">Publish to all parents</button>
+              </div>
+            </sc-if>
+            <sc-if value="{{ composeSent }}" hint-placeholder-val="{{ false }}">
+              <div style="text-align:center;padding:40px 16px">
+                <div style="width:66px;height:66px;border-radius:50%;background:#e8efe9;display:grid;place-items:center;margin:0 auto 18px"><svg viewBox="0 0 24 24" width="30" fill="none" stroke="#15412f" stroke-width="2.4"><path d="M5 12l5 5L20 6"/></svg></div>
+                <h3 style="font-family:'Instrument Serif',serif;font-size:24px;margin:0 0 8px">Notice published</h3>
+                <p style="font-size:13px;color:#6c766f;line-height:1.5;max-width:240px;margin:0 auto">It's now on every parent's notice board and a push notification has been sent.</p>
+                <button onClick="{{ nav.noticeBoard }}" style="width:100%;max-width:210px;padding:14px;border-radius:14px;background:#15412f;color:#fff;font-weight:600;font-size:14px;border:none;cursor:pointer;font-family:inherit;margin:22px auto 0">View notice board</button>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <!-- ============ DIARY · PARENT ============ -->
+        <sc-if value="{{ diaryParent }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:16px 15px 22px">
+            <div class="gw-scroll" ref="{{ setStripRef }}" style="display:flex;gap:6px;overflow-x:auto;margin-bottom:14px;padding-bottom:2px">
+              <sc-for list="{{ dateStrip }}" as="d" hint-placeholder-count="10">
+                <button onClick="{{ d.onPick }}" style="{{ d.style }}">{{ d.wd }}<b style="{{ d.numStyle }}">{{ d.dnum }}</b><sc-if value="{{ d.showDot }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;bottom:5px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:#c2a04e"></span></sc-if></button>
+              </sc-for>
+            </div>
+            <div style="display:flex;align-items:center;gap:9px;margin-bottom:11px">
+              <div style="font-family:'Instrument Serif',serif;font-size:19px;line-height:1">{{ selDateLabel }}</div>
+              <sc-if value="{{ selIsToday }}" hint-placeholder-val="{{ true }}"><span style="font-size:10px;font-weight:700;color:#15412f;background:#efe6cf;padding:3px 8px;border-radius:7px">TODAY</span></sc-if>
+            </div>
+            <sc-if value="{{ diaryHasTasks }}" hint-placeholder-val="{{ true }}">
+              <div style="background:#fff;border:1px solid #e6e9e3;border-radius:20px;padding:15px;margin-bottom:12px;box-shadow:0 1px 2px rgba(20,40,30,.04)">
+                <sc-for list="{{ diaryView }}" as="item" hint-placeholder-count="3">
+                  <div style="display:flex;align-items:center;gap:11px;padding:10px 0;border-top:1px solid #e6e9e3">
+                    <div onClick="{{ item.onToggle }}" style="{{ item.boxStyle }}"><sc-if value="{{ item.done }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 24 24" width="12" fill="none" stroke="#fff" stroke-width="3"><path d="M5 12l5 5L20 6"/></svg></sc-if></div>
+                    <div style="flex:1"><b style="{{ item.titleStyle }}">{{ item.subj }}</b><small style="display:block;color:#6c766f;font-size:11px;margin-top:1px">{{ item.note }}</small></div>
+                  </div>
+                </sc-for>
+              </div>
+              <sc-if value="{{ diaryNote }}" hint-placeholder-val="{{ false }}">
+                <div style="background:#fff;border:1px solid #e6e9e3;border-radius:20px;padding:15px;margin-bottom:12px;box-shadow:0 1px 2px rgba(20,40,30,.04);display:flex;gap:9px;align-items:flex-start">
+                  <span style="font-size:10px;font-weight:700;color:#15412f;background:#e8efe9;padding:3px 8px;border-radius:7px;margin-top:1px">NOTE</span>
+                  <p style="font-size:12.5px;color:#6c766f;line-height:1.5;margin:0">{{ diaryNote }}</p>
+                </div>
+              </sc-if>
+            </sc-if>
+            <sc-if value="{{ diaryEmpty }}" hint-placeholder-val="{{ false }}">
+              <div style="text-align:center;padding:40px 20px;color:#6c766f">
+                <div style="width:54px;height:54px;border-radius:50%;background:#f1f5f1;display:grid;place-items:center;margin:0 auto 14px"><svg viewBox="0 0 24 24" width="24" fill="none" stroke="#9fb3a5" stroke-width="1.8"><path d="M4 5h11a3 3 0 013 3v11M4 5v14h14"/></svg></div>
+                <div style="font-size:13.5px;font-weight:600;color:#15211b;margin-bottom:4px">No homework posted</div>
+                <p style="font-size:12px;line-height:1.5;margin:0 auto;max-width:200px">Teachers haven't added diary entries for this day yet.</p>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <!-- ============ DIARY · TEACHER (post homework) ============ -->
+        <sc-if value="{{ diaryTeacher }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:16px 15px 22px">
+            <div class="gw-scroll" ref="{{ setStripRef }}" style="display:flex;gap:6px;overflow-x:auto;margin-bottom:14px;padding-bottom:2px">
+              <sc-for list="{{ teDateStrip }}" as="d" hint-placeholder-count="10">
+                <button onClick="{{ d.onPick }}" style="{{ d.style }}">{{ d.wd }}<b style="{{ d.numStyle }}">{{ d.dnum }}</b><sc-if value="{{ d.showDot }}" hint-placeholder-val="{{ false }}"><span style="position:absolute;bottom:5px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:#c2a04e"></span></sc-if></button>
+              </sc-for>
+            </div>
+            <div style="display:flex;align-items:center;gap:9px;margin-bottom:11px">
+              <div style="font-family:'Instrument Serif',serif;font-size:19px;line-height:1">{{ teDateLabel }}</div>
+              <sc-if value="{{ teIsToday }}" hint-placeholder-val="{{ true }}"><span style="font-size:10px;font-weight:700;color:#15412f;background:#efe6cf;padding:3px 8px;border-radius:7px">TODAY</span></sc-if>
+            </div>
+            <div style="background:#fff;border:1px solid #e6e9e3;border-radius:20px;padding:6px 15px;margin-bottom:12px;box-shadow:0 1px 2px rgba(20,40,30,.04)">
+              <sc-if value="{{ teHwEmpty }}" hint-placeholder-val="{{ false }}">
+                <div style="padding:18px 0;text-align:center;color:#6c766f;font-size:12.5px">No homework posted for {{ curClass.label }} yet.</div>
+              </sc-if>
+              <sc-for list="{{ teHwList }}" as="h" hint-placeholder-count="3">
+                <div style="display:flex;align-items:flex-start;gap:11px;padding:11px 0;border-top:1px solid #f0f2ee">
+                  <span style="font-size:9.5px;font-weight:700;letter-spacing:.03em;text-transform:uppercase;color:#15412f;background:#e8efe9;padding:4px 8px;border-radius:7px;margin-top:1px;flex:none">{{ h.subj }}</span>
+                  <div style="flex:1;font-size:12.5px;color:#15211b;line-height:1.45">{{ h.note }}</div>
+                  <button onClick="{{ h.onDelete }}" style="width:24px;height:24px;border-radius:8px;background:#f6ecec;border:none;display:grid;place-items:center;cursor:pointer;flex:none"><svg viewBox="0 0 24 24" width="13" fill="none" stroke="#c0392b" stroke-width="2"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+                </div>
+              </sc-for>
+            </div>
+            <div style="background:#fff;border:1px solid #e6e9e3;border-radius:20px;padding:15px;box-shadow:0 1px 2px rgba(20,40,30,.04)">
+              <div style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;font-weight:600;color:#6c766f;margin-bottom:9px">Add homework</div>
+              <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px">
+                <sc-for list="{{ hwSubjOptions }}" as="s" hint-placeholder-count="4"><button onClick="{{ s.onClick }}" style="{{ s.style }}">{{ s.label }}</button></sc-for>
+              </div>
+              <textarea value="{{ hwNote }}" onChange="{{ setHwNote }}" placeholder="Homework details for parents…" style="width:100%;padding:11px 13px;border:1.5px solid #e6e9e3;border-radius:12px;font-family:inherit;font-size:13px;background:#fff;color:#15211b;resize:none;height:64px;box-sizing:border-box;margin-bottom:10px"></textarea>
+              <button onClick="{{ addHw }}" style="width:100%;padding:12px;border-radius:12px;background:#15412f;color:#fff;font-weight:600;font-size:13px;border:none;cursor:pointer;font-family:inherit">Post to {{ curClass.label }}</button>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ============ CALENDAR (shared) ============ -->
+        <sc-if value="{{ isCalendar }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:16px 15px 22px">
+            <sc-if value="{{ calIsAdmin }}" hint-placeholder-val="{{ false }}">
+              <sc-if value="{{ calNotAdding }}" hint-placeholder-val="{{ true }}">
+                <button onClick="{{ toggleCalAdd }}" style="width:100%;padding:12px;border-radius:14px;background:#15412f;color:#fff;font-weight:600;font-size:13px;border:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:7px;margin-bottom:14px"><svg viewBox="0 0 24 24" width="17" fill="none" stroke="#fff" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Add an event</button>
+              </sc-if>
+              <sc-if value="{{ calAdding }}" hint-placeholder-val="{{ false }}">
+                <div style="background:#fff;border:1px solid #e6e9e3;border-radius:18px;padding:14px;margin-bottom:16px;box-shadow:0 1px 2px rgba(20,40,30,.04)">
+                  <div style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;font-weight:600;color:#6c766f;margin-bottom:10px">New event</div>
+                  <div style="display:flex;gap:8px;margin-bottom:10px">
+                    <select value="{{ calForm.m }}" onChange="{{ setCalMonth }}" style="flex:none;width:78px;padding:10px;border:1.5px solid #e6e9e3;border-radius:11px;font-family:inherit;font-size:13px;background:#fff;color:#15211b"><option>JAN</option><option>FEB</option><option>MAR</option><option>APR</option><option>MAY</option><option>JUN</option><option>JUL</option><option>AUG</option><option>SEP</option><option>OCT</option><option>NOV</option><option>DEC</option></select>
+                    <input type="number" value="{{ calForm.d }}" onChange="{{ setCalDay }}" placeholder="Day" style="flex:1;min-width:0;padding:10px 12px;border:1.5px solid #e6e9e3;border-radius:11px;font-family:inherit;font-size:13px;background:#fff;color:#15211b;box-sizing:border-box">
+                  </div>
+                  <input type="text" value="{{ calForm.title }}" onChange="{{ setCalTitle }}" placeholder="Event title" style="width:100%;padding:10px 12px;border:1.5px solid #e6e9e3;border-radius:11px;font-family:inherit;font-size:13px;background:#fff;color:#15211b;box-sizing:border-box;margin-bottom:10px">
+                  <input type="text" value="{{ calForm.sub }}" onChange="{{ setCalSub }}" placeholder="Time / venue" style="width:100%;padding:10px 12px;border:1.5px solid #e6e9e3;border-radius:11px;font-family:inherit;font-size:13px;background:#fff;color:#15211b;box-sizing:border-box;margin-bottom:12px">
+                  <div style="display:flex;gap:9px">
+                    <button onClick="{{ toggleCalAdd }}" style="flex:1;padding:12px;border-radius:12px;background:#fff;color:#15412f;font-weight:600;font-size:13px;border:1.5px solid #d3ddd4;cursor:pointer;font-family:inherit">Cancel</button>
+                    <button onClick="{{ addEvent }}" style="flex:1;padding:12px;border-radius:12px;background:#15412f;color:#fff;font-weight:600;font-size:13px;border:none;cursor:pointer;font-family:inherit">Add to calendar</button>
+                  </div>
+                </div>
+              </sc-if>
+            </sc-if>
+            <div style="font-size:11.5px;color:#6c766f;margin-bottom:14px">Upcoming at Greenwood</div>
+            <sc-for list="{{ events }}" as="ev" hint-placeholder-count="5">
+              <div style="display:flex;gap:12px;margin-bottom:11px;align-items:stretch">
+                <div style="width:50px;flex:none;border-radius:14px;background:#fff;border:1px solid #e6e9e3;text-align:center;padding:8px 0;display:flex;flex-direction:column;justify-content:center">
+                  <span style="font-size:10px;font-weight:700;color:#c2a04e;letter-spacing:.06em">{{ ev.m }}</span>
+                  <span style="font-family:'Instrument Serif',serif;font-size:22px;line-height:1">{{ ev.d }}</span>
+                </div>
+                <div style="flex:1;background:#fff;border:1px solid #e6e9e3;border-radius:14px;padding:11px 13px;border-left:3px solid {{ ev.accent }};display:flex;align-items:center;gap:10px">
+                  <div style="flex:1;min-width:0">
+                    <h4 style="font-size:13.5px;font-weight:600;margin:0">{{ ev.title }}</h4>
+                    <small style="font-size:11px;color:#6c766f">{{ ev.sub }}</small>
+                  </div>
+                  <sc-if value="{{ ev.canEdit }}" hint-placeholder-val="{{ false }}">
+                    <button onClick="{{ ev.onRemove }}" style="flex:none;width:30px;height:30px;border-radius:9px;border:none;background:#faeeee;cursor:pointer;display:grid;place-items:center"><svg viewBox="0 0 24 24" width="15" fill="none" stroke="#c0392b" stroke-width="2"><path d="M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13"/></svg></button>
+                  </sc-if>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <!-- ============ RESULTS · PARENT ============ -->
+        <sc-if value="{{ resultsParent }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:16px 15px 22px">
+            <div style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;font-weight:600;color:#6c766f;margin-bottom:8px">Academic year</div>
+            <div class="gw-scroll" style="display:flex;gap:8px;overflow-x:auto;margin-bottom:16px;padding-bottom:2px">
+              <sc-for list="{{ yearPills }}" as="y" hint-placeholder-count="3">
+                <button onClick="{{ y.onPick }}" style="{{ y.style }}"><span style="{{ y.labelStyle }}">{{ y.label }}</span><span style="{{ y.subStyle }}">{{ y.sub }}</span></button>
+              </sc-for>
+            </div>
+            <div style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;font-weight:600;color:#6c766f;margin-bottom:8px">Examinations</div>
+            <div class="gw-scroll" style="display:flex;gap:8px;overflow-x:auto;margin-bottom:16px;padding-bottom:2px">
+              <sc-for list="{{ examChips }}" as="e" hint-placeholder-count="4">
+                <button onClick="{{ e.onPick }}" style="{{ e.style }}"><span style="{{ e.nameStyle }}">{{ e.name }}</span><span style="{{ e.pctStyle }}">{{ e.pctLabel }}</span></button>
+              </sc-for>
+            </div>
+            <sc-if value="{{ reportPublished }}" hint-placeholder-val="{{ true }}">
+              <sc-if value="{{ reportProvisional }}" hint-placeholder-val="{{ false }}">
+                <div style="background:#fbf3e2;border:1px solid #ecd8ab;border-radius:16px;padding:12px 14px;margin-bottom:14px;display:flex;gap:9px;align-items:flex-start">
+                  <svg viewBox="0 0 24 24" width="16" fill="none" stroke="#a9761b" stroke-width="2" style="flex:none;margin-top:1px"><path d="M12 9v4M12 17h.01M10.3 3.9L2 18a2 2 0 001.7 3h16.6a2 2 0 001.7-3L14 3.9a2 2 0 00-3.4 0z"/></svg>
+                  <div style="font-size:11.5px;color:#8a6d1f;line-height:1.5"><b>Provisional result</b> \u2014 under review. Marks may change slightly after the class discussion; the school will notify you once finalized.</div>
+                </div>
+              </sc-if>
+              <div style="display:flex;gap:10px;margin-bottom:14px">
+                <div style="flex:1;background:#fff;border:1px solid #e6e9e3;border-radius:16px;padding:13px;text-align:center"><div style="font-family:'Instrument Serif',serif;font-size:26px;line-height:1;color:#15412f">{{ report.overall }}<span style="font-size:14px">%</span></div><small style="font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#6c766f;font-weight:600">Overall</small></div>
+                <div style="flex:1;background:#fff;border:1px solid #e6e9e3;border-radius:16px;padding:13px;text-align:center"><div style="font-family:'Instrument Serif',serif;font-size:26px;line-height:1;color:#15412f">{{ report.rankLabel }}</div><small style="font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#6c766f;font-weight:600">Class rank</small></div>
+                <div style="flex:1;background:#fff;border:1px solid #e6e9e3;border-radius:16px;padding:13px;text-align:center"><div style="font-family:'Instrument Serif',serif;font-size:26px;line-height:1;color:#15412f">{{ report.grade }}</div><small style="font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:#6c766f;font-weight:600">Grade</small></div>
+              </div>
+              <div style="background:#fff;border:1px solid #e6e9e3;border-radius:20px;padding:15px;margin-bottom:12px;box-shadow:0 1px 2px rgba(20,40,30,.04)">
+                <sc-for list="{{ report.subjects }}" as="s" hint-placeholder-count="4">
+                  <div style="margin-bottom:13px">
+                    <div style="display:flex;justify-content:space-between;font-size:13px;font-weight:600;margin-bottom:6px"><span>{{ s.name }}</span><span style="color:#6c766f">{{ s.score }}</span></div>
+                    <div style="height:7px;border-radius:6px;background:#f1f5f1;overflow:hidden"><i style="display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,#15412f,#1d5740);width:{{ s.pct }}"></i></div>
+                  </div>
+                </sc-for>
+              </div>
+              <div style="background:#fff;border:1px solid #e6e9e3;border-radius:20px;padding:15px;box-shadow:0 1px 2px rgba(20,40,30,.04);display:flex;gap:9px;align-items:flex-start">
+                <span style="font-size:10px;font-weight:700;color:#15412f;background:#e8efe9;padding:3px 8px;border-radius:7px;margin-top:1px">TEACHER</span>
+                <p style="font-size:12.5px;color:#6c766f;line-height:1.5;margin:0">{{ report.remark }}</p>
+              </div>
+            </sc-if>
+            <sc-if value="{{ reportUpcoming }}" hint-placeholder-val="{{ false }}">
+              <div style="text-align:center;padding:40px 20px;color:#6c766f">
+                <div style="width:54px;height:54px;border-radius:50%;background:#f1f5f1;display:grid;place-items:center;margin:0 auto 14px"><svg viewBox="0 0 24 24" width="24" fill="none" stroke="#9fb3a5" stroke-width="1.8"><path d="M12 7v5l3 2"/><circle cx="12" cy="12" r="9"/></svg></div>
+                <div style="font-size:13.5px;font-weight:600;color:#15211b;margin-bottom:4px">{{ report.name }} not published yet</div>
+                <p style="font-size:12px;line-height:1.5;margin:0 auto;max-width:210px">Results will be released after {{ report.when }}. You'll get a notification when they're ready.</p>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <!-- ============ RESULTS · TEACHER (marks sheet) ============ -->
+        <sc-if value="{{ resultsTeacher }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:16px 15px 22px">
+            <div style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;font-weight:600;color:#6c766f;margin-bottom:8px">Examination</div>
+            <div class="gw-scroll" style="display:flex;gap:8px;overflow-x:auto;margin-bottom:14px;padding-bottom:2px">
+              <sc-for list="{{ teExamChips }}" as="e" hint-placeholder-count="4">
+                <button onClick="{{ e.onClick }}" style="{{ e.style }}"><span style="{{ e.nameStyle }}">{{ e.name }}</span><span style="{{ e.tagStyle }}">{{ e.tag }}</span></button>
+              </sc-for>
+            </div>
+
+            <sc-if value="{{ marksEditable }}" hint-placeholder-val="{{ true }}">
+              <div>
+                <sc-if value="{{ isEditingFinal }}" hint-placeholder-val="{{ false }}">
+                  <div style="background:#eef5f0;border:1px solid #cfe3d6;border-radius:16px;padding:12px 14px;margin-bottom:14px;display:flex;gap:9px;align-items:flex-start">
+                    <svg viewBox="0 0 24 24" width="16" fill="none" stroke="#15412f" stroke-width="2" style="flex:none;margin-top:1px"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>
+                    <div style="font-size:11.5px;color:#15412f;line-height:1.5"><b>Editing finalized results.</b> Marks stay locked for parents until you re-publish. Every change is recorded in the edit history.</div>
+                  </div>
+                </sc-if>
+                <sc-if value="{{ teExamProvisional }}" hint-placeholder-val="{{ false }}">
+                  <div style="background:#fbf3e2;border:1px solid #ecd8ab;border-radius:16px;padding:12px 14px;margin-bottom:14px;display:flex;gap:9px;align-items:flex-start">
+                    <svg viewBox="0 0 24 24" width="16" fill="none" stroke="#a9761b" stroke-width="2" style="flex:none;margin-top:1px"><path d="M12 9v4M12 17h.01M10.3 3.9L2 18a2 2 0 001.7 3h16.6a2 2 0 001.7-3L14 3.9a2 2 0 00-3.4 0z"/></svg>
+                    <div style="font-size:11.5px;color:#8a6d1f;line-height:1.5"><b>Provisional</b> — parents can see these marks, tagged as under review. You can still edit them, then finalize once discussed.</div>
+                  </div>
+                </sc-if>
+                <div style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;font-weight:600;color:#6c766f;margin-bottom:8px">Subject</div>
+                <div class="gw-scroll" style="display:flex;gap:7px;overflow-x:auto;margin-bottom:14px;padding-bottom:2px">
+                  <sc-for list="{{ teSubjChips }}" as="s" hint-placeholder-count="4"><button onClick="{{ s.onClick }}" style="{{ s.style }}"><span style="{{ s.nameStyle }}">{{ s.label }}</span><sc-if value="{{ s.done }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 24 24" width="12" fill="none" stroke="#1f8a5b" stroke-width="3" style="flex:none"><path d="M5 12l5 5L20 6"/></svg></sc-if></button></sc-for>
+                </div>
+                <div style="display:flex;gap:10px;margin-bottom:12px">
+                  <div style="flex:1;background:#15412f;color:#fff;border-radius:16px;padding:13px;text-align:center"><div style="font-family:'Instrument Serif',serif;font-size:24px;line-height:1">{{ marksAvg }}</div><small style="font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:#cfe0d6;font-weight:600">Class avg</small></div>
+                  <div style="flex:1;background:#fff;border:1px solid #e6e9e3;border-radius:16px;padding:13px;text-align:center"><div style="font-family:'Instrument Serif',serif;font-size:24px;line-height:1;color:#15412f">{{ marksEntered }}</div><small style="font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:#6c766f;font-weight:600">of {{ curClass.count }} in</small></div>
+                  <div style="flex:1;background:#fff;border:1px solid #e6e9e3;border-radius:16px;padding:13px;text-align:center"><div style="font-family:'Instrument Serif',serif;font-size:24px;line-height:1;color:#15412f">{{ maxMarks }}</div><small style="font-size:10px;letter-spacing:.04em;text-transform:uppercase;color:#6c766f;font-weight:600">Max</small></div>
+                </div>
+                <div style="background:#fff;border:1px solid #e6e9e3;border-radius:20px;padding:6px 14px;margin-bottom:12px;box-shadow:0 1px 2px rgba(20,40,30,.04)">
+                  <sc-for list="{{ marksSheet }}" as="r" hint-placeholder-count="8">
+                    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-top:1px solid #f0f2ee">
+                      <span style="width:20px;font-size:11px;color:#6c766f;font-weight:600;flex:none">{{ r.roll }}</span>
+                      <span style="flex:1;font-size:13px;font-weight:600;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ r.name }}</span>
+                      <sc-if value="{{ r.notAbsent }}" hint-placeholder-val="{{ true }}">
+                        <input type="number" value="{{ r.value }}" onChange="{{ r.onMark }}" placeholder="—" style="width:50px;text-align:center;padding:8px 4px;border:1.5px solid #e6e9e3;border-radius:10px;font-family:inherit;font-size:13px;font-weight:600;color:#15211b;background:#fff;box-sizing:border-box">
+                        <span style="font-size:11px;color:#b7bfb6;flex:none;width:24px">/{{ maxMarks }}</span>
+                      </sc-if>
+                      <sc-if value="{{ r.absent }}" hint-placeholder-val="{{ false }}">
+                        <span style="font-size:11px;font-weight:700;color:#c0392b;width:78px;text-align:center">ABSENT</span>
+                      </sc-if>
+                      <button onClick="{{ r.onAbsent }}" style="{{ r.absBtnStyle }}">A</button>
+                    </div>
+                  </sc-for>
+                </div>
+                <sc-if value="{{ pubToastProvisional }}" hint-placeholder-val="{{ false }}">
+                  <div style="background:#fbf3e2;border:1px solid #ecd8ab;border-radius:14px;padding:11px 14px;margin-bottom:11px;font-size:12px;color:#8a6d1f;font-weight:600;display:flex;align-items:center;gap:8px"><svg viewBox="0 0 24 24" width="15" fill="none" stroke="#a9761b" stroke-width="2.6"><path d="M6 8a6 6 0 1112 0c0 7 3 8 3 8H3s3-1 3-8M10 21a2 2 0 004 0"/></svg>Provisional results sent to {{ curClass.label }} parents</div>
+                </sc-if>
+                <sc-if value="{{ pubToastSaved }}" hint-placeholder-val="{{ false }}">
+                  <div style="background:#eef5f0;border:1px solid #cfe3d6;border-radius:14px;padding:11px 14px;margin-bottom:11px;font-size:12px;color:#15412f;font-weight:600;display:flex;align-items:center;gap:8px"><svg viewBox="0 0 24 24" width="15" fill="none" stroke="#1f8a5b" stroke-width="2.6"><path d="M5 12l5 5L20 6"/></svg>Changes saved · parents see the updated marks</div>
+                </sc-if>
+                <sc-if value="{{ isEditingFinal }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;gap:9px">
+                    <button onClick="{{ cancelReopen }}" style="flex:1;padding:14px;border-radius:14px;background:#fff;color:#15412f;font-weight:600;font-size:13.5px;border:1.5px solid #d3ddd4;cursor:pointer;font-family:inherit">Cancel</button>
+                    <button onClick="{{ republishMarks }}" style="flex:1;padding:14px;border-radius:14px;background:#15412f;color:#fff;font-weight:600;font-size:13.5px;border:none;cursor:pointer;font-family:inherit">Save &amp; re-publish</button>
+                  </div>
+                  <div style="text-align:center;font-size:11px;color:#6c766f;margin-top:9px;line-height:1.4">Re-publishing pushes the corrected report cards to parents and notes the update.</div>
+                </sc-if>
+                <sc-if value="{{ teExamDraft }}" hint-placeholder-val="{{ true }}">
+                  <button onClick="{{ publishProvisional }}" style="width:100%;padding:14px;border-radius:14px;background:#15412f;color:#fff;font-weight:600;font-size:14px;border:none;cursor:pointer;font-family:inherit">Publish as provisional</button>
+                  <div style="text-align:center;font-size:11px;color:#6c766f;margin-top:9px;line-height:1.4">Provisional results reach parents tagged “under review”. You finalize them after discussion.</div>
+                </sc-if>
+                <sc-if value="{{ teExamProvisional }}" hint-placeholder-val="{{ false }}">
+                  <div style="display:flex;gap:9px">
+                    <button onClick="{{ saveMarks }}" style="flex:1;padding:14px;border-radius:14px;background:#fff;color:#15412f;font-weight:600;font-size:13.5px;border:1.5px solid #15412f;cursor:pointer;font-family:inherit">Save changes</button>
+                    <button onClick="{{ finalizeMarks }}" style="flex:1;padding:14px;border-radius:14px;background:#15412f;color:#fff;font-weight:600;font-size:13.5px;border:none;cursor:pointer;font-family:inherit">Finalize results</button>
+                  </div>
+                  <div style="text-align:center;font-size:11px;color:#6c766f;margin-top:9px;line-height:1.4">Finalizing locks the marks and removes the “provisional” tag for parents.</div>
+                </sc-if>
+              </div>
+            </sc-if>
+
+            <sc-if value="{{ marksPublished }}" hint-placeholder-val="{{ false }}">
+              <div style="background:#fff;border:1px solid #e6e9e3;border-radius:20px;padding:18px;margin-bottom:12px;box-shadow:0 1px 2px rgba(20,40,30,.04)">
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px">
+                  <div style="width:40px;height:40px;border-radius:12px;background:#e8efe9;display:grid;place-items:center;flex:none"><svg viewBox="0 0 24 24" width="21" fill="none" stroke="#1f8a5b" stroke-width="2.4"><path d="M5 12l5 5L20 6"/></svg></div>
+                  <div><b style="font-size:14px;font-weight:700;display:block">Results finalized</b><small style="font-size:11.5px;color:#6c766f">{{ teExamName }} · {{ curClass.label }} · locked</small></div>
+                </div>
+                <div style="display:flex;gap:10px">
+                  <div style="flex:1;background:#f6f7f3;border-radius:14px;padding:12px;text-align:center"><div style="font-family:'Instrument Serif',serif;font-size:23px;line-height:1;color:#15412f">{{ pubAvg }}<span style="font-size:12px">%</span></div><small style="font-size:10px;text-transform:uppercase;color:#6c766f;font-weight:600">Class avg</small></div>
+                  <div style="flex:1;background:#f6f7f3;border-radius:14px;padding:12px;text-align:center"><div style="font-family:'Instrument Serif',serif;font-size:23px;line-height:1;color:#15412f">{{ curClass.count }}</div><small style="font-size:10px;text-transform:uppercase;color:#6c766f;font-weight:600">Cards sent</small></div>
+                </div>
+                <button onClick="{{ reopenMarks }}" style="width:100%;margin-top:14px;padding:13px;border-radius:14px;background:#fff;color:#15412f;font-weight:600;font-size:13.5px;border:1.5px solid #15412f;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:8px"><svg viewBox="0 0 24 24" width="16" fill="none" stroke="#15412f" stroke-width="2"><path d="M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z"/></svg>Edit marks</button>
+                <div style="text-align:center;font-size:11px;color:#6c766f;margin-top:9px;line-height:1.4">Marks stay editable after finalizing. Corrections re-send updated report cards to parents.</div>
+              </div>
+              <sc-if value="{{ pubToastFinal }}" hint-placeholder-val="{{ false }}">
+                <div style="background:#eef5f0;border:1px solid #cfe3d6;border-radius:16px;padding:13px 15px;display:flex;gap:9px;align-items:flex-start">
+                  <svg viewBox="0 0 24 24" width="17" fill="none" stroke="#1f8a5b" stroke-width="2" style="flex:none;margin-top:1px"><path d="M6 8a6 6 0 1112 0c0 7 3 8 3 8H3s3-1 3-8M10 21a2 2 0 004 0"/></svg>
+                  <div style="font-size:12px;color:#15412f;line-height:1.5">Final report cards sent to all parents in {{ curClass.label }}. Open the Parent view to see {{ teExamName }} on Aarav's report card.</div>
+                </div>
+              </sc-if>
+              <sc-if value="{{ pubToastUpdated }}" hint-placeholder-val="{{ false }}">
+                <div style="background:#eef5f0;border:1px solid #cfe3d6;border-radius:16px;padding:13px 15px;display:flex;gap:9px;align-items:flex-start">
+                  <svg viewBox="0 0 24 24" width="17" fill="none" stroke="#1f8a5b" stroke-width="2" style="flex:none;margin-top:1px"><path d="M6 8a6 6 0 1112 0c0 7 3 8 3 8H3s3-1 3-8M10 21a2 2 0 004 0"/></svg>
+                  <div style="font-size:12px;color:#15412f;line-height:1.5">Updated {{ teExamName }} report cards re-sent to {{ curClass.label }} parents. The edit is logged for the school office.</div>
+                </div>
+              </sc-if>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <!-- ============ PHOTOS (shared) ============ -->
+        <sc-if value="{{ isPhotos }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:16px 15px 22px">
+            <sc-if value="{{ canUpload }}" hint-placeholder-val="{{ false }}">
+              <button style="width:100%;padding:12px;border-radius:14px;background:#15412f;color:#fff;font-weight:600;font-size:13px;border:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:7px;margin-bottom:14px"><svg viewBox="0 0 24 24" width="17" fill="none" stroke="#fff" stroke-width="2"><path d="M12 16V4M6 10l6-6 6 6M4 20h16"/></svg>Upload photos to this album</button>
+            </sc-if>
+            <div style="font-family:'Instrument Serif',serif;font-size:22px;margin-bottom:3px">Annual Sports Day</div>
+            <div style="font-size:11.5px;color:#6c766f;margin-bottom:14px">25 June · 142 photos · shared by the school</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:7px">
+              <div style="grid-column:span 2;border-radius:14px;aspect-ratio:2.1;position:relative;overflow:hidden;background:linear-gradient(150deg,#3d6b4e,#7fae8c)"><div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,rgba(0,0,0,.3))"></div><div style="position:absolute;left:11px;bottom:9px;color:#fff;font-size:11px;font-weight:600;z-index:2">100m Finals</div></div>
+              <div style="border-radius:14px;aspect-ratio:1;background:linear-gradient(150deg,#caa24f,#e7cd8e)"></div>
+              <div style="border-radius:14px;aspect-ratio:1;background:linear-gradient(150deg,#8a5a3c,#caa07c)"></div>
+              <div style="border-radius:14px;aspect-ratio:1;background:linear-gradient(150deg,#36505f,#7a98a6)"></div>
+              <div style="border-radius:14px;aspect-ratio:1;background:linear-gradient(150deg,#4a6b4f,#9cbfa0)"></div>
+              <div style="grid-column:span 2;border-radius:14px;aspect-ratio:2.1;position:relative;overflow:hidden;background:linear-gradient(150deg,#8a5a3c,#caa07c)"><div style="position:absolute;inset:0;background:linear-gradient(180deg,transparent 55%,rgba(0,0,0,.3))"></div><div style="position:absolute;left:11px;bottom:9px;color:#fff;font-size:11px;font-weight:600;z-index:2">Prize Distribution</div></div>
+              <div style="border-radius:14px;aspect-ratio:1;background:linear-gradient(150deg,#caa24f,#e7cd8e)"></div>
+              <div style="border-radius:14px;aspect-ratio:1;background:linear-gradient(150deg,#3d6b4e,#7fae8c)"></div>
+            </div>
+          </div>
+        </sc-if>
+
+        <!-- ============ STAFF (admin) ============ -->
+        <sc-if value="{{ isStaff }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:16px 15px 22px">
+            <button onClick="{{ openAddTeacher }}" style="width:100%;padding:12px;border-radius:14px;background:#15412f;color:#fff;font-weight:600;font-size:13px;border:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:7px;margin-bottom:14px"><svg viewBox="0 0 24 24" width="17" fill="none" stroke="#fff" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Add a teacher</button>
+            <div style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;font-weight:600;color:#6c766f;margin-bottom:9px">{{ staffCount }} teachers</div>
+            <sc-for list="{{ staffList }}" as="t" hint-placeholder-count="6">
+              <div onClick="{{ t.onOpen }}" style="background:#fff;border:1px solid #e6e9e3;border-radius:18px;padding:13px;margin-bottom:9px;box-shadow:0 1px 2px rgba(20,40,30,.04);display:flex;gap:12px;align-items:center;cursor:pointer">
+                <div style="width:40px;height:40px;border-radius:12px;display:grid;place-items:center;color:#15412f;font-weight:700;font-size:13px;flex:none;background:linear-gradient(140deg,#d7e4da,#a7c4b4)">{{ t.initials }}</div>
+                <div style="flex:1;min-width:0"><b style="font-size:13.5px;font-weight:600;display:block">{{ t.name }}</b><small style="font-size:11px;color:#6c766f">{{ t.line }}</small></div>
+                <sc-if value="{{ t.isInvited }}" hint-placeholder-val="{{ false }}"><span style="font-size:9.5px;font-weight:700;color:#8a6d1f;background:#efe6cf;padding:4px 8px;border-radius:7px;flex:none">INVITED</span></sc-if>
+                <svg viewBox="0 0 24 24" width="17" fill="none" stroke="#c3ccc5" stroke-width="2.2" style="flex:none"><path d="M9 6l6 6-6 6"/></svg>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <!-- ============ STAFF DETAIL (admin) ============ -->
+        <sc-if value="{{ isStaffDetail }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:16px 15px 22px">
+            <div style="background:#fff;border:1px solid #e6e9e3;border-radius:20px;padding:18px;margin-bottom:12px;box-shadow:0 1px 2px rgba(20,40,30,.04);text-align:center">
+              <div style="width:60px;height:60px;border-radius:18px;display:grid;place-items:center;color:#15412f;font-weight:700;font-size:19px;margin:0 auto 12px;background:linear-gradient(140deg,#d7e4da,#a7c4b4)">{{ staffDetail.initials }}</div>
+              <h3 style="font-family:'Instrument Serif',serif;font-size:23px;margin:0 0 3px">{{ staffDetail.name }}</h3>
+              <div style="font-size:12px;color:#6c766f;font-weight:600">{{ staffDetail.subject }} · {{ staffDetail.statusLabel }}</div>
+              <sc-if value="{{ staffDetail.hasPhone }}" hint-placeholder-val="{{ false }}"><div style="font-size:11.5px;color:#6c766f;margin-top:5px">{{ staffDetail.phone }} · login mobile</div></sc-if>
+            </div>
+            <div style="background:#fff;border:1px solid #e6e9e3;border-radius:20px;padding:15px;margin-bottom:12px;box-shadow:0 1px 2px rgba(20,40,30,.04)">
+              <div style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;font-weight:600;color:#6c766f;margin-bottom:11px">Assigned classes</div>
+              <sc-if value="{{ hasAssigned }}" hint-placeholder-val="{{ true }}">
+                <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:13px">
+                  <sc-for list="{{ assignedChips }}" as="c" hint-placeholder-count="3">
+                    <div style="display:flex;align-items:center;gap:9px;padding:9px 11px;border:1.5px solid #e6e9e3;border-radius:13px">
+                      <div style="flex:1;min-width:0"><b style="font-size:13px;font-weight:700;display:block">{{ c.label }}</b><small style="font-size:10.5px;color:#6c766f">{{ c.subjLine }}</small></div>
+                      <button onClick="{{ c.onCt }}" style="{{ c.ctBtnStyle }}">{{ c.ctBtnLabel }}</button>
+                      <button onClick="{{ c.onRemove }}" style="width:28px;height:28px;border-radius:9px;border:none;background:#f6ecec;color:#c0392b;cursor:pointer;font-family:inherit;font-size:16px;font-weight:700;flex:none">×</button>
+                    </div>
+                  </sc-for>
+                </div>
+              </sc-if>
+              <sc-if value="{{ noAssigned }}" hint-placeholder-val="{{ false }}"><div style="font-size:12.5px;color:#6c766f;padding:2px 0 13px">No classes assigned yet.</div></sc-if>
+              <div style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;font-weight:600;color:#6c766f;margin-bottom:8px">Assign a class</div>
+              <sc-if value="{{ hasAvailable }}" hint-placeholder-val="{{ true }}">
+                <div style="display:flex;gap:7px;flex-wrap:wrap">
+                  <sc-for list="{{ availableClasses }}" as="a" hint-placeholder-count="3"><button onClick="{{ a.onAdd }}" style="display:inline-flex;align-items:center;gap:5px;font-size:12px;font-weight:600;color:#15412f;background:#eef3ee;border:1.5px solid #dbe5db;padding:8px 12px;border-radius:11px;cursor:pointer;font-family:inherit">+ {{ a.label }}</button></sc-for>
+                </div>
+              </sc-if>
+              <sc-if value="{{ noAvailable }}" hint-placeholder-val="{{ false }}"><div style="font-size:12.5px;color:#6c766f">This teacher is in every class.</div></sc-if>
+            </div>
+            <button onClick="{{ toggleStaffStatus }}" style="width:100%;padding:13px;border-radius:14px;background:{{ staffDetail.actionBg }};color:{{ staffDetail.actionColor }};font-weight:600;font-size:13.5px;border:none;cursor:pointer;font-family:inherit;margin-bottom:9px">{{ staffDetail.actionLabel }}</button>
+            <div style="text-align:center;font-size:11px;color:#6c766f;line-height:1.4">Class & subject assignments sync to the teacher's app instantly.</div>
+          </div>
+        </sc-if>
+
+        <!-- ============ STAFF ADD (admin) ============ -->
+        <sc-if value="{{ isStaffAdd }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:16px 15px 22px">
+            <sc-if value="{{ addForm }}" hint-placeholder-val="{{ true }}">
+              <div>
+                <div style="margin-bottom:14px"><label style="display:block;font-size:12px;font-weight:600;margin-bottom:7px">Full name</label>
+                  <input value="{{ ntName }}" onChange="{{ setNtName }}" placeholder="e.g. Priya Sharma" style="width:100%;padding:11px 13px;border:1.5px solid #e6e9e3;border-radius:12px;font-family:inherit;font-size:13px;background:#fff;color:#15211b;box-sizing:border-box">
+                </div>
+                <div style="margin-bottom:14px"><label style="display:block;font-size:12px;font-weight:600;margin-bottom:7px">Mobile number <span style="color:#6c766f;font-weight:500">· their login</span></label>
+                  <div style="display:flex;align-items:center;background:#fff;border:1.5px solid #e6e9e3;border-radius:12px;overflow:hidden">
+                    <span style="padding:0 12px;font-size:13px;font-weight:600;color:#15211b;border-right:1px solid #e6e9e3;height:44px;display:flex;align-items:center">+91</span>
+                    <input value="{{ ntPhone }}" onChange="{{ setNtPhone }}" inputmode="numeric" placeholder="Teacher's mobile" style="flex:1;min-width:0;border:none;padding:0 13px;height:44px;font-family:inherit;font-size:13px;background:transparent;color:#15211b">
+                  </div>
+                </div>
+                <div style="margin-bottom:14px"><label style="display:block;font-size:12px;font-weight:600;margin-bottom:7px">Subjects <span style="color:#6c766f;font-weight:500">· pick all they teach</span></label>
+                  <div style="display:flex;gap:7px;flex-wrap:wrap">
+                    <sc-for list="{{ ntSubjOptions }}" as="s" hint-placeholder-count="6"><button onClick="{{ s.onClick }}" style="{{ s.style }}">{{ s.label }}</button></sc-for>
+                  </div>
+                </div>
+                <div style="margin-bottom:14px"><label style="display:block;font-size:12px;font-weight:600;margin-bottom:7px">Classes &amp; subjects <span style="color:#6c766f;font-weight:500">· which subjects in which class</span></label>
+                  <sc-if value="{{ ntNoSubjects }}" hint-placeholder-val="{{ false }}"><div style="font-size:12px;color:#8a6d1f;background:#fbf3e2;border:1px solid #ecd8ab;border-radius:11px;padding:10px 12px">Pick the subjects above first, then choose which classes they teach them in.</div></sc-if>
+                  <sc-if value="{{ ntSubjectsChosen }}" hint-placeholder-val="{{ true }}">
+                    <sc-for list="{{ ntClassMap }}" as="c" hint-placeholder-count="4">
+                      <div style="{{ c.rowStyle }}">
+                        <div onClick="{{ c.onToggle }}" style="display:flex;align-items:center;gap:9px">
+                          <span style="{{ c.boxStyle }}"><sc-if value="{{ c.selected }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 24 24" width="13" fill="none" stroke="#fff" stroke-width="3"><path d="M5 12l5 5L20 6"/></svg></sc-if></span>
+                          <b style="font-size:13px;font-weight:700;flex:1">{{ c.label }}</b>
+                        </div>
+                        <sc-if value="{{ c.selected }}" hint-placeholder-val="{{ false }}">
+                          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:10px;padding-left:29px">
+                            <sc-for list="{{ c.subjChips }}" as="s" hint-placeholder-count="2"><button onClick="{{ s.onClick }}" style="{{ s.style }}">{{ s.label }}</button></sc-for>
+                          </div>
+                        </sc-if>
+                      </div>
+                    </sc-for>
+                  </sc-if>
+                </div>
+                <sc-if value="{{ hasNtClasses }}" hint-placeholder-val="{{ false }}">
+                  <div style="margin-bottom:14px"><label style="display:block;font-size:12px;font-weight:600;margin-bottom:7px">Class teacher of</label>
+                    <div style="display:flex;gap:7px;flex-wrap:wrap">
+                      <sc-for list="{{ ntCtOptions }}" as="o" hint-placeholder-count="2"><button onClick="{{ o.onClick }}" style="{{ o.style }}">{{ o.label }}</button></sc-for>
+                    </div>
+                    <div style="font-size:11px;color:#6c766f;margin-top:7px;line-height:1.5">A teacher can lead one class as its class teacher — or none, and still teach several classes.</div>
+                  </div>
+                </sc-if>
+                <button onClick="{{ sendInvite }}" style="{{ addTeacherStyle }}">Send invite</button>
+                <div style="display:flex;gap:8px;align-items:flex-start;margin-top:11px">
+                  <svg viewBox="0 0 24 24" width="14" fill="none" stroke="#6c766f" stroke-width="1.9" style="flex:none;margin-top:1px"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
+                  <div style="font-size:11px;color:#6c766f;line-height:1.5">They sign in with this mobile and a one-time code — no password, nothing to set up.</div>
+                </div>
+              </div>
+            </sc-if>
+            <sc-if value="{{ addSent }}" hint-placeholder-val="{{ false }}">
+              <div style="text-align:center;padding:40px 16px">
+                <div style="width:66px;height:66px;border-radius:50%;background:#e8efe9;display:grid;place-items:center;margin:0 auto 18px"><svg viewBox="0 0 24 24" width="30" fill="none" stroke="#15412f" stroke-width="2.4"><path d="M5 12l5 5L20 6"/></svg></div>
+                <h3 style="font-family:'Instrument Serif',serif;font-size:24px;margin:0 0 8px">Teacher added</h3>
+                <p style="font-size:13px;color:#6c766f;line-height:1.5;max-width:250px;margin:0 auto">{{ invitedName }} can now sign in with their mobile and a one-time code. They're in your staff list — edit classes or subjects anytime.</p>
+                <button onClick="{{ nav.staff }}" style="width:100%;max-width:210px;padding:14px;border-radius:14px;background:#15412f;color:#fff;font-weight:600;font-size:14px;border:none;cursor:pointer;font-family:inherit;margin:22px auto 0">Back to staff</button>
+              </div>
+            </sc-if>
+          </div>
+        </sc-if>
+
+        <!-- ============ CLASSES (admin) ============ -->
+        <sc-if value="{{ isClasses }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:16px 15px 22px">
+            <button onClick="{{ openAddClass }}" style="width:100%;padding:12px;border-radius:14px;background:#15412f;color:#fff;font-weight:600;font-size:13px;border:none;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:7px;margin-bottom:14px"><svg viewBox="0 0 24 24" width="17" fill="none" stroke="#fff" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg>Add a class</button>
+            <div style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;font-weight:600;color:#6c766f;margin-bottom:9px">{{ classCount }} classes</div>
+            <sc-for list="{{ adminClassList }}" as="c" hint-placeholder-count="4">
+              <div onClick="{{ c.onOpen }}" style="background:#fff;border:1px solid #e6e9e3;border-radius:18px;padding:13px;margin-bottom:9px;box-shadow:0 1px 2px rgba(20,40,30,.04);display:flex;gap:12px;align-items:center;cursor:pointer">
+                <div style="width:42px;height:42px;border-radius:13px;background:#e8efe9;display:grid;place-items:center;flex:none"><svg viewBox="0 0 24 24" width="20" fill="none" stroke="#15412f" stroke-width="1.9"><path d="M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z"/></svg></div>
+                <div style="flex:1;min-width:0"><b style="font-size:14px;font-weight:700;display:block">{{ c.label }}</b><small style="font-size:11px;color:#6c766f">{{ c.ctLabel }}</small></div>
+                <span style="font-size:12px;font-weight:700;color:#15412f;background:#f1f5f1;border-radius:9px;padding:5px 9px;flex:none">{{ c.count }}</span>
+                <svg viewBox="0 0 24 24" width="17" fill="none" stroke="#c3ccc5" stroke-width="2.2" style="flex:none"><path d="M9 6l6 6-6 6"/></svg>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <!-- ============ CLASS DETAIL (admin) ============ -->
+        <sc-if value="{{ isClassDetail }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:16px 15px 22px">
+            <div style="background:#fff;border:1px solid #e6e9e3;border-radius:18px;padding:14px;margin-bottom:12px;box-shadow:0 1px 2px rgba(20,40,30,.04);display:flex;align-items:center;gap:11px">
+              <div style="width:40px;height:40px;border-radius:12px;background:#e8efe9;display:grid;place-items:center;flex:none"><svg viewBox="0 0 24 24" width="20" fill="none" stroke="#15412f" stroke-width="1.9"><path d="M12 12a4 4 0 100-8 4 4 0 000 8M5 20a7 7 0 0114 0"/></svg></div>
+              <div style="flex:1"><small style="font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#6c766f;font-weight:600;display:block;margin-bottom:2px">Class teacher</small>
+                <sc-if value="{{ activeClassHasCt }}" hint-placeholder-val="{{ true }}"><b style="font-size:14px;font-weight:700">{{ activeClassCtName }}</b></sc-if>
+                <sc-if value="{{ activeClassNoCt }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:#8a6d1f;font-weight:600">Not set — assign from a teacher's profile</span></sc-if>
+              </div>
+            </div>
+            <div style="background:#fff;border:1px solid #e6e9e3;border-radius:16px;padding:14px;margin-bottom:12px;box-shadow:0 1px 2px rgba(20,40,30,.04)">
+              <div style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;font-weight:600;color:#6c766f;margin-bottom:6px">Teaches here</div>
+              <sc-if value="{{ teachesHereEmpty }}" hint-placeholder-val="{{ false }}"><div style="font-size:12.5px;color:#6c766f;padding:4px 0">No teachers assigned to this class yet.</div></sc-if>
+              <sc-for list="{{ teachesHere }}" as="t" hint-placeholder-count="3">
+                <div style="display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid #f0f3ef">
+                  <div style="flex:1;min-width:0"><b style="font-size:13px;font-weight:600;display:block">{{ t.name }}</b><small style="font-size:11px;color:#6c766f">{{ t.subjects }}</small></div>
+                  <sc-if value="{{ t.isCt }}" hint-placeholder-val="{{ false }}"><span style="font-size:9.5px;font-weight:700;color:#8a6d1f;background:#efe6cf;padding:4px 8px;border-radius:7px">CLASS TEACHER</span></sc-if>
+                </div>
+              </sc-for>
+            </div>
+            <div style="background:#fff;border:1px solid #e6e9e3;border-radius:16px;padding:14px;margin-bottom:14px;box-shadow:0 1px 2px rgba(20,40,30,.04)">
+              <div style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;font-weight:600;color:#6c766f;margin-bottom:10px">Add a student</div>
+              <input value="{{ newStudent }}" onChange="{{ setNewStudent }}" placeholder="Student's full name" style="width:100%;box-sizing:border-box;border:1.5px solid #e6e9e3;border-radius:11px;padding:10px 12px;font-family:inherit;font-size:13px;background:#fff;color:#15211b;margin-bottom:9px">
+              <input value="{{ gName }}" onChange="{{ setGName }}" placeholder="Guardian's name" style="width:100%;box-sizing:border-box;border:1.5px solid #e6e9e3;border-radius:11px;padding:10px 12px;font-family:inherit;font-size:13px;background:#fff;color:#15211b;margin-bottom:9px">
+              <div style="display:flex;align-items:center;background:#fff;border:1.5px solid #e6e9e3;border-radius:11px;overflow:hidden;margin-bottom:9px">
+                <span style="padding:0 11px;font-size:13px;font-weight:600;color:#15211b;border-right:1px solid #e6e9e3;height:42px;display:flex;align-items:center">+91</span>
+                <input value="{{ gPhone }}" onChange="{{ setGPhone }}" inputmode="numeric" placeholder="Guardian mobile (for login)" style="flex:1;min-width:0;border:none;padding:0 12px;height:42px;font-family:inherit;font-size:13px;background:transparent;color:#15211b">
+              </div>
+              <div style="display:flex;gap:6px;margin-bottom:12px">
+                <sc-for list="{{ gRelOptions }}" as="r" hint-placeholder-count="3"><button onClick="{{ r.onClick }}" style="{{ r.style }}">{{ r.label }}</button></sc-for>
+              </div>
+              <button onClick="{{ addStudent }}" style="{{ addStudentStyle }}">Add student</button>
+              <div style="display:flex;gap:8px;align-items:flex-start;margin-top:11px">
+                <svg viewBox="0 0 24 24" width="14" fill="none" stroke="#6c766f" stroke-width="1.9" style="flex:none;margin-top:1px"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg>
+                <div style="font-size:11px;color:#6c766f;line-height:1.5">The guardian's mobile is their login. They sign in with it and a one-time code — no separate sign-up.</div>
+              </div>
+            </div>
+            <div style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;font-weight:600;color:#6c766f;margin-bottom:9px">{{ activeClassCount }} students</div>
+            <sc-for list="{{ classRoster }}" as="r" hint-placeholder-count="6">
+              <div style="background:#fff;border:1px solid #e6e9e3;border-radius:14px;padding:11px 13px;margin-bottom:8px;display:flex;gap:11px;align-items:center">
+                <span style="width:26px;height:26px;border-radius:8px;background:#f1f5f1;color:#6c766f;font-size:11px;font-weight:700;display:grid;place-items:center;flex:none">{{ r.roll }}</span>
+                <div style="flex:1;min-width:0"><b style="font-size:13.5px;font-weight:600;display:block">{{ r.name }}</b>
+                  <sc-if value="{{ r.hasGuardian }}" hint-placeholder-val="{{ false }}"><small style="font-size:10.5px;color:#6c766f">{{ r.guardianLine }}</small></sc-if>
+                  <sc-if value="{{ r.noGuardian }}" hint-placeholder-val="{{ true }}"><small style="font-size:10.5px;color:#a9761b;font-weight:600">{{ r.guardianLine }}</small></sc-if>
+                </div>
+                <button onClick="{{ r.onRemove }}" style="width:28px;height:28px;border-radius:9px;border:none;background:#f6ecec;color:#c0392b;cursor:pointer;font-family:inherit;font-size:16px;font-weight:700;flex:none">×</button>
+              </div>
+            </sc-for>
+            <sc-if value="{{ classEmpty }}" hint-placeholder-val="{{ false }}"><div style="text-align:center;color:#6c766f;font-size:12.5px;padding:20px 0">No students yet. Add the first one above.</div></sc-if>
+          </div>
+        </sc-if>
+
+        <!-- ============ CLASS ADD (admin) ============ -->
+        <sc-if value="{{ isClassAdd }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:16px 15px 22px">
+            <div style="display:flex;gap:10px;margin-bottom:14px">
+              <div style="flex:1"><label style="display:block;font-size:12px;font-weight:600;margin-bottom:7px">Grade</label>
+                <input value="{{ acGrade }}" onChange="{{ setAcGrade }}" placeholder="e.g. 5" style="width:100%;box-sizing:border-box;padding:11px 13px;border:1.5px solid #e6e9e3;border-radius:12px;font-family:inherit;font-size:13px;background:#fff;color:#15211b">
+              </div>
+              <div style="flex:1"><label style="display:block;font-size:12px;font-weight:600;margin-bottom:7px">Section</label>
+                <input value="{{ acSection }}" onChange="{{ setAcSection }}" placeholder="e.g. C" style="width:100%;box-sizing:border-box;padding:11px 13px;border:1.5px solid #e6e9e3;border-radius:12px;font-family:inherit;font-size:13px;background:#fff;color:#15211b">
+              </div>
+            </div>
+            <div style="margin-bottom:14px"><label style="display:block;font-size:12px;font-weight:600;margin-bottom:7px">Class teacher <span style="color:#6c766f;font-weight:500">· optional</span></label>
+              <div style="display:flex;gap:7px;flex-wrap:wrap">
+                <sc-for list="{{ acCtOptions }}" as="o" hint-placeholder-count="4"><button onClick="{{ o.onClick }}" style="{{ o.style }}">{{ o.label }}</button></sc-for>
+              </div>
+            </div>
+            <button onClick="{{ addClass }}" style="width:100%;padding:14px;border-radius:14px;background:#15412f;color:#fff;font-weight:600;font-size:14px;border:none;cursor:pointer;font-family:inherit">Create class</button>
+            <div style="text-align:center;font-size:11px;color:#6c766f;line-height:1.5;margin-top:12px">The class teacher can also be set or changed later from any teacher's profile. Subjects a teacher takes here are set when you add or edit the teacher.</div>
+          </div>
+        </sc-if>
+
+        <!-- ============ NOTIFICATIONS (shared) ============ -->
+        <sc-if value="{{ isNotifs }}" hint-placeholder-val="{{ false }}">
+          <div style="padding:16px 15px 22px">
+            <sc-for list="{{ notifs }}" as="n" hint-placeholder-count="5">
+              <div style="display:flex;gap:11px;padding:13px 0;border-bottom:1px solid #e6e9e3">
+                <div style="width:36px;height:36px;border-radius:11px;background:#e8efe9;display:grid;place-items:center;flex:none"><svg viewBox="0 0 24 24" width="18" fill="none" stroke="#15412f" stroke-width="1.8"><path d="{{ n.path }}"/></svg></div>
+                <div style="flex:1"><b style="font-size:13px;font-weight:600;display:block;margin-bottom:2px">{{ n.title }}</b><small style="font-size:11.5px;color:#6c766f;line-height:1.4">{{ n.sub }}</small></div>
+                <span style="font-size:10px;color:#6c766f;font-weight:600;flex:none">{{ n.tm }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+
+        <!-- ============ CLASS PICKER OVERLAY (teacher) ============ -->
+        <sc-if value="{{ classPickerOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="position:fixed;inset:0;z-index:40">
+            <div onClick="{{ closeClassPicker }}" style="position:absolute;inset:0;background:rgba(15,25,20,.42)"></div>
+            <div style="position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:24px 24px 0 0;padding:8px 15px 22px;animation:gwsheet .28s ease both">
+              <div style="width:40px;height:4px;border-radius:3px;background:#e0e5df;margin:8px auto 14px"></div>
+              <div style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;font-weight:600;color:#6c766f;margin-bottom:10px">Your classes</div>
+              <sc-for list="{{ classList }}" as="c" hint-placeholder-count="3">
+                <div onClick="{{ c.onPick }}" style="{{ c.rowStyle }}">
+                  <div style="flex:1"><b style="font-size:14px;font-weight:700;display:block;color:{{ c.titleColor }}">{{ c.label }}</b><small style="font-size:11px;color:#6c766f">{{ c.roleLabel }} · {{ c.count }} students</small></div>
+                  <sc-if value="{{ c.active }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 24 24" width="18" fill="none" stroke="#15412f" stroke-width="2.4"><path d="M5 12l5 5L20 6"/></svg></sc-if>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+        <!-- ============ ACCOUNT SHEET ============ -->
+        <sc-if value="{{ acctOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="position:fixed;inset:0;z-index:48">
+            <div onClick="{{ closeAcct }}" style="position:absolute;inset:0;background:rgba(15,25,20,.42)"></div>
+            <div style="position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:24px 24px 0 0;padding:8px 15px 22px;animation:gwsheet .28s ease both">
+              <div style="width:40px;height:4px;border-radius:3px;background:#e0e5df;margin:8px auto 16px"></div>
+              <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
+                <div style="width:44px;height:44px;border-radius:50%;background:#15412f;color:#fff;font-weight:700;font-size:15px;display:grid;place-items:center;flex:none">{{ personaInitials }}</div>
+                <div style="flex:1;min-width:0"><b style="font-size:15px;font-weight:700;display:block">{{ personaName }}</b><small style="font-size:11.5px;color:#6c766f">{{ personaPhone }}</small></div>
+              </div>
+              <sc-if value="{{ canSwitch }}" hint-placeholder-val="{{ false }}">
+                <div style="font-size:10px;letter-spacing:.13em;text-transform:uppercase;font-weight:600;color:#6c766f;margin-bottom:10px">You're on {{ ctxCount }} accounts · switch view</div>
+                <sc-for list="{{ acctContexts }}" as="c" hint-placeholder-count="2">
+                  <div onClick="{{ c.onPick }}" style="{{ c.rowStyle }}">
+                    <div style="flex:1;min-width:0"><b style="font-size:13.5px;font-weight:700;display:block">{{ c.line }}</b><small style="font-size:11px;color:#6c766f">{{ c.meta }}</small></div>
+                    <sc-if value="{{ c.active }}" hint-placeholder-val="{{ false }}"><svg viewBox="0 0 24 24" width="18" fill="none" stroke="#15412f" stroke-width="2.4"><path d="M5 12l5 5L20 6"/></svg></sc-if>
+                  </div>
+                </sc-for>
+              </sc-if>
+              <button onClick="{{ signOut }}" style="width:100%;margin-top:8px;padding:13px;border-radius:14px;background:#f6ecec;color:#c0392b;font-weight:700;font-size:13.5px;border:none;cursor:pointer;font-family:inherit">Sign out</button>
+            </div>
+          </div>
+        </sc-if>
+
+      </div>
+
+      <!-- TAB BAR -->
+      <div style="display:flex;justify-content:space-around;align-items:center;padding:10px 6px 20px;background:#fff;border-top:1px solid #e6e9e3">
+        <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="5">
+          <button onClick="{{ t.onClick }}" style="display:flex;flex-direction:column;align-items:center;gap:4px;font-size:9.5px;font-weight:600;background:none;border:none;cursor:pointer;font-family:inherit;flex:1;color:{{ t.color }}"><svg viewBox="0 0 24 24" width="21" height="21" fill="none" stroke="currentColor" stroke-width="1.8"><path d="{{ t.icon }}"/></svg>{{ t.label }}</button>
+        </sc-for>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = {
+    role: 'parent',
+    locked: true,
+    screen: 'home',
+    // auth
+    authStep: 'phone',
+    phoneInput: '98765 43210',
+    otpInput: '',
+    activePersonaId: 'anita',
+    ctxId: 0,
+    acctOpen: false,
+    loginError: '',
+    // parent
+    leaveType: 'Sick', leaveSent: false,
+    activeNoticeId: 'ptm', ackedSet: {},
+    selDate: '25',
+    resYear: 'g5', resExam: 'ut2',
+    diaryByDate: {
+      '16': { note: null, tasks: [
+        { subj: 'Mathematics', note: 'Ms. Rao · Worksheet 9, place value', done: true },
+        { subj: 'English', note: 'Ms. Kapoor · spellings list 6', done: true } ] },
+      '17': { note: null, tasks: [
+        { subj: 'Science', note: 'Mr. Nair · label the parts of a plant', done: true },
+        { subj: 'Hindi', note: 'Mrs. Iyer · सुलेख अभ्यास पृष्ठ 4', done: true } ] },
+      '18': { note: null, tasks: [
+        { subj: 'Mathematics', note: 'Ms. Rao · Worksheet 10', done: true },
+        { subj: 'Computer', note: 'Mr. Das · draw a simple flowchart', done: true } ] },
+      '19': { note: null, tasks: [
+        { subj: 'English', note: 'Ms. Kapoor · read chapter 5 aloud', done: true },
+        { subj: 'EVS', note: 'Ms. Rao · collect 3 kinds of leaves', done: true } ] },
+      '20': { note: 'Bring your art file on Monday. — Ms. Bose', tasks: [
+        { subj: 'Mathematics', note: 'Ms. Rao · revision sheet', done: true },
+        { subj: 'Art', note: 'Ms. Bose · finish the landscape sketch', done: true } ] },
+      '23': { note: null, tasks: [
+        { subj: 'Mathematics', note: 'Ms. Rao · Worksheet 11, fractions', done: true },
+        { subj: 'Hindi', note: 'Mrs. Iyer · कविता याद करना', done: true } ] },
+      '24': { note: 'PT kit needed tomorrow. — Coach Singh', tasks: [
+        { subj: 'Mathematics', note: 'Ms. Rao · Worksheet 11 (part B)', done: true },
+        { subj: 'Science', note: 'Mr. Nair · read pp. 36–39', done: true },
+        { subj: 'EVS', note: 'Ms. Rao · water cycle diagram', done: true } ] },
+      '25': { note: "Please send a fresh leaf for tomorrow's Science lab. — Mr. Nair", tasks: [
+        { subj: 'Mathematics', note: 'Ms. Rao · Worksheet 12, fractions', done: true },
+        { subj: 'Science', note: 'Mr. Nair · read pp. 40–44, leaf diagram', done: false },
+        { subj: 'English', note: 'Ms. Kapoor · paragraph on "My favourite season"', done: false } ] },
+      '26': { note: null, tasks: [] },
+      '27': { note: null, tasks: [] },
+    },
+    // teacher
+    selClass: '5B',
+    classPickerOpen: false,
+    attAbs: { '5B': {}, '5A': {}, '6A': {} },
+    regSavedFlag: false,
+    teExam: 'ut3', teSubject: 'math',
+    marks: {},
+    examStatus: {},
+    editingFinal: {},
+    pubJustNow: '',
+    calEvents: [
+      { m: 'JUN', d: '28', title: 'Parent–Teacher Meeting', sub: '9:00 AM – 1:00 PM · Main block', accent: '#c2a04e' },
+      { m: 'JUL', d: '02', title: 'Annual Sports Day', sub: 'Full day · Sports ground', accent: '#15412f' },
+      { m: 'JUL', d: '09', title: 'Unit Test 3 begins', sub: 'Maths, Science, English', accent: '#c0392b' },
+      { m: 'JUL', d: '15', title: 'Independence Day rehearsal', sub: '2:00 PM · Assembly hall', accent: '#15412f' },
+      { m: 'AUG', d: '15', title: 'Independence Day · Holiday', sub: 'School closed', accent: '#15412f' },
+    ],
+    calAdding: false,
+    calForm: { m: 'JUL', d: '', title: '', sub: '' },
+    teDate: '25',
+    hwNote: '', hwSubject: 'Mathematics',
+    classDiary: {
+      '5B': {
+        '24': [ { subj: 'Mathematics', note: 'Worksheet 11 (part B)' }, { subj: 'Science', note: 'Read pp. 36–39' }, { subj: 'EVS', note: 'Water cycle diagram' } ],
+        '25': [ { subj: 'Mathematics', note: 'Worksheet 12, fractions' }, { subj: 'Science', note: 'Read pp. 40–44, leaf diagram' }, { subj: 'English', note: 'Paragraph on "My favourite season"' } ],
+      },
+      '5A': { '25': [ { subj: 'Mathematics', note: 'Exercise 6.2 — all sums' } ] },
+      '6A': { '25': [ { subj: 'Mathematics', note: 'Algebra worksheet 3' } ] },
+    },
+    // admin
+    teachers: [
+      { id: 'rao', name: 'Anjali Rao', initials: 'AR', subject: 'Mathematics', subjects: ['Mathematics'], phone: '9811122233', classes: ['5-B', '5-A', '6-A'], ct: '5-B', status: 'active' },
+      { id: 'kapoor', name: 'Neha Kapoor', initials: 'NK', subject: 'English', subjects: ['English'], phone: '9811133344', classes: ['5-B', '5-A'], ct: '', status: 'active' },
+      { id: 'nair', name: 'Rajesh Nair', initials: 'RN', subject: 'Science', subjects: ['Science', 'Computer'], phone: '9811144455', classes: ['5-B', '6-A'], ct: '', status: 'active' },
+      { id: 'iyer', name: 'Lakshmi Iyer', initials: 'LI', subject: 'Hindi', subjects: ['Hindi'], phone: '9877700011', classes: ['5-A', '5-B'], ct: '5-A', status: 'active' },
+      { id: 'verma', name: 'Suresh Verma', initials: 'SV', subject: 'Social Studies', subjects: ['Social Studies'], phone: '9811166677', classes: ['6-A', '6-B'], ct: '6-A', status: 'active' },
+      { id: 'das', name: 'Partho Das', initials: 'PD', subject: 'Computer', subjects: ['Computer'], phone: '9811177788', classes: ['5-A', '5-B', '6-A'], ct: '', status: 'active' },
+      { id: 'bose', name: 'Ritika Bose', initials: 'RB', subject: 'Art', subjects: ['Art'], phone: '9811188899', classes: ['5-A', '5-B', '6-A', '6-B'], ct: '', status: 'active' },
+      { id: 'singh', name: 'Harpreet Singh', initials: 'HS', subject: 'Phys. Education', subjects: ['Phys. Education'], phone: '9811199900', classes: ['5-A', '5-B', '6-A', '6-B'], ct: '', status: 'invited' },
+    ],
+    activeTeacherId: 'rao',
+    ntName: '', ntPhone: '', ntSubjects: [], ntClasses: [], ntTeach: {}, ntCt: '', addSent: false, invitedName: '',
+    ncTitle: '', ncBody: '', ncCat: 'Admin', composeSent: false,
+    // admin classes & students
+    adminClasses: [
+      { id: '5-A', label: 'Grade 5-A', ctId: 'iyer', students: ['Kavya Pillai', 'Aryan Verma', 'Neel Saxena', 'Myra Jain', 'Reyansh Shah', 'Sara Dsouza', 'Yash Agarwal', 'Advika Rao', 'Zara Khan', 'Ved Kulkarni', 'Naina Bhat', 'Ishaan Roy', 'Pari Nanda', 'Kabir Sethi'] },
+      { id: '5-B', label: 'Grade 5-B', ctId: 'rao', students: ['Aarav Mehta', 'Diya Sharma', 'Kabir Nair', 'Ananya Iyer', 'Vivaan Reddy', 'Ishika Rao', 'Rohan Gupta', 'Meera Krishnan', 'Arjun Menon', 'Saanvi Desai', 'Aditya Bose', 'Anika Kapoor', 'Dhruv Malhotra', 'Riya Chopra', 'Kian Fernandes', 'Tara Sinha'] },
+      { id: '6-A', label: 'Grade 6-A', ctId: 'verma', students: ['Nikhil Rao', 'Aisha Sheikh', 'Prisha Nanda', 'Om Prakash', 'Laksh Bhatia', 'Ira Menon', 'Shaurya Singh', 'Anvi Patel', 'Rudra Das', 'Mishka Roy', 'Aarohi Jain', 'Dev Malhotra', 'Sia Kapoor', 'Rehan Ali'] },
+      { id: '6-B', label: 'Grade 6-B', ctId: '', students: [] },
+    ],
+    activeClassId: '5-B',
+    newStudent: '',
+    gName: '', gPhone: '', gRel: 'Mother',
+    acGrade: '', acSection: '', acCt: '',
+  };
+
+  dateOrder = ['16', '17', '18', '19', '20', '23', '24', '25', '26', '27'];
+  WD = { '16': 'Mon', '17': 'Tue', '18': 'Wed', '19': 'Thu', '20': 'Fri', '23': 'Mon', '24': 'Tue', '25': 'Wed', '26': 'Thu', '27': 'Fri' };
+  WDFULL = { Mon: 'Monday', Tue: 'Tuesday', Wed: 'Wednesday', Thu: 'Thursday', Fri: 'Friday' };
+
+  ICON = {
+    home: 'M3 11l9-8 9 8v9a1 1 0 01-1 1h-5v-6h-6v6H4a1 1 0 01-1-1z',
+    diary: 'M4 5h11a3 3 0 013 3v11M4 5v14h14',
+    calendar: 'M4 6h16v14H4zM4 10h16M9 4v4M15 4v4',
+    results: 'M7 3h8l4 4v14H7zM10 12h6M10 16h6',
+    photos: 'M4 6h16v13H4zM12 15a3 3 0 100-6 3 3 0 000 6',
+    staff: 'M12 12a4 4 0 100-8 4 4 0 000 8M5 20a7 7 0 0114 0',
+    notices: 'M6 8a6 6 0 1112 0c0 7 3 8 3 8H3s3-1 3-8M10 21a2 2 0 004 0',
+    check: 'M5 12l5 5L20 6',
+    classes: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
+  };
+
+  classes = [
+    { id: '5B', label: 'Grade 5-B', roleLabel: 'Class teacher', count: 32, subjects: ['math', 'sci', 'eng', 'soc'], ct: true },
+    { id: '5A', label: 'Grade 5-A', roleLabel: 'Mathematics', count: 30, subjects: ['math'], ct: false },
+    { id: '6A', label: 'Grade 6-A', roleLabel: 'Mathematics', count: 34, subjects: ['math'], ct: false },
+  ];
+  subjMeta = { math: 'Mathematics', sci: 'Science', eng: 'English', soc: 'Social Studies' };
+  subjName = { Mathematics: 'math', Science: 'sci', English: 'eng', 'Social Studies': 'soc' };
+
+  rosters = {
+    '5B': ['Aarav Mehta', 'Diya Sharma', 'Kabir Nair', 'Ananya Iyer', 'Vivaan Reddy', 'Ishika Rao', 'Rohan Gupta', 'Meera Krishnan', 'Arjun Menon', 'Saanvi Desai', 'Aditya Bose', 'Anika Kapoor', 'Dhruv Malhotra', 'Riya Chopra', 'Kian Fernandes', 'Tara Sinha'],
+    '5A': ['Kavya Pillai', 'Aryan Verma', 'Neel Saxena', 'Myra Jain', 'Reyansh Shah', 'Sara Dsouza', 'Yash Agarwal', 'Advika Rao', 'Zara Khan', 'Ved Kulkarni', 'Naina Bhat', 'Ishaan Roy', 'Pari Nanda', 'Kabir Sethi'],
+    '6A': ['Nikhil Rao', 'Aisha Sheikh', 'Prisha Nanda', 'Om Prakash', 'Laksh Bhatia', 'Ira Menon', 'Shaurya Singh', 'Anvi Patel', 'Rudra Das', 'Mishka Roy', 'Aarohi Jain', 'Dev Malhotra', 'Sia Kapoor', 'Rehan Ali'],
+  };
+
+  meta = {
+    home: ['Greenwood', '', false],
+    diary: ['Diary', '', false],
+    calendar: ['Calendar', 'GREENWOOD INTERNATIONAL', false],
+    results: ['Results', '', false],
+    photos: ['Moments', 'SHARED BY THE SCHOOL', false],
+    attendance: ['Attendance', '', true],
+    leave: ['Apply for Leave', 'AARAV · GRADE 5-B', true],
+    notice: ['Notice', '', true],
+    noticeBoard: ['Notice Board', 'GREENWOOD INTERNATIONAL', false],
+    noticeCompose: ['New Notice', 'TO ALL PARENTS', true],
+    notifs: ['Notifications', 'GREENWOOD INTERNATIONAL', true],
+    staff: ['Staff', 'MANAGE TEACHERS', false],
+    staffDetail: ['Teacher', 'STAFF PROFILE', true],
+    staffAdd: ['Add Teacher', 'SEND AN INVITE', true],
+    classes: ['Classes', 'ALL CLASSES', false],
+    classDetail: ['Class', '', true],
+    classAdd: ['New Class', 'ADD A CLASS', true],
+  };
+
+  notices = [
+    { id: 'ptm', category: 'Principal', from: 'Ms. Sridevi Menon · Principal', pinned: true, date: '24 Jun',
+      icon: 'M6 8a6 6 0 1112 0c0 7 3 8 3 8H3s3-1 3-8',
+      title: 'Parent–Teacher Meeting', preview: 'Slots open for Saturday, 28 June. Reserve your 15-minute window.',
+      body: "Dear Parents,\n\nOur term PTM is on Saturday, 28 June, from 9:00 AM to 1:00 PM. Please reserve a 15-minute slot with your child's class teacher through the app. Report cards will be discussed in person.\n\nWarm regards,\nMs. Sridevi Menon, Principal",
+      ackStat: '142 of 180 parents have acknowledged' },
+    { id: 'halfday', category: 'Admin', from: 'School Office', pinned: false, date: '25 Jun',
+      icon: 'M4 8h16M7 3v3M17 3v3M5 6h14v14H5z',
+      title: 'Half-day this Friday, 27 June', preview: 'School closes at 12:00 noon for a staff development session.',
+      body: 'Dear Parents,\n\nThis Friday, 27 June, will be a half-day. School will close at 12:00 noon for a staff development session. Buses will run on the revised half-day schedule. Please arrange your child\u2019s pick-up accordingly.\n\nThank you,\nSchool Office',
+      ackStat: '54 of 180 parents have acknowledged' },
+    { id: 'fee', category: 'Accounts', from: 'Accounts Office', pinned: false, date: '22 Jun',
+      icon: 'M3 7h18v10H3zM3 11h18',
+      title: 'Term 2 fee — due 5 July', preview: 'Term 2 fees are now payable. Pay online to avoid a late charge.',
+      body: 'Dear Parents,\n\nThe Term 2 fee is now due and payable by 5 July 2026. You can pay securely through the Fees section of the app or at the school accounts office. A late fee applies after the due date.\n\nThank you,\nAccounts Office',
+      ackStat: '120 of 180 parents have acknowledged' },
+    { id: 'sports', category: 'Sports', from: 'Sports Department', pinned: false, date: '20 Jun',
+      icon: 'M6 4h12v3a6 6 0 01-12 0zM10 13h4v3h-4z',
+      title: 'Annual Sports Day — kit list', preview: 'House T-shirts and white shorts required. Full kit list inside.',
+      body: 'Dear Parents,\n\nAnnual Sports Day is on 2 July. Children must come in their House T-shirt, white shorts and non-marking sports shoes, and carry a labelled water bottle and cap. Events begin at 8:00 AM sharp.\n\nSports Department',
+      ackStat: '98 of 180 parents have acknowledged' },
+    { id: 'bus', category: 'Admin', from: 'Transport Office', pinned: false, date: '18 Jun',
+      icon: 'M4 16V7a2 2 0 012-2h12a2 2 0 012 2v9M4 16h16M7 16v2M17 16v2M6 11h12',
+      title: 'Revised bus timings from 1 July', preview: 'Morning pick-up moves 10 minutes earlier on all routes.',
+      body: 'Dear Parents,\n\nFrom 1 July, morning pick-up on all routes will be 10 minutes earlier to ease traffic delays. Updated route timings are in the Transport section. Please ensure children are ready at the stop accordingly.\n\nTransport Office',
+      ackStat: '110 of 180 parents have acknowledged' },
+    { id: 'reading', category: 'Library', from: 'School Library', pinned: false, date: '15 Jun',
+      icon: 'M4 5h11a3 3 0 013 3v11M4 5v14h14',
+      title: 'Summer reading challenge', preview: 'Read 5 books over the break and earn a reading badge.',
+      body: 'Dear Parents,\n\nOur summer reading challenge invites every child to read five books over the break. Log titles in the reading diary; children who complete the challenge receive a reading badge in assembly.\n\nSchool Library',
+      ackStat: '76 of 180 parents have acknowledged' },
+  ];
+
+  years = [
+    { id: 'g5', label: 'Grade 5', sub: '2026–27 · now', short: 'Grade 5', exams: [
+      { id: 'ut1', name: 'Unit Test 1', rank: 5, remark: 'A steady start to the year. A little more care with presentation in Maths. — Ms. Kapoor',
+        subjects: [{ name: 'Mathematics', m: 42, max: 50 }, { name: 'Science', m: 41, max: 50 }, { name: 'English', m: 43, max: 50 }, { name: 'Social Studies', m: 42, max: 50 }] },
+      { id: 'hy', name: 'Half-Yearly', rank: 4, remark: 'Good all-round performance. Reading comprehension has clearly improved. — Ms. Kapoor',
+        subjects: [{ name: 'Mathematics', m: 71, max: 80 }, { name: 'Science', m: 68, max: 80 }, { name: 'English', m: 70, max: 80 }, { name: 'Social Studies', m: 69, max: 80 }] },
+      { id: 'ut2', name: 'Unit Test 2', rank: 3, remark: 'Excellent improvement in Maths this term. Keep encouraging daily reading at home. — Ms. Kapoor',
+        subjects: [{ name: 'Mathematics', m: 46, max: 50 }, { name: 'Science', m: 44, max: 50 }, { name: 'English', m: 43, max: 50 }, { name: 'Social Studies', m: 43, max: 50 }] },
+      { id: 'ut3', name: 'Unit Test 3', published: false, when: '12 July', subjects: [] },
+    ]},
+    { id: 'g4', label: 'Grade 4', sub: '2025–26', short: 'Grade 4', exams: [
+      { id: 'ut1', name: 'Unit Test 1', rank: 6, remark: 'Settling in well. More practice needed with multiplication tables. — Mr. Verma',
+        subjects: [{ name: 'Mathematics', m: 40, max: 50 }, { name: 'Science', m: 41, max: 50 }, { name: 'English', m: 42, max: 50 }, { name: 'Social Studies', m: 40, max: 50 }] },
+      { id: 'hy', name: 'Half-Yearly', rank: 4, remark: 'Consistent effort across all subjects. — Mr. Verma',
+        subjects: [{ name: 'Mathematics', m: 69, max: 80 }, { name: 'Science', m: 66, max: 80 }, { name: 'English', m: 70, max: 80 }, { name: 'Social Studies', m: 67, max: 80 }] },
+      { id: 'ut2', name: 'Unit Test 2', rank: 3, remark: 'A strong showing in English and Maths. — Mr. Verma',
+        subjects: [{ name: 'Mathematics', m: 44, max: 50 }, { name: 'Science', m: 42, max: 50 }, { name: 'English', m: 44, max: 50 }, { name: 'Social Studies', m: 43, max: 50 }] },
+      { id: 'ann', name: 'Annual Exam', rank: 2, remark: 'An excellent year. Promoted to Grade 5 with distinction. — Mr. Verma',
+        subjects: [{ name: 'Mathematics', m: 92, max: 100 }, { name: 'Science', m: 88, max: 100 }, { name: 'English', m: 90, max: 100 }, { name: 'Social Studies', m: 86, max: 100 }] },
+    ]},
+    { id: 'g3', label: 'Grade 3', sub: '2024–25', short: 'Grade 3', exams: [
+      { id: 'hy', name: 'Half-Yearly', rank: 3, remark: 'Curious and participative in class. — Mrs. Fernandes',
+        subjects: [{ name: 'Mathematics', m: 71, max: 80 }, { name: 'EVS', m: 70, max: 80 }, { name: 'English', m: 68, max: 80 }, { name: 'Hindi', m: 70, max: 80 }] },
+      { id: 'ann', name: 'Annual Exam', rank: 2, remark: 'A wonderful year of growth. Promoted to Grade 4. — Mrs. Fernandes',
+        subjects: [{ name: 'Mathematics', m: 92, max: 100 }, { name: 'EVS', m: 90, max: 100 }, { name: 'English', m: 88, max: 100 }, { name: 'Hindi', m: 90, max: 100 }] },
+    ]},
+  ];
+
+  teExams = [ { id: 'ut1', name: 'Unit Test 1' }, { id: 'hy', name: 'Half-Yearly' }, { id: 'ut2', name: 'Unit Test 2' }, { id: 'ut3', name: 'Unit Test 3' } ];
+  pubAvgMap = { ut1: 82, hy: 85, ut2: 86 };
+
+  tabsByRole = {
+    parent: ['home', 'diary', 'calendar', 'results', 'photos'],
+    teacher: ['home', 'diary', 'calendar', 'results', 'photos'],
+    admin: ['home', 'staff', 'classes', 'notices', 'calendar'],
+  };
+
+  personas = [
+    { id: 'anita', name: 'Anita Sharma', phone: '9876543210', tag: 'Parent',
+      contexts: [ { role: 'parent', school: 'Greenwood International', line: 'Parent of Aarav Mehta', sub: 'Grade 5-B', child: 'Aarav' } ] },
+    { id: 'rao', name: 'Anjali Rao', phone: '9811122233', tag: 'Teacher',
+      contexts: [ { role: 'teacher', school: 'Greenwood International', line: 'Class Teacher · Grade 5-B', sub: 'Mathematics', selClass: '5B' } ] },
+    { id: 'menon', name: 'Sridevi Menon', phone: '9800011122', tag: 'Admin',
+      contexts: [ { role: 'admin', school: 'Greenwood International', line: 'School Administrator', sub: 'Principal' } ] },
+    { id: 'iyer', name: 'Lakshmi Iyer', phone: '9877700011', tag: 'Teacher + Parent',
+      contexts: [ { role: 'teacher', school: 'Greenwood International', line: 'Class Teacher · Grade 5-A', sub: 'Hindi', selClass: '5A' },
+                  { role: 'parent', school: 'Greenwood International', line: 'Parent of Ananya Iyer', sub: 'Grade 5-B', child: 'Ananya' } ] },
+    { id: 'ravi', name: 'Ravi Menon', phone: '9765544332', tag: 'Parent · 2 schools',
+      contexts: [ { role: 'parent', school: 'Greenwood International', line: 'Parent of Kabir Nair', sub: 'Grade 5-B', child: 'Kabir' },
+                  { role: 'parent', school: 'Oakridge Public School', line: 'Parent of Sara Menon', sub: 'Grade 3-A', child: 'Sara' } ] },
+    { id: 'unknown', name: 'Rohan Gupta', phone: '9000000000', tag: 'Not registered', contexts: [] },
+  ];
+  roleRank = { admin: 3, teacher: 2, parent: 1 };
+
+  personaById(id) { return this.personas.find(p => p.id === id) || this.personas[0]; }
+  defaultCtxIndex(p) { let bi = 0, br = -1; (p.contexts || []).forEach((c, i) => { const r = this.roleRank[c.role] || 0; if (r > br) { br = r; bi = i; } }); return bi; }
+  fmtPhone(d) { d = (d || '').replace(/\D/g, ''); return d.length <= 5 ? d : d.slice(0, 5) + ' ' + d.slice(5); }
+  maskPhone(d) { d = (d || '').replace(/\D/g, ''); return d.length < 10 ? '+91 ' + this.fmtPhone(d) : '+91 ' + d.slice(0, 2) + '••• •' + d.slice(-4); }
+
+  pickPersona(id) {
+    const p = this.personaById(id), idx = this.defaultCtxIndex(p), ctx = p.contexts[idx] || {};
+    this.setState({ activePersonaId: id, phoneInput: this.fmtPhone(p.phone), otpInput: '', authStep: 'phone', locked: true, acctOpen: false, loginError: '', ctxId: idx, role: ctx.role || 'parent', selClass: ctx.selClass || '5B', screen: 'home' });
+  }
+  setPhoneInput(v) { this.setState({ phoneInput: v, loginError: '' }); }
+  submitPhone() { const d = (this.state.phoneInput || '').replace(/\D/g, ''); if (d.length < 10) { this.setState({ loginError: 'Enter a 10-digit mobile number' }); return; } this.setState({ authStep: 'otp', otpInput: '', loginError: '' }); }
+  setOtpInput(v) { this.setState({ otpInput: (v || '').replace(/\D/g, '').slice(0, 6), loginError: '' }); }
+  autofillOtp() { this.setState({ otpInput: '481902', loginError: '' }); }
+  verifyOtp() {
+    if ((this.state.otpInput || '').length !== 6) { this.setState({ loginError: 'Enter the 6-digit code' }); return; }
+    const d = (this.state.phoneInput || '').replace(/\D/g, '');
+    const p = this.personas.find(x => x.phone === d && x.contexts.length);
+    if (!p) { this.setState({ authStep: 'notfound' }); return; }
+    this.enterContext(p.id, this.defaultCtxIndex(p));
+  }
+  enterContext(pid, idx) {
+    const p = this.personaById(pid), ctx = p.contexts[idx] || {};
+    this.setState({ activePersonaId: pid, ctxId: idx, role: ctx.role || 'parent', selClass: ctx.selClass || '5B', authStep: 'in', screen: 'home', acctOpen: false, classPickerOpen: false });
+  }
+  switchContext(idx) { this.enterContext(this.state.activePersonaId, idx); }
+  signOut() { this.setState({ authStep: 'phone', locked: true, otpInput: '', acctOpen: false, screen: 'home', classPickerOpen: false, loginError: '' }); }
+  backToPhone() { this.setState({ authStep: 'phone', otpInput: '', loginError: '' }); }
+
+  go(s) { this.setState({ screen: s, classPickerOpen: false }); }
+
+  activeTabKey(screen) {
+    if (['staff', 'staffDetail', 'staffAdd'].includes(screen)) return 'staff';
+    if (['classes', 'classDetail', 'classAdd'].includes(screen)) return 'classes';
+    if (['noticeBoard', 'notice', 'noticeCompose'].includes(screen)) return this.state.role === 'admin' ? 'notices' : 'home';
+    if (['attendance', 'leave'].includes(screen)) return 'home';
+    if (screen === 'notifs') return 'home';
+    return screen;
+  }
+
+  rosterOf(cls) { return this.rosters[cls].map((name, i) => ({ id: cls + '-' + i, name, roll: i + 1 })); }
+  mkKey(cls, exam, subj, sid) { return cls + '.' + exam + '.' + subj + '.' + sid; }
+
+  setMark(cls, exam, subj, sid, raw) {
+    let v = (raw || '').replace(/[^0-9]/g, '').slice(0, 3);
+    if (v !== '' && parseInt(v) > 50) v = '50';
+    this.setState(s => ({ marks: { ...s.marks, [this.mkKey(cls, exam, subj, sid)]: v } }));
+  }
+
+  aaravMark(code) {
+    const v = parseInt(this.state.marks[this.mkKey('5B', 'ut3', code, '5B-0')]);
+    const def = { math: 45, sci: 43, eng: 44, soc: 42 };
+    return (!isNaN(v)) ? v : def[code];
+  }
+
+  statusOf(cls, examId) {
+    if (examId !== 'ut3') return 'final';
+    return this.state.examStatus[cls + '.' + examId] || 'draft';
+  }
+  isPublishedExam(cls, examId) { const st = this.statusOf(cls, examId); return st === 'provisional' || st === 'final'; }
+
+  getYears() {
+    const clone = this.years.map(y => ({ ...y, exams: y.exams.map(e => ({ ...e, subjects: e.subjects ? e.subjects.slice() : [] })) }));
+    const st = this.statusOf('5B', 'ut3');
+    if (st === 'provisional' || st === 'final') {
+      const g5 = clone.find(y => y.id === 'g5');
+      const ut3 = g5.exams.find(e => e.id === 'ut3');
+      ut3.published = true;
+      ut3.provisional = (st === 'provisional');
+      ut3.rank = 3;
+      ut3.remark = (st === 'provisional')
+        ? 'Provisional marks — please review with your child; totals may change slightly after moderation. — Ms. Rao'
+        : 'A confident finish to the unit tests — consistent across every subject. — Ms. Rao';
+      ut3.subjects = [['Mathematics', 'math'], ['Science', 'sci'], ['English', 'eng'], ['Social Studies', 'soc']].map(([name, code]) => ({ name, m: this.aaravMark(code), max: 50 }));
+      delete ut3.when;
+    }
+    return clone;
+  }
+
+  pickYear(id) {
+    const y = this.getYears().find(v => v.id === id);
+    const pub = y.exams.filter(e => e.published !== false);
+    const last = pub[pub.length - 1] || y.exams[0];
+    this.setState({ resYear: id, resExam: last.id });
+  }
+
+  componentDidUpdate(prev) {
+    if ((prev.screen !== this.state.screen || prev.role !== this.state.role) && this.contentRef) this.contentRef.scrollTop = 0;
+    const diaryNow = (this.state.screen === 'diary');
+    if ((prev.screen !== this.state.screen || prev.selClass !== this.state.selClass) && diaryNow && this.stripRef) {
+      const el = this.stripRef;
+      requestAnimationFrame(() => { if (el) el.scrollLeft = el.scrollWidth; });
+    }
+  }
+
+  toggle(dk, i) {
+    this.setState(s => {
+      const bd = { ...s.diaryByDate }; const day = { ...bd[dk] }; const t = day.tasks.slice();
+      t[i] = { ...t[i], done: !t[i].done }; day.tasks = t; bd[dk] = day; return { diaryByDate: bd };
+    });
+  }
+  toggleAtt(cls, sid, val) {
+    this.setState(s => { const a = { ...s.attAbs }; const c = { ...a[cls] };
+      if (val === 'A') c[sid] = true; else delete c[sid];
+      a[cls] = c; return { attAbs: a, regSavedFlag: false }; });
+  }
+  markAllPresent(cls) { this.setState(s => { const a = { ...s.attAbs }; a[cls] = {}; return { attAbs: a, regSavedFlag: false }; }); }
+
+  addHw() {
+    const note = this.state.hwNote.trim(); if (!note) return;
+    const cls = this.state.selClass, dk = this.state.teDate, subj = this.state.hwSubject;
+    this.setState(s => { const cd = { ...s.classDiary }; const c = { ...(cd[cls] || {}) }; const list = (c[dk] || []).slice();
+      list.push({ subj, note }); c[dk] = list; cd[cls] = c; return { classDiary: cd, hwNote: '' }; });
+  }
+  delHw(dk, i) {
+    const cls = this.state.selClass;
+    this.setState(s => { const cd = { ...s.classDiary }; const c = { ...(cd[cls] || {}) }; const list = (c[dk] || []).slice();
+      list.splice(i, 1); c[dk] = list; cd[cls] = c; return { classDiary: cd }; });
+  }
+
+  setExamStatus(status, toast) {
+    const cls = this.state.selClass;
+    this.setState(s => ({ examStatus: { ...s.examStatus, [cls + '.ut3']: status }, pubJustNow: toast }));
+  }
+  publishProvisional() { this.setExamStatus('provisional', 'provisional'); }
+  finalizeMarks() { this.setExamStatus('final', 'final'); }
+  saveMarks() { this.setState({ pubJustNow: 'saved' }); }
+  reopenMarks() {
+    const key = this.state.selClass + '.' + this.state.teExam;
+    this.setState(s => ({ editingFinal: { ...s.editingFinal, [key]: true }, pubJustNow: '' }));
+  }
+  cancelReopen() {
+    const key = this.state.selClass + '.' + this.state.teExam;
+    this.setState(s => { const e = { ...s.editingFinal }; delete e[key]; return { editingFinal: e, pubJustNow: '' }; });
+  }
+  republishMarks() {
+    const key = this.state.selClass + '.' + this.state.teExam;
+    this.setState(s => { const e = { ...s.editingFinal }; delete e[key]; return { editingFinal: e, pubJustNow: 'updated' }; });
+  }
+  toggleCalAdd() { this.setState(s => ({ calAdding: !s.calAdding, calForm: { m: 'JUL', d: '', title: '', sub: '' } })); }
+  setCalField(k, v) { this.setState(s => ({ calForm: { ...s.calForm, [k]: v } })); }
+  addEvent() {
+    const f = this.state.calForm;
+    if (!f.title.trim() || !f.d.trim()) return;
+    const ev = { m: (f.m || 'JUL').toUpperCase().slice(0, 3), d: ('0' + f.d.trim()).slice(-2), title: f.title.trim(), sub: (f.sub || '').trim() || 'School event', accent: '#c2a04e' };
+    this.setState(s => ({ calEvents: [...s.calEvents, ev], calAdding: false, calForm: { m: 'JUL', d: '', title: '', sub: '' } }));
+  }
+  removeEvent(i) { this.setState(s => ({ calEvents: s.calEvents.filter((_, idx) => idx !== i) })); }
+
+  sendInvite() {
+    const name = (this.state.ntName || '').trim() || 'New Teacher';
+    const phone = (this.state.ntPhone || '').replace(/\D/g, '');
+    const subjects = this.state.ntSubjects.slice();
+    const teach = {}; Object.keys(this.state.ntTeach).forEach(c => { const subs = (this.state.ntTeach[c] || []).filter(su => subjects.includes(su)); if (subs.length) teach[c] = subs; });
+    const classes = Object.keys(teach);
+    let ct = this.state.ntCt;
+    if (ct && !classes.includes(ct)) ct = '';
+    const initials = name.split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase();
+    const id = 'nt' + Date.now();
+    this.setState(s => {
+      const teachers = s.teachers.map(t => (ct && t.ct === ct) ? { ...t, ct: '' } : t);
+      return {
+        teachers: [...teachers, { id, name, initials, subject: subjects.join(', ') || '—', subjects, phone, classes, teach, ct, status: 'invited' }],
+        adminClasses: ct ? s.adminClasses.map(c => c.id === ct ? { ...c, ctId: id } : (c.ctId ? c : c)) : s.adminClasses,
+        addSent: true, invitedName: name,
+      };
+    });
+  }
+  teachOf(t) { return t.teach || Object.fromEntries((t.classes || []).map(c => [c, this.subjectsOf(t)])); }
+  toggleNtClassTeach(cid) { this.setState(st => { const teach = { ...st.ntTeach }; if (cid in teach) { delete teach[cid]; return { ntTeach: teach, ntCt: st.ntCt === cid ? '' : st.ntCt }; } teach[cid] = st.ntSubjects.slice(); return { ntTeach: teach }; }); }
+  toggleNtClassSubj(cid, su) { this.setState(st => { const teach = { ...st.ntTeach }; const cur = (teach[cid] || []).slice(); const i = cur.indexOf(su); if (i >= 0) cur.splice(i, 1); else cur.push(su); teach[cid] = cur; return { ntTeach: teach }; }); }
+  subjectsOf(t) { return (t.subjects && t.subjects.length) ? t.subjects : (t.subject ? [t.subject] : []); }
+  toggleNtSubject(s) { this.setState(st => ({ ntSubjects: st.ntSubjects.includes(s) ? st.ntSubjects.filter(x => x !== s) : [...st.ntSubjects, s] })); }
+  toggleNtClass(c) { this.setState(st => { const has = st.ntClasses.includes(c); const ntClasses = has ? st.ntClasses.filter(x => x !== c) : [...st.ntClasses, c]; return { ntClasses, ntCt: (has && st.ntCt === c) ? '' : st.ntCt }; }); }
+  openAddTeacher() { this.setState({ screen: 'staffAdd', ntName: '', ntPhone: '', ntSubjects: [], ntClasses: [], ntTeach: {}, ntCt: '', addSent: false }); }
+  toggleStaffStatus() {
+    const id = this.state.activeTeacherId;
+    this.setState(s => ({ teachers: s.teachers.map(t => t.id === id ? { ...t, status: (t.status === 'active' ? 'inactive' : 'active') } : t) }));
+  }
+  assignClass(cid) {
+    const tid = this.state.activeTeacherId;
+    this.setState(s => ({ teachers: s.teachers.map(t => (t.id === tid && !t.classes.includes(cid)) ? { ...t, classes: [...t.classes, cid] } : t) }));
+  }
+  unassignClass(cid) {
+    const tid = this.state.activeTeacherId;
+    this.setState(s => ({
+      teachers: s.teachers.map(t => t.id === tid ? { ...t, classes: t.classes.filter(c => c !== cid), ct: t.ct === cid ? '' : t.ct } : t),
+      adminClasses: s.adminClasses.map(c => (c.id === cid && c.ctId === tid) ? { ...c, ctId: '' } : c),
+    }));
+  }
+  makeClassTeacher(cid) {
+    const tid = this.state.activeTeacherId;
+    this.setState(s => {
+      const cur = s.teachers.find(t => t.id === tid);
+      const isCt = cur && cur.ct === cid;
+      return {
+        teachers: s.teachers.map(t => {
+          if (t.id === tid) return { ...t, classes: t.classes.includes(cid) ? t.classes : [...t.classes, cid], ct: isCt ? '' : cid };
+          return (!isCt && t.ct === cid) ? { ...t, ct: '' } : t;
+        }),
+        adminClasses: s.adminClasses.map(c => c.id === cid ? { ...c, ctId: isCt ? '' : tid } : c),
+      };
+    });
+  }
+  openClass(cid) { this.setState({ activeClassId: cid, screen: 'classDetail', newStudent: '' }); }
+  addStudent() {
+    const nm = (this.state.newStudent || '').trim(); const gp = (this.state.gPhone || '').replace(/\D/g, '');
+    if (!nm || gp.length !== 10) return;
+    const cid = this.state.activeClassId;
+    const guardian = { name: (this.state.gName || '').trim() || 'Guardian', phone: gp, relation: this.state.gRel };
+    this.setState(s => ({ adminClasses: s.adminClasses.map(c => c.id === cid ? { ...c, students: [...c.students, { name: nm, guardian }] } : c), newStudent: '', gName: '', gPhone: '', gRel: 'Mother' }));
+  }
+  removeStudent(idx) {
+    const cid = this.state.activeClassId;
+    this.setState(s => ({ adminClasses: s.adminClasses.map(c => c.id === cid ? { ...c, students: c.students.filter((_, i) => i !== idx) } : c) }));
+  }
+  addClass() {
+    const g = (this.state.acGrade || '').trim(), sec = (this.state.acSection || '').trim().toUpperCase();
+    if (!g || !sec) return;
+    const id = g + '-' + sec; const ct = this.state.acCt;
+    if (this.state.adminClasses.some(c => c.id === id)) { this.setState({ screen: 'classes', acGrade: '', acSection: '', acCt: '' }); return; }
+    this.setState(s => {
+      const teachers = ct ? s.teachers.map(t => {
+        if (t.id === ct) { const classes = t.classes.includes(id) ? t.classes : [...t.classes, id]; const teach = { ...this.teachOf(t) }; if (!teach[id]) teach[id] = this.subjectsOf(t); return { ...t, classes, ct: id, teach }; }
+        return (t.ct === id) ? { ...t, ct: '' } : t;
+      }) : s.teachers;
+      return { adminClasses: [...s.adminClasses.map(c => (ct && c.ctId === ct) ? { ...c, ctId: '' } : c), { id, label: 'Grade ' + id, ctId: ct || '', students: [] }], teachers, screen: 'classes', acGrade: '', acSection: '', acCt: '' };
+    });
+  }
+  openAddClass() { this.setState({ screen: 'classAdd', acGrade: '', acSection: '', acCt: '' }); }
+  postNotice() {
+    const title = this.state.ncTitle.trim() || 'School notice';
+    const body = this.state.ncBody.trim() || 'Details to follow.';
+    const n = { id: 'nc' + Date.now(), category: this.state.ncCat, from: 'School Office', pinned: false, date: '25 Jun',
+      icon: 'M4 8h16M7 3v3M17 3v3M5 6h14v14H5z', title, preview: body.slice(0, 90), body: body, ackStat: '0 of 180 parents have acknowledged', custom: true };
+    this.notices = [n, ...this.notices];
+    this.setState({ composeSent: true });
+  }
+
+  attCells() {
+    const sun = [7, 14, 21, 28], sat = [6, 13, 20, 27], absent = [11], holiday = [19];
+    const out = [];
+    for (let d = 1; d <= 30; d++) {
+      let color = '#1f8a5b', future = false;
+      if (sun.includes(d) || sat.includes(d) || holiday.includes(d)) color = '#e6e9e3';
+      if (absent.includes(d)) color = '#c0392b';
+      if (d > 25 && !sun.includes(d) && !sat.includes(d)) { color = '#f1f5f1'; future = true; }
+      out.push({ d, color, showDot: !future, txt: color === '#e6e9e3' ? '#6c766f' : '#15211b' });
+    }
+    return out;
+  }
+
+  buildStrip(dk, hasHwFn) {
+    return this.dateOrder.map(k => {
+      const active = k === dk;
+      const hasHw = hasHwFn(k);
+      const style = 'flex:none;width:46px;text-align:center;padding:8px 0 13px;border-radius:13px;font-size:11px;font-weight:600;cursor:pointer;position:relative;font-family:inherit;' +
+        (active ? 'background:#15412f;border:1px solid #15412f;color:#bcd2c5'
+          : (k === '25' ? 'background:#fff;border:1.5px solid #15412f;color:#6c766f' : 'background:#fff;border:1px solid #e6e9e3;color:#6c766f'));
+      const numStyle = 'display:block;font-size:15px;margin-top:2px;color:' + (active ? '#fff' : '#15211b');
+      return { wd: this.WD[k], dnum: k, style, numStyle, showDot: hasHw && !active };
+    });
+  }
+
+  renderVals() {
+    const S = this.state, screen = S.screen, role = S.role;
+    const isParent = role === 'parent', isTeacher = role === 'teacher', isAdmin = role === 'admin';
+    const m = this.meta[screen] || this.meta.home;
+    const persona = this.personaById(S.activePersonaId);
+    const activeCtx = (persona.contexts[S.ctxId] || persona.contexts[0] || {});
+    const teacherNameOf = (id) => { const t = S.teachers.find(x => x.id === id); return t ? t.name : ''; };
+    const activeClass = S.adminClasses.find(c => c.id === S.activeClassId) || S.adminClasses[0];
+
+    // nav
+    const navKeys = ['home', 'diary', 'calendar', 'results', 'photos', 'attendance', 'leave', 'notice', 'noticeBoard', 'noticeCompose', 'notifs', 'staff', 'staffAdd', 'classes', 'classAdd'];
+    const nav = {}; navKeys.forEach(k => { nav[k] = () => this.go(k); });
+
+    // tabs
+    const activeKey = this.activeTabKey(screen);
+    const tabLabel = { home: 'Home', diary: 'Diary', calendar: 'Calendar', results: isTeacher ? 'Marks' : 'Results', photos: 'Photos', staff: 'Staff', notices: 'Notices', classes: 'Classes' };
+    const tabScreen = { notices: 'noticeBoard' };
+    const tabs = this.tabsByRole[role].map(k => ({
+      label: tabLabel[k], icon: this.ICON[k] || this.ICON.home,
+      color: activeKey === k ? '#15412f' : '#6c766f',
+      onClick: () => this.go(tabScreen[k] || k),
+    }));
+
+    // header
+    const curClass = this.classes.find(c => c.id === S.selClass) || this.classes[0];
+    let hdrTitle = m[0], hdrSub = m[1];
+    if (screen === 'home') { hdrTitle = 'Greenwood'; hdrSub = isParent ? ((activeCtx.school || 'Greenwood International').toUpperCase()) : (persona.name.toUpperCase() + (isTeacher ? ' · TEACHER' : ' · ADMIN')); }
+    if (screen === 'diary') { hdrTitle = isTeacher ? 'Class Diary' : 'Diary'; hdrSub = isTeacher ? curClass.label.toUpperCase() : ('AARAV · ' + S.selDate + ' JUNE'); }
+    if (screen === 'results') { if (isTeacher) { hdrTitle = 'Marks'; hdrSub = curClass.label.toUpperCase(); } else { const yy = this.getYears().find(y => y.id === S.resYear) || this.years[0]; const ee = yy.exams.find(e => e.id === S.resExam) || yy.exams[0]; hdrTitle = 'Report Card'; hdrSub = (yy.short + ' · ' + ee.name).toUpperCase(); } }
+    if (screen === 'attendance') hdrSub = isTeacher ? (curClass.label + ' · 25 JUN').toUpperCase() : 'AARAV · GRADE 5-B';
+    if (screen === 'notice') { const a0 = this.notices.find(n => n.id === S.activeNoticeId) || this.notices[0]; hdrSub = a0.from.toUpperCase(); }
+    if (screen === 'staffDetail') { const t0 = S.teachers.find(t => t.id === S.activeTeacherId); hdrTitle = 'Teacher'; hdrSub = t0 ? (this.subjectsOf(t0)[0] || 'STAFF').toUpperCase() : 'STAFF'; }
+    if (screen === 'classDetail') { hdrTitle = activeClass.label; hdrSub = activeClass.ctId ? ('CLASS TEACHER · ' + teacherNameOf(activeClass.ctId).toUpperCase()) : 'NO CLASS TEACHER'; }
+
+    const topLevel = this.tabsByRole[role].includes(screen) || (screen === 'noticeBoard' && isAdmin);
+    const showCrest = topLevel;
+    const showBack = !topLevel;
+    const goBack = () => this.go(isAdmin ? (['staffDetail', 'staffAdd'].includes(screen) ? 'staff' : (['classDetail', 'classAdd'].includes(screen) ? 'classes' : (['noticeCompose', 'notice'].includes(screen) ? 'noticeBoard' : 'home'))) : 'home');
+
+    // lock note
+    const lockNote = isParent
+      ? { icon: this.ICON.check, title: 'Aarav was marked Present today', sub: 'Marked 8:42 AM by Ms. Rao.' }
+      : isTeacher
+        ? { icon: 'M9 11l3 3L22 4M4 12h5', title: "Grade 5-B register isn't taken yet", sub: 'Tap to mark today\u2019s attendance.' }
+        : { icon: this.ICON.staff, title: '1 teacher invite is pending', sub: 'Harpreet Singh · Phys. Education.' };
+
+    // ---- diary (parent) ----
+    const mapTask = (dk) => (t, i) => ({
+      subj: t.subj, note: t.note, done: t.done,
+      onToggle: () => this.toggle(dk, i),
+      boxStyle: 'width:21px;height:21px;border-radius:7px;flex:none;display:grid;place-items:center;cursor:pointer;' + (t.done ? 'background:#15412f;border:1.8px solid #15412f' : 'background:#fff;border:1.8px solid #e6e9e3'),
+      titleStyle: t.done ? 'font-size:13px;font-weight:600;text-decoration:line-through;color:#6c766f' : 'font-size:13px;font-weight:600',
+    });
+    const selDay = S.diaryByDate[S.selDate] || { note: null, tasks: [] };
+    const diaryView = selDay.tasks.map(mapTask(S.selDate));
+    const today = S.diaryByDate['25'];
+    const todayTasks = today.tasks.map(mapTask('25'));
+    const dateStrip = this.buildStrip(S.selDate, k => S.diaryByDate[k].tasks.length > 0).map(d => ({ ...d, onPick: () => this.setState({ selDate: d.dnum }) }));
+
+    // ---- diary (teacher) ----
+    const teDays = S.classDiary[S.selClass] || {};
+    const teHwList = (teDays[S.teDate] || []).map((h, i) => ({ subj: h.subj, note: h.note, onDelete: () => this.delHw(S.teDate, i) }));
+    const teDateStrip = this.buildStrip(S.teDate, k => (teDays[k] || []).length > 0).map(d => ({ ...d, onPick: () => this.setState({ teDate: d.dnum }) }));
+    const hwSubjOptions = curClass.subjects.map(code => { const label = this.subjMeta[code]; const on = S.hwSubject === label;
+      return { label, onClick: () => this.setState({ hwSubject: label }), style: 'padding:8px 12px;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;border:1.5px solid ' + (on ? '#15412f;background:#e8efe9;color:#15412f' : '#e6e9e3;background:#fff;color:#6c766f') }; });
+
+    // ---- attendance (teacher) ----
+    const canMarkAtt = curClass.ct;
+    const roster = this.rosterOf(S.selClass);
+    const abs = S.attAbs[S.selClass] || {};
+    const segBtn = (on, col) => 'width:30px;height:26px;border-radius:8px;border:none;cursor:pointer;font-family:inherit;font-size:12px;font-weight:700;' + (on ? ('background:' + col + ';color:#fff') : 'background:transparent;color:#9aa39b');
+    const register = roster.map(r => { const isAbs = !!abs[r.id];
+      return { name: r.name, roll: r.roll, onPresent: () => this.toggleAtt(S.selClass, r.id, 'P'), onAbsent: () => this.toggleAtt(S.selClass, r.id, 'A'),
+        presentStyle: segBtn(!isAbs, '#1f8a5b'), absentStyle: segBtn(isAbs, '#c0392b') }; });
+    const regAbsent = Object.keys(abs).length; const regPresent = curClass.count - regAbsent;
+
+    // read-only register for subject teachers (marked by the class teacher)
+    const ctNameOf = { '5B': 'Ms. Rao', '5A': 'Ms. Iyer', '6A': 'Mr. Verma' };
+    const seededAbs = { '5A': ['5A-3', '5A-7'], '6A': ['6A-5'] };
+    const roAbsIds = seededAbs[S.selClass] || [];
+    const roRegister = roster.map(r => { const isAbs = roAbsIds.includes(r.id);
+      return { name: r.name, roll: r.roll, absent: isAbs, present: !isAbs,
+        statusStyle: 'font-size:11px;font-weight:700;padding:4px 10px;border-radius:8px;flex:none;' + (isAbs ? 'background:#f6ecec;color:#c0392b' : 'background:#e8efe9;color:#1f8a5b'),
+        statusLabel: isAbs ? 'Absent' : 'Present' }; });
+    const roCtName = ctNameOf[S.selClass] || 'the class teacher';
+    // unified class attendance (for home stat + read-only view)
+    const classAbsent = canMarkAtt ? regAbsent : roAbsIds.length;
+    const classPresent = curClass.count - classAbsent;
+
+    // ---- results (parent) ----
+    const round = (x) => Math.round(x);
+    const gradeFor = (p) => p >= 90 ? 'A+' : p >= 80 ? 'A' : p >= 70 ? 'B+' : p >= 60 ? 'B' : 'C';
+    const ord = (n) => { const s = ['th', 'st', 'nd', 'rd'], v = n % 100; return n + (s[(v - 20) % 10] || s[v] || s[0]); };
+    const overallOf = (ex) => { if (!ex.subjects || !ex.subjects.length) return null; let sm = 0, mx = 0; ex.subjects.forEach(s => { sm += s.m; mx += s.max; }); return round(sm / mx * 100); };
+    const liveYears = this.getYears();
+    const yr = liveYears.find(y => y.id === S.resYear) || liveYears[0];
+    const exam = yr.exams.find(e => e.id === S.resExam) || yr.exams[yr.exams.length - 1];
+    const published = exam.published !== false;
+    const overall = overallOf(exam);
+    const yearPills = liveYears.map(y => { const on = y.id === yr.id;
+      return { label: y.label, sub: y.sub, onPick: () => this.pickYear(y.id),
+        style: 'flex:none;min-width:104px;text-align:left;padding:11px 14px;border-radius:15px;cursor:pointer;font-family:inherit;' + (on ? 'background:#15412f;border:1px solid #15412f' : 'background:#fff;border:1px solid #e6e9e3'),
+        labelStyle: 'display:block;font-size:13px;font-weight:700;' + (on ? 'color:#fff' : 'color:#15211b'),
+        subStyle: 'display:block;font-size:10px;font-weight:600;margin-top:2px;' + (on ? 'color:#9fc0ad' : 'color:#6c766f') }; });
+    const examChips = yr.exams.map(e => { const on = e.id === exam.id; const pub = e.published !== false; const ov = overallOf(e);
+      return { name: e.name, pctLabel: pub ? (ov + '%') : 'Soon', onPick: () => this.setState({ resExam: e.id }),
+        style: 'flex:none;min-width:96px;text-align:left;padding:10px 13px;border-radius:14px;cursor:pointer;font-family:inherit;' + (on ? 'background:#15412f;border:1px solid #15412f' : (pub ? 'background:#fff;border:1px solid #e6e9e3' : 'background:#f6f7f3;border:1px dashed #cdd5cc')),
+        nameStyle: 'display:block;font-size:12px;font-weight:700;' + (on ? 'color:#fff' : (pub ? 'color:#15211b' : 'color:#9aa39b')),
+        pctStyle: 'display:block;font-size:11px;font-weight:600;margin-top:3px;' + (on ? 'color:#c2a04e' : (pub ? 'color:#6c766f' : 'color:#b7bfb6')) }; });
+    const report = { name: exam.name, overall, grade: overall != null ? gradeFor(overall) : '', rankLabel: exam.rank ? ord(exam.rank) : '', remark: exam.remark, when: exam.when, provisional: !!exam.provisional,
+      subjects: (exam.subjects || []).map(s => ({ name: s.name, score: s.m + ' / ' + s.max, pct: round(s.m / s.max * 100) + '%' })) };
+
+    // ---- results (teacher / marks) ----
+    const maxMarks = 50;
+    const teStatus = this.statusOf(S.selClass, S.teExam);
+    const teExamPublished = teStatus === 'final';
+    const teExamProvisional = teStatus === 'provisional';
+    const teExamDraft = teStatus === 'draft';
+    const isEditingFinal = teExamPublished && !!S.editingFinal[S.selClass + '.' + S.teExam];
+    const teExamName = (this.teExams.find(e => e.id === S.teExam) || {}).name || '';
+    const statusTag = { draft: 'To enter', provisional: 'Provisional', final: 'Published' };
+    const teExamChips = this.teExams.map(e => { const on = e.id === S.teExam; const st = this.statusOf(S.selClass, e.id);
+      const tagCol = st === 'final' ? '#1f8a5b' : (st === 'provisional' ? '#c2882a' : '#8a6d1f');
+      return { name: e.name, tag: statusTag[st], onClick: () => this.setState({ teExam: e.id, teSubject: 'math' }),
+        style: 'flex:none;min-width:100px;text-align:left;padding:10px 13px;border-radius:14px;cursor:pointer;font-family:inherit;border:1px solid ' + (on ? '#15412f;background:#15412f' : '#e6e9e3;background:#fff'),
+        nameStyle: 'display:block;font-size:12px;font-weight:700;' + (on ? 'color:#fff' : 'color:#15211b'),
+        tagStyle: 'display:block;font-size:10px;font-weight:600;margin-top:3px;' + (on ? 'color:#c2a04e' : ('color:' + tagCol)) }; });
+    const subjectDone = (code) => roster.every(r => (S.marks[this.mkKey(S.selClass, S.teExam, code, r.id)] || '') !== '' || false);
+    const teSubjChips = curClass.subjects.map(code => { const on = S.teSubject === code; const done = subjectDone(code);
+      return { label: this.subjMeta[code], done, onClick: () => this.setState({ teSubject: code }),
+        style: 'flex:none;display:flex;align-items:center;gap:6px;padding:9px 12px;border-radius:12px;cursor:pointer;font-family:inherit;border:1.5px solid ' + (on ? '#15412f;background:#e8efe9' : '#e6e9e3;background:#fff'),
+        nameStyle: 'font-size:12px;font-weight:700;' + (on ? 'color:#15412f' : 'color:#6c766f') }; });
+    const absMarks = S.attAbs[S.selClass] || {};
+    const marksSheet = roster.map(r => { const key = this.mkKey(S.selClass, S.teExam, S.teSubject, r.id); const val = S.marks[key] || ''; const isAbs = !!absMarks[r.id];
+      return { name: r.name, roll: r.roll, value: val, absent: isAbs, notAbsent: !isAbs,
+        onMark: (e) => this.setMark(S.selClass, S.teExam, S.teSubject, r.id, e && e.target ? e.target.value : ''),
+        onAbsent: () => this.toggleAtt(S.selClass, r.id, isAbs ? 'P' : 'A'),
+        absBtnStyle: 'width:28px;height:28px;border-radius:9px;border:none;cursor:pointer;font-family:inherit;font-size:12px;font-weight:700;flex:none;' + (isAbs ? 'background:#c0392b;color:#fff' : 'background:#f1f5f1;color:#9aa39b') }; });
+    let msum = 0, mcount = 0;
+    roster.forEach(r => { if (absMarks[r.id]) return; const v = parseInt(S.marks[this.mkKey(S.selClass, S.teExam, S.teSubject, r.id)]); if (!isNaN(v)) { msum += v; mcount++; } });
+    const marksAvg = mcount ? Math.round(msum / mcount / maxMarks * 100) + '%' : '—';
+    let pubAvg = this.pubAvgMap[S.teExam] || 85;
+    if (S.teExam === 'ut3') { let a = 0, c = 0; curClass.subjects.forEach(code => { roster.forEach(r => { if (absMarks[r.id]) return; const v = parseInt(S.marks[this.mkKey(S.selClass, 'ut3', code, r.id)]); if (!isNaN(v)) { a += v; c++; } }); }); pubAvg = c ? Math.round(a / c / maxMarks * 100) : 86; }
+
+    // ---- notices ----
+    const ackedSet = S.ackedSet;
+    const openNotice = (id) => this.setState({ activeNoticeId: id, screen: 'notice' });
+    const board = this.notices.map(n => { const acked = !!ackedSet[n.id]; return { ...n, showAckDot: isParent && acked, showUnreadDot: isParent && !acked, onOpen: () => openNotice(n.id) }; });
+    const unreadCount = this.notices.filter(n => !ackedSet[n.id]).length;
+    const homeNotices = board.filter(n => !ackedSet[n.id]).slice(0, 4);
+    const active = this.notices.find(n => n.id === S.activeNoticeId) || this.notices[0];
+    const activeAcked = !!ackedSet[active.id];
+    const activeStat = active.ackStat.replace(/^(\d+)/, (m0, d) => activeAcked ? (parseInt(d) + 1) : d);
+
+    // compose categories
+    const cats = ['Admin', 'Principal', 'Sports', 'Library'];
+    const catOptions = cats.map(c => ({ label: c, onClick: () => this.setState({ ncCat: c }), style: 'padding:8px 13px;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;border:1.5px solid ' + (S.ncCat === c ? '#15412f;background:#e8efe9;color:#15412f' : '#e6e9e3;background:#fff;color:#6c766f') }));
+
+    // ---- admin staff ----
+    const staffList = S.teachers.map(t => ({ id: t.id, name: t.name, initials: t.initials, isInvited: t.status === 'invited',
+      line: this.subjectsOf(t).join(', ') + ' · ' + (t.classes.length ? (t.classes.length + (t.classes.length > 1 ? ' classes' : ' class')) : 'No class yet') + (t.ct ? ' · CT ' + t.ct : ''),
+      onOpen: () => this.setState({ activeTeacherId: t.id, screen: 'staffDetail' }) }));
+    const at = S.teachers.find(t => t.id === S.activeTeacherId) || S.teachers[0];
+    const statusLabel = at.status === 'active' ? 'Active' : (at.status === 'invited' ? 'Invite pending' : 'Inactive');
+    const staffDetail = { initials: at.initials, name: at.name, subject: this.subjectsOf(at).join(', '), phone: this.maskPhone(at.phone), hasPhone: !!at.phone, statusLabel,
+      classChips: at.classes.map(c => ({ label: c, isCt: at.ct === c, style: 'display:inline-flex;align-items:center;font-size:12px;font-weight:600;color:#15412f;background:#f1f5f1;border:1px solid #e6e9e3;padding:8px 12px;border-radius:11px' })),
+      actionLabel: at.status === 'active' ? 'Deactivate account' : 'Activate account',
+      actionBg: at.status === 'active' ? '#f6ecec' : '#15412f', actionColor: at.status === 'active' ? '#c0392b' : '#fff' };
+    const assignedChips = at.classes.map(cid => { const ac = S.adminClasses.find(c => c.id === cid); const isCt = at.ct === cid; const subs = this.teachOf(at)[cid] || [];
+      return { id: cid, label: ac ? ac.label : ('Grade ' + cid), isCt, subjLine: subs.length ? subs.join(', ') : 'No subject set', onRemove: () => this.unassignClass(cid), onCt: () => this.makeClassTeacher(cid),
+        ctBtnLabel: isCt ? 'Class teacher ✓' : 'Make CT',
+        ctBtnStyle: 'padding:6px 10px;border-radius:9px;font-size:10.5px;font-weight:700;cursor:pointer;font-family:inherit;flex:none;border:1.5px solid ' + (isCt ? '#15412f;background:#15412f;color:#fff' : '#dbe5db;background:#fff;color:#15412f') }; });
+    const availableClasses = S.adminClasses.filter(c => !at.classes.includes(c.id)).map(c => ({ id: c.id, label: c.label, onAdd: () => this.assignClass(c.id) }));
+    const adminClassList = S.adminClasses.map(c => ({ id: c.id, label: c.label, count: c.students.length, ctLabel: c.ctId ? ('Class teacher · ' + teacherNameOf(c.ctId)) : 'No class teacher yet', onOpen: () => this.openClass(c.id) }));
+    const classRoster = activeClass.students.map((s, i) => { const g = (s && typeof s === 'object') ? s.guardian : null;
+      return { name: (typeof s === 'string') ? s : s.name, roll: ('0' + (i + 1)).slice(-2), hasGuardian: !!g, noGuardian: !g,
+        guardianLine: g ? (g.relation + ' · ' + g.name + ' · ' + this.maskPhone(g.phone)) : 'No guardian phone — can\'t log in yet',
+        onRemove: () => this.removeStudent(i) }; });
+    const gRelOptions = ['Mother', 'Father', 'Guardian'].map(r => ({ label: r, onClick: () => this.setState({ gRel: r }),
+      style: 'flex:1;text-align:center;padding:8px 0;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;border:1.5px solid ' + (S.gRel === r ? '#15412f;background:#e8efe9;color:#15412f' : '#e6e9e3;background:#fff;color:#6c766f') }));
+    const addStudentReady = (S.newStudent || '').trim().length > 0 && (S.gPhone || '').replace(/\D/g, '').length === 10;
+    const addStudentStyle = 'width:100%;margin-top:4px;padding:13px;border-radius:12px;font-weight:700;font-size:13.5px;border:none;cursor:pointer;font-family:inherit;' + (addStudentReady ? 'background:#15412f;color:#fff' : 'background:#dfe5df;color:#9aa39b');
+    const activeClassCtName = activeClass.ctId ? teacherNameOf(activeClass.ctId) : '';
+    const activeTeach = S.teachers.filter(t => S.activeClassId in this.teachOf(t)).map(t => ({ name: t.name, subjects: this.teachOf(t)[S.activeClassId].join(', '), isCt: activeClass.ctId === t.id }));
+    const allSubjects = ['Mathematics', 'Science', 'English', 'Social Studies', 'Hindi', 'Computer', 'Art', 'Phys. Education'];
+    const ntChip = (on) => 'padding:8px 12px;border-radius:10px;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;border:1.5px solid ' + (on ? '#15412f;background:#e8efe9;color:#15412f' : '#e6e9e3;background:#fff;color:#6c766f');
+    const ntSubjOptions = allSubjects.map(s => ({ label: s, onClick: () => this.toggleNtSubject(s), style: ntChip(S.ntSubjects.includes(s)) }));
+    const ntClassMap = S.adminClasses.map(c => { const sel = c.id in S.ntTeach;
+      return { id: c.id, label: c.label, selected: sel, notSelected: !sel,
+        rowStyle: 'border:1.5px solid ' + (sel ? '#15412f;background:#f3f8f4' : '#e6e9e3;background:#fff') + ';border-radius:13px;padding:11px 12px;margin-bottom:8px;cursor:pointer',
+        boxStyle: 'width:20px;height:20px;border-radius:6px;flex:none;display:grid;place-items:center;border:1.5px solid ' + (sel ? '#15412f;background:#15412f' : '#cdd5cc;background:#fff'),
+        subjChips: S.ntSubjects.map(su => ({ label: su, onClick: () => this.toggleNtClassSubj(c.id, su),
+          style: 'padding:5px 10px;border-radius:8px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;border:1px solid ' + ((S.ntTeach[c.id] || []).includes(su) ? '#15412f;background:#15412f;color:#fff' : '#dbe5db;background:#fff;color:#15412f') })),
+        onToggle: () => this.toggleNtClassTeach(c.id) }; });
+    const ntSubjectsChosen = S.ntSubjects.length > 0;
+    const ntCtOptions = [{ id: '', label: 'Not a class teacher' }].concat(Object.keys(S.ntTeach).map(id => { const ac = S.adminClasses.find(c => c.id === id); return { id, label: ac ? ac.label : id }; }))
+      .map(o => ({ label: o.label, onClick: () => this.setState({ ntCt: o.id }), style: ntChip(S.ntCt === o.id) }));
+    const acCtOptions = [{ id: '', label: 'Assign later' }].concat(S.teachers.filter(t => t.status !== 'inactive').map(t => ({ id: t.id, label: t.name })))
+      .map(o => ({ label: o.label, onClick: () => this.setState({ acCt: o.id }), style: ntChip(S.acCt === o.id) }));
+    const ntPhoneDigits = (S.ntPhone || '').replace(/\D/g, '');
+    const addTeacherReady = (S.ntName || '').trim().length > 0 && ntPhoneDigits.length === 10 && S.ntSubjects.length > 0;
+    const addTeacherStyle = 'width:100%;padding:14px;border-radius:14px;font-weight:700;font-size:14px;border:none;cursor:pointer;font-family:inherit;' + (addTeacherReady ? 'background:#15412f;color:#fff' : 'background:#dfe5df;color:#9aa39b');
+
+    // class picker
+    const classList = this.classes.map(c => ({ label: c.label, roleLabel: c.roleLabel, count: c.count, active: c.id === S.selClass,
+      titleColor: c.id === S.selClass ? '#15412f' : '#15211b',
+      rowStyle: 'display:flex;align-items:center;gap:10px;padding:13px 14px;border-radius:15px;cursor:pointer;margin-bottom:8px;border:1.5px solid ' + (c.id === S.selClass ? '#15412f;background:#f3f8f4' : '#e6e9e3;background:#fff'),
+      onPick: () => this.setState({ selClass: c.id, classPickerOpen: false, teSubject: 'math', teDate: '25' }) }));
+
+    // teacher home actions
+    const teStatusHome = this.statusOf(S.selClass, 'ut3');
+    const teacherActions = [];
+    if (canMarkAtt) teacherActions.push({ title: "Mark today's attendance", sub: S.regSavedFlag ? 'Saved · ' + regPresent + ' present' : (regAbsent > 0 ? (regAbsent + ' marked absent · not saved') : 'Register not taken yet'), icon: 'M9 11l3 3L20 5M4 12h4', iconBg: '#e8efe9', iconStroke: '#15412f', badge: S.regSavedFlag ? '' : 'DUE', onClick: () => this.go('attendance') });
+    else teacherActions.push({ title: 'Class attendance', sub: classPresent + ' present · ' + classAbsent + ' absent · by ' + roCtName, icon: 'M12 12a4 4 0 100-8 4 4 0 000 8M4 20a8 8 0 0116 0M8 3.5a3 3 0 010 5', iconBg: '#e8efe9', iconStroke: '#15412f', badge: 'VIEW', onClick: () => this.go('attendance') });
+    teacherActions.push({ title: 'Post homework', sub: (teHwList.length) + ' posted for today · ' + curClass.label, icon: this.ICON.diary, iconBg: '#e8efe9', iconStroke: '#15412f', badge: '', onClick: () => this.go('diary') });
+    teacherActions.push({ title: 'Enter Unit Test 3 marks', sub: (teStatusHome === 'final' ? 'Finalized & published' : (teStatusHome === 'provisional' ? 'Provisional · under review' : 'Due 12 July · not published')), icon: this.ICON.results, iconBg: '#efe6cf', iconStroke: '#8a6d1f', badge: (teStatusHome === 'draft' ? 'TO DO' : (teStatusHome === 'provisional' ? 'PROVISIONAL' : '')), onClick: () => this.setState({ screen: 'results', teExam: 'ut3' }) });
+
+    const monthOrder = { JAN:0,FEB:1,MAR:2,APR:3,MAY:4,JUN:5,JUL:6,AUG:7,SEP:8,OCT:9,NOV:10,DEC:11 };
+    const events = S.calEvents
+      .map((e, i) => ({ ...e, idx: i }))
+      .sort((a, b) => (monthOrder[a.m] - monthOrder[b.m]) || (parseInt(a.d) - parseInt(b.d)))
+      .map(e => ({ ...e, canEdit: isAdmin, onRemove: () => this.removeEvent(e.idx) }));
+
+    // intro / auth demo
+    const personaChips = this.personas.map(p => ({ name: p.name, tag: p.tag, onClick: () => this.pickPersona(p.id),
+      style: 'flex:1 1 45%;min-width:0;text-align:left;padding:9px 12px;border-radius:13px;cursor:pointer;font-family:inherit;border:1.5px solid ' + (S.activePersonaId === p.id ? '#15412f;background:#15412f' : '#e6e9e3;background:#fff'),
+      nameStyle: 'display:block;font-size:12.5px;font-weight:700;' + (S.activePersonaId === p.id ? 'color:#fff' : 'color:#15211b'),
+      tagStyle: 'display:block;font-size:10px;font-weight:600;margin-top:2px;' + (S.activePersonaId === p.id ? 'color:#c2a04e' : 'color:#6c766f') }));
+    const introChip = 'Pick a person, then tap the phone';
+    const featList = ['Phone number + one-time code — no password', 'No role to pick; the account already knows', 'More than one hat? Switch inside the app', 'Schools add teachers, teachers add students'];
+    const introListTitle = 'How signing in works';
+    const acctRoleLabel = activeCtx.role ? (activeCtx.role.charAt(0).toUpperCase() + activeCtx.role.slice(1)) : '';
+    const canSwitch = persona.contexts.length > 1;
+    const acctContexts = persona.contexts.map((c, i) => ({ line: c.line, meta: (c.role.charAt(0).toUpperCase() + c.role.slice(1)) + ' · ' + c.school, active: i === S.ctxId, onPick: () => this.switchContext(i),
+      rowStyle: 'display:flex;align-items:center;gap:10px;padding:12px 13px;border-radius:14px;cursor:pointer;margin-bottom:8px;border:1.5px solid ' + (i === S.ctxId ? '#15412f;background:#f3f8f4' : '#e6e9e3;background:#fff') }));
+    const verifyReady = (S.otpInput || '').length === 6;
+    const verifyStyle = 'margin-top:20px;width:100%;padding:15px;border-radius:14px;font-weight:700;font-size:14.5px;border:none;cursor:pointer;font-family:inherit;' + (verifyReady ? 'background:#15412f;color:#fff' : 'background:#dfe5df;color:#9aa39b');
+
+    return {
+      // shell
+      role, isParent, isTeacher, isAdmin, notAdmin: !isAdmin,
+      locked: S.locked, unlock: () => this.setState({ locked: false }), lockNote,
+      tabs, nav, goBack,
+      hdrTitle, hdrSub, showBack, showCrest,
+      showClassBar: isTeacher && ['home', 'attendance', 'diary', 'results'].includes(screen),
+      curClass, openClassPicker: () => this.setState({ classPickerOpen: true }),
+      closeClassPicker: () => this.setState({ classPickerOpen: false }),
+      classPickerOpen: S.classPickerOpen, classList,
+      setContentRef: (el) => { this.contentRef = el; },
+      setStripRef: (el) => { this.stripRef = el; },
+
+      // intro
+      personaChips, introChip, featList, introListTitle,
+
+      // auth
+      authActive: !S.locked && S.authStep !== 'in',
+      authPhone: !S.locked && S.authStep === 'phone',
+      authOtp: !S.locked && S.authStep === 'otp',
+      authNotFound: !S.locked && S.authStep === 'notfound',
+      phoneInput: S.phoneInput, otpInput: S.otpInput,
+      setPhoneInput: (e) => this.setPhoneInput(e && e.target ? e.target.value : ''),
+      setOtpInput: (e) => this.setOtpInput(e && e.target ? e.target.value : ''),
+      submitPhone: () => this.submitPhone(), verifyOtp: () => this.verifyOtp(), autofillOtp: () => this.autofillOtp(), backToPhone: () => this.backToPhone(),
+      otpTargetLabel: this.maskPhone(S.phoneInput), notFoundNumber: '+91 ' + this.fmtPhone((S.phoneInput || '').replace(/\D/g, '')),
+      loginError: S.loginError, hasLoginError: !!S.loginError, verifyStyle,
+
+      // account
+      personaName: persona.name, personaInitials: persona.name.split(/\s+/).map(w => w[0]).slice(0, 2).join('').toUpperCase(),
+      personaPhone: this.maskPhone(persona.phone), acctRoleLabel, ctxCount: persona.contexts.length,
+      showAcctBar: S.authStep === 'in' && canSwitch, canSwitch, acctContexts,
+      acctOpen: S.acctOpen, openAcct: () => this.setState({ acctOpen: true }), closeAcct: () => this.setState({ acctOpen: false }),
+      signOut: () => this.signOut(),
+
+      // screen flags
+      homeParent: screen === 'home' && isParent, homeTeacher: screen === 'home' && isTeacher, homeAdmin: screen === 'home' && isAdmin,
+      attParent: screen === 'attendance' && isParent, attTeacher: screen === 'attendance' && isTeacher,
+      diaryParent: screen === 'diary' && isParent, diaryTeacher: screen === 'diary' && isTeacher,
+      resultsParent: screen === 'results' && isParent, resultsTeacher: screen === 'results' && isTeacher,
+      isLeave: screen === 'leave', isNotice: screen === 'notice', isNoticeBoard: screen === 'noticeBoard', isNoticeCompose: screen === 'noticeCompose',
+      isCalendar: screen === 'calendar', isPhotos: screen === 'photos', isNotifs: screen === 'notifs',
+      isStaff: screen === 'staff', isStaffDetail: screen === 'staffDetail', isStaffAdd: screen === 'staffAdd',
+      isClasses: screen === 'classes', isClassDetail: screen === 'classDetail', isClassAdd: screen === 'classAdd',
+      canUpload: isTeacher || isAdmin,
+
+      // parent home
+      homeNotices, homeHasUnread: unreadCount > 0, homeAllRead: unreadCount === 0,
+      homeNoticeLabel: unreadCount > 0 ? (unreadCount + ' new') : 'all read', noticeCount: this.notices.length,
+      todayTasks, doneCount: today.tasks.filter(t => t.done).length, todayTotal: today.tasks.length,
+      upNext: events[0],
+
+      // teacher home
+      teacherActions, teacherPresent: classPresent, teacherHwCount: teHwList.length,
+
+      // admin home
+      adminStats: [{ n: '480', label: 'Students' }, { n: S.teachers.length + '', label: 'Teachers' }, { n: '18', label: 'Classes' }, { n: '96%', label: 'Present today' }],
+      staffCount: S.teachers.length, pendingCount: S.teachers.filter(t => t.status === 'invited').length,
+      adminActivity: [
+        { dot: '#1f8a5b', title: 'Ms. Rao marked 5-B register', sub: '30 present · 2 absent', tm: '9:12' },
+        { dot: '#c2a04e', title: 'Unit Test 2 results published', sub: 'Grade 5-B · Ms. Kapoor', tm: '1d' },
+        { dot: '#15412f', title: 'New notice posted', sub: 'Half-day this Friday', tm: '1d' },
+      ],
+
+      // attendance parent
+      weekdays: ['M', 'T', 'W', 'T', 'F', 'S', 'S'], attCells: this.attCells(),
+      // attendance teacher
+      canMarkAtt, cantMarkAtt: !canMarkAtt, register, regPresent, regAbsent,
+      roRegister, roCtName, classPresent, classAbsent,
+      markAllPresent: () => this.markAllPresent(S.selClass),
+      saveRegister: () => this.setState({ regSavedFlag: true }), regSaved: S.regSavedFlag ? '✓ Register saved' : 'Save register',
+
+      // diary parent
+      diaryView, dateStrip, selDateLabel: this.WDFULL[this.WD[S.selDate]] + ', ' + S.selDate + ' June', selIsToday: S.selDate === '25',
+      diaryHasTasks: selDay.tasks.length > 0, diaryEmpty: selDay.tasks.length === 0, diaryNote: selDay.note,
+      // diary teacher
+      teDateStrip, teDateLabel: this.WDFULL[this.WD[S.teDate]] + ', ' + S.teDate + ' June', teIsToday: S.teDate === '25',
+      teHwList, teHwEmpty: teHwList.length === 0, hwSubjOptions, hwNote: S.hwNote,
+      setHwNote: (e) => this.setState({ hwNote: e && e.target ? e.target.value : '' }), addHw: () => this.addHw(),
+
+      // leave
+      leaveSent: S.leaveSent, leaveForm: !S.leaveSent, submitLeave: () => this.setState({ leaveSent: true }),
+      pickSick: () => this.setState({ leaveType: 'Sick' }), pickCasual: () => this.setState({ leaveType: 'Casual' }), pickOther: () => this.setState({ leaveType: 'Other' }),
+      optSick: this.opt('Sick'), optCasual: this.opt('Casual'), optOther: this.opt('Other'),
+
+      // notices
+      board, unreadCount,
+      activeNotice: { ...active, ackStat: activeStat }, activeNoticeAcked: activeAcked, activeNoticeUnacked: !activeAcked,
+      showAckButton: isParent, acknowledge: () => this.setState(s => ({ ackedSet: { ...s.ackedSet, [active.id]: true } })),
+      // compose
+      catOptions, ncTitle: S.ncTitle, ncBody: S.ncBody, setNcTitle: (e) => this.setState({ ncTitle: e && e.target ? e.target.value : '' }), setNcBody: (e) => this.setState({ ncBody: e && e.target ? e.target.value : '' }),
+      postNotice: () => this.postNotice(), composeForm: !S.composeSent, composeSent: S.composeSent,
+
+      // calendar
+      events,
+      calIsAdmin: isAdmin, calAdding: S.calAdding, calForm: S.calForm, calNotAdding: !S.calAdding,
+      toggleCalAdd: () => this.toggleCalAdd(), addEvent: () => this.addEvent(),
+      setCalMonth: (e) => this.setCalField('m', e && e.target ? e.target.value : ''),
+      setCalDay: (e) => this.setCalField('d', e && e.target ? e.target.value : ''),
+      setCalTitle: (e) => this.setCalField('title', e && e.target ? e.target.value : ''),
+      setCalSub: (e) => this.setCalField('sub', e && e.target ? e.target.value : ''),
+
+      // results parent
+      yearPills, examChips, report, reportPublished: published && report.subjects.length > 0, reportUpcoming: !published, reportProvisional: published && !!exam.provisional,
+
+      // results teacher
+      teExamChips, teSubjChips, marksSheet, maxMarks, marksAvg, marksEntered: mcount, teExamName,
+      marksEditable: teExamDraft || teExamProvisional || isEditingFinal, marksPublished: teExamPublished && !isEditingFinal,
+      teExamProvisional, teExamDraft, teExamFinal: teExamPublished, isEditingFinal,
+      pubAvg, pubJustNow: S.pubJustNow,
+      pubToastProvisional: S.pubJustNow === 'provisional', pubToastFinal: S.pubJustNow === 'final', pubToastSaved: S.pubJustNow === 'saved', pubToastUpdated: S.pubJustNow === 'updated',
+      publishProvisional: () => this.publishProvisional(), finalizeMarks: () => this.finalizeMarks(), saveMarks: () => this.saveMarks(),
+      reopenMarks: () => this.reopenMarks(), cancelReopen: () => this.cancelReopen(), republishMarks: () => this.republishMarks(),
+
+      // staff
+      staffList, staffDetail, toggleStaffStatus: () => this.toggleStaffStatus(),
+      assignedChips, availableClasses, hasAssigned: at.classes.length > 0, noAssigned: at.classes.length === 0, hasAvailable: availableClasses.length > 0, noAvailable: availableClasses.length === 0,
+      adminClassList, classCount: S.adminClasses.length, nClassLabel: S.adminClasses.length + (S.adminClasses.length === 1 ? ' class' : ' classes'),
+      activeClassLabel: activeClass.label, activeClassCount: activeClass.students.length, activeClassCtName, activeClassHasCt: !!activeClass.ctId, activeClassNoCt: !activeClass.ctId,
+      classRoster, classEmpty: activeClass.students.length === 0,
+      teachesHere: activeTeach, teachesHereEmpty: activeTeach.length === 0,
+      newStudent: S.newStudent, setNewStudent: (e) => this.setState({ newStudent: e && e.target ? e.target.value : '' }), addStudent: () => this.addStudent(),
+      gName: S.gName, setGName: (e) => this.setState({ gName: e && e.target ? e.target.value : '' }),
+      gPhone: S.gPhone, setGPhone: (e) => this.setState({ gPhone: e && e.target ? e.target.value : '' }),
+      gRelOptions, addStudentReady, addStudentStyle,
+      acGrade: S.acGrade, acSection: S.acSection, setAcGrade: (e) => this.setState({ acGrade: e && e.target ? e.target.value : '' }), setAcSection: (e) => this.setState({ acSection: e && e.target ? e.target.value : '' }), addClass: () => this.addClass(),
+      ntName: S.ntName, setNtName: (e) => this.setState({ ntName: e && e.target ? e.target.value : '' }),
+      ntPhone: S.ntPhone, setNtPhone: (e) => this.setState({ ntPhone: e && e.target ? e.target.value : '' }),
+      ntSubjOptions, ntClassMap, ntCtOptions, ntSubjectsChosen, ntNoSubjects: S.ntSubjects.length === 0, hasNtClasses: Object.keys(S.ntTeach).length > 0, addTeacherReady, addTeacherStyle,
+      sendInvite: () => this.sendInvite(), openAddTeacher: () => this.openAddTeacher(), openAddClass: () => this.openAddClass(), acCtOptions, addForm: !S.addSent, addSent: S.addSent, invitedName: S.invitedName,
+
+      notifs: [
+        { path: this.ICON.check, title: 'Aarav was marked Present', sub: 'Marked 8:42 AM by Ms. Rao', tm: 'now' },
+        { path: 'M3 6h18v14H3zM3 13l5-4 4 3 5-5 4 4', title: 'New album: Annual Sports Day', sub: '142 photos from this morning', tm: '1h' },
+        { path: this.ICON.diary, title: 'Homework posted for Wed', sub: '3 subjects · Maths, Science, English', tm: '3h' },
+        { path: 'M6 8a6 6 0 1112 0c0 7 3 8 3 8H3s3-1 3-8', title: 'Notice: Parent–Teacher Meeting', sub: 'From the Principal · please acknowledge', tm: '1d' },
+        { path: 'M6 3h9l4 4v14H6z', title: 'Unit Test 2 results published', sub: 'Aarav scored 88% · class rank 3', tm: '2d' },
+      ],
+    };
+  }
+
+  opt(t) {
+    const base = 'flex:1;text-align:center;padding:10px 0;border-radius:12px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;border:1.5px solid ';
+    return base + (this.state.leaveType === t ? '#15412f;background:#e8efe9;color:#15412f' : '#e6e9e3;background:#fff;color:#6c766f');
+  }
+}
+</script>
+</body>
+</html>
