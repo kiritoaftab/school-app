@@ -21,6 +21,8 @@ export const GLYPH = {
   edit: 'M12 20h9M16.5 3.5a2.1 2.1 0 013 3L7 19l-4 1 1-4z',
   trash: 'M4 7h16M9 7V5h6v2M6 7l1 13h10l1-13',
   attendanceCheck: 'M9 11l3 3L20 5M4 12h4',
+  students: 'M9 7a3 3 0 106 0 3 3 0 00-6 0M4 20a5 5 0 0110 0M15 12a3 3 0 100-6M17 20a5 5 0 00-3-4.6',
+  chevronDown: 'M6 9l6 6 6-6',
 } as const;
 
 // ---- helpers ----
@@ -279,6 +281,26 @@ export const ROSTERS: Record<string, string[]> = {
 export function rosterOf(cls: string) {
   return (ROSTERS[cls] || []).map((name, i) => ({ id: cls + '-' + i, name, roll: i + 1 }));
 }
+
+// A roster entry that may carry guardian details (teacher & admin roster editing).
+export interface RosterStudent {
+  name: string;
+  guardian?: Guardian;
+}
+
+// Attendance is simulated deterministically for the admin overview: every 4th
+// student (roll index 3, 10, 17…) is treated as absent for the day.
+export function classAttendanceOf(students: (string | RosterStudent)[]) {
+  const roster = students.map((s, i) => ({
+    name: typeof s === 'string' ? s : s.name,
+    roll: ('0' + (i + 1)).slice(-2),
+    present: i % 7 !== 3,
+  }));
+  const total = roster.length;
+  const absent = roster.filter((r) => !r.present).length;
+  const present = total - absent;
+  return { roster, present, absent, total, pct: total ? Math.round((present / total) * 100) : 0 };
+}
 export const CT_NAME_OF: Record<string, string> = { '5B': 'Ms. Rao', '5A': 'Ms. Iyer', '6A': 'Mr. Verma' };
 export const SEEDED_ABS: Record<string, string[]> = { '5A': ['5A-3', '5A-7'], '6A': ['6A-5'] };
 
@@ -339,6 +361,16 @@ export const ADMIN_CLASSES: AdminClass[] = [
 
 export const ALL_SUBJECTS = ['Mathematics', 'Science', 'English', 'Social Studies', 'Hindi', 'Computer', 'Art', 'Phys. Education'];
 export const NOTICE_CATEGORIES = ['Admin', 'Principal', 'Sports', 'Library'];
+
+// Per-class subject & exam catalogues (editable by admin & class teacher).
+export const DEFAULT_CLASS_SUBJECTS = ['Mathematics', 'Science', 'English', 'Social Studies', 'Hindi'];
+export interface ClassExam { id: string; name: string }
+export const DEFAULT_CLASS_EXAMS: ClassExam[] = [
+  { id: 'ut1', name: 'Unit Test 1' },
+  { id: 'hy', name: 'Half-Yearly' },
+  { id: 'ut2', name: 'Unit Test 2' },
+  { id: 'ut3', name: 'Unit Test 3' },
+];
 
 export const ADMIN_ACTIVITY = [
   { dot: '#1f8a5b', title: 'Ms. Rao marked 5-B register', sub: '30 present · 2 absent', tm: '9:12' },

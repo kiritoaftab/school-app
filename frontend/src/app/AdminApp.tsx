@@ -10,13 +10,14 @@ import {
 import { AccountSheet } from './AccountSheet';
 import {
   SCHOOL, GLYPH, NOTICES, ADMIN_ACTIVITY, ALL_SUBJECTS, NOTICE_CATEGORIES,
-  TEACHERS, ADMIN_CLASSES, subjectsOf, teachOf, initialsOf, maskPhone,
-  type Teacher, type AdminClass, type Notice,
+  TEACHERS, ADMIN_CLASSES, DEFAULT_CLASS_SUBJECTS, DEFAULT_CLASS_EXAMS,
+  subjectsOf, teachOf, initialsOf, maskPhone, classAttendanceOf,
+  type Teacher, type AdminClass, type Notice, type ClassExam,
 } from './data';
 
 type Screen =
   | 'home' | 'staff' | 'staffDetail' | 'staffAdd' | 'classes' | 'classDetail' | 'classAdd'
-  | 'noticeBoard' | 'notice' | 'noticeCompose' | 'calendar' | 'notifs';
+  | 'adminAtt' | 'adminAttClass' | 'noticeBoard' | 'notice' | 'noticeCompose' | 'calendar' | 'notifs';
 
 export function AdminApp() {
   const { user, logout } = useAuth();
@@ -30,11 +31,22 @@ export function AdminApp() {
   const [activeTeacherId, setActiveTeacherId] = useState('rao');
   const [activeClassId, setActiveClassId] = useState('5-B');
   const [activeNoticeId, setActiveNoticeId] = useState('ptm');
+  const [attClassId, setAttClassId] = useState('5-B');
+  // Per-class subject & exam catalogues (editable in class detail).
+  const [classSubjects, setClassSubjects] = useState<Record<string, string[]>>({});
+  const [classExams, setClassExams] = useState<Record<string, ClassExam[]>>({});
 
   const name = user?.name ?? 'Sridevi Menon';
   const teacherName = (id: string) => teachers.find((t) => t.id === id)?.name ?? '';
   const activeClass = classes.find((c) => c.id === activeClassId) || classes[0];
   const activeTeacher = teachers.find((t) => t.id === activeTeacherId) || teachers[0];
+
+  // Attendance aggregates (simulated) for the admin overview.
+  const classAtt = classes.map((c) => ({ id: c.id, label: c.label, ...classAttendanceOf(c.students) }));
+  const schoolPresent = classAtt.reduce((a, c) => a + c.present, 0);
+  const schoolTotal = classAtt.reduce((a, c) => a + c.total, 0);
+  const schoolPct = schoolTotal ? Math.round((schoolPresent / schoolTotal) * 100) : 0;
+  const attClass = classAtt.find((c) => c.id === attClassId) || classAtt[0];
 
   function go(s: Screen) {
     setScreen(s);
@@ -48,6 +60,7 @@ export function AdminApp() {
     staffAdd: ['Add Teacher', 'SEND AN INVITE'],
     classes: ['Classes', 'ALL CLASSES'],
     classAdd: ['New Class', 'ADD A CLASS'],
+    adminAtt: ['Attendance', 'TODAY · ALL CLASSES'],
     noticeBoard: ['Notice Board', SCHOOL.toUpperCase()],
     noticeCompose: ['New Notice', 'TO ALL PARENTS'],
     calendar: ['Calendar', SCHOOL.toUpperCase()],
@@ -56,12 +69,14 @@ export function AdminApp() {
   if (M[screen]) { [title, sub] = M[screen]; }
   else if (screen === 'staffDetail') { title = 'Teacher'; sub = (subjectsOf(activeTeacher)[0] || 'STAFF').toUpperCase(); }
   else if (screen === 'classDetail') { title = activeClass.label; sub = activeClass.ctId ? `CLASS TEACHER · ${teacherName(activeClass.ctId).toUpperCase()}` : 'NO CLASS TEACHER'; }
+  else if (screen === 'adminAttClass') { title = attClass.label; sub = `${attClass.present} / ${attClass.total} PRESENT`; }
   else if (screen === 'notice') { title = 'Notice'; sub = (notices.find((n) => n.id === activeNoticeId)?.from ?? '').toUpperCase(); }
 
   const TOP: Screen[] = ['home', 'staff', 'classes', 'noticeBoard', 'calendar'];
   const topLevel = TOP.includes(screen);
   const backTo: Record<string, Screen> = {
     staffDetail: 'staff', staffAdd: 'staff', classDetail: 'classes', classAdd: 'classes',
+    adminAtt: 'home', adminAttClass: 'adminAtt',
     noticeCompose: 'noticeBoard', notice: 'noticeBoard', notifs: 'home',
   };
   const onBack = topLevel ? undefined : () => go(backTo[screen] || 'home');
@@ -108,12 +123,21 @@ export function AdminApp() {
       tabs={tabs}
       overlays={<AccountSheet open={acctOpen} onClose={() => setAcctOpen(false)} name={name} phone={user?.phone ?? '9800011122'} roleLabel="Admin" onSignOut={() => { logout(); navigate('/login'); }} />}
     >
-      {screen === 'home' && <AdminHome name={name} teachers={teachers} classes={classes} go={go} />}
+      {screen === 'home' && <AdminHome name={name} teachers={teachers} classes={classes} schoolStudents={schoolTotal} schoolPct={schoolPct} go={go} openAcct={() => setAcctOpen(true)} />}
       {screen === 'staff' && <StaffList teachers={teachers} onAdd={() => go('staffAdd')} onOpen={(id) => { setActiveTeacherId(id); go('staffDetail'); }} />}
       {screen === 'staffDetail' && <StaffDetail teacher={activeTeacher} classes={classes} teacherName={teacherName} onMakeCt={makeCt} onUnassign={unassign} onAssign={assign} onToggleStatus={toggleStatus} />}
       {screen === 'staffAdd' && <StaffAdd classes={classes} onSent={(t) => { setTeachers((ts) => [...ts, t]); }} onDone={() => go('staff')} />}
       {screen === 'classes' && <ClassesList classes={classes} teacherName={teacherName} onAdd={() => go('classAdd')} onOpen={(id) => { setActiveClassId(id); go('classDetail'); }} />}
-      {screen === 'classDetail' && <ClassDetail cls={activeClass} teachers={teachers} teacherName={teacherName} setClasses={setClasses} />}
+      {screen === 'classDetail' && (
+        <ClassDetail
+          cls={activeClass} teachers={teachers} teacherName={teacherName}
+          setTeachers={setTeachers} setClasses={setClasses}
+          classSubjects={classSubjects} setClassSubjects={setClassSubjects}
+          classExams={classExams} setClassExams={setClassExams}
+        />
+      )}
+      {screen === 'adminAtt' && <AdminAttendance classAtt={classAtt} schoolPct={schoolPct} schoolPresent={schoolPresent} onOpen={(id) => { setAttClassId(id); go('adminAttClass'); }} />}
+      {screen === 'adminAttClass' && <AdminAttendanceClass att={attClass} />}
       {screen === 'classAdd' && <ClassAdd teachers={teachers} onCreate={(c, ctId) => { setClasses((cs) => cs.some((x) => x.id === c.id) ? cs : [...cs, c]); if (ctId) setTeachers((ts) => ts.map((t) => (t.id === ctId ? { ...t, classes: t.classes.includes(c.id) ? t.classes : [...t.classes, c.id], ct: c.id } : t.ct === c.id ? { ...t, ct: '' } : t))); go('classes'); }} />}
       {screen === 'noticeBoard' && <NoticeBoardScreen role="admin" notices={notices} acked={{}} onOpen={(id) => { setActiveNoticeId(id); go('notice'); }} onCompose={() => go('noticeCompose')} />}
       {screen === 'notice' && <NoticeDetailScreen notice={notices.find((n) => n.id === activeNoticeId)!} acked={false} showAck={false} onAcknowledge={() => {}} />}
@@ -125,24 +149,27 @@ export function AdminApp() {
 }
 
 // ---------- HOME ----------
-function AdminHome({ name, teachers, classes, go }: { name: string; teachers: Teacher[]; classes: AdminClass[]; go: (s: Screen) => void }) {
+function AdminHome({ name, teachers, classes, schoolStudents, schoolPct, go, openAcct }: { name: string; teachers: Teacher[]; classes: AdminClass[]; schoolStudents: number; schoolPct: number; go: (s: Screen) => void; openAcct: () => void }) {
   const pending = teachers.filter((t) => t.status === 'invited').length;
-  const stats = [
-    { n: '480', label: 'Students' },
-    { n: String(teachers.length), label: 'Teachers' },
-    { n: '18', label: 'Classes' },
-    { n: '96%', label: 'Present today' },
+  const stats: { n: string; label: string; to: Screen }[] = [
+    { n: String(schoolStudents), label: 'Students', to: 'classes' },
+    { n: String(teachers.length), label: 'Teachers', to: 'staff' },
+    { n: String(classes.length), label: 'Classes', to: 'classes' },
+    { n: `${schoolPct}%`, label: 'Present today', to: 'adminAtt' },
   ];
   return (
     <div className="px-[15px] pt-4 pb-6">
       <div className="flex items-center gap-2.5 mb-4">
-        <div className="w-[38px] h-[38px] rounded-[13px] grid place-items-center text-green font-bold text-[14px] flex-none" style={{ background: 'linear-gradient(140deg,#d7e4da,#a7c4b4)' }}>{initialsOf(name)}</div>
-        <div className="font-semibold text-[14px] leading-[1.1]">{name}<small className="block text-muted font-medium text-[11px] mt-0.5">Principal · Admin</small></div>
+        <div onClick={openAcct} className="flex items-center gap-2.5 cursor-pointer">
+          <div className="w-[38px] h-[38px] rounded-[13px] grid place-items-center text-green font-bold text-[14px] flex-none" style={{ background: 'linear-gradient(140deg,#d7e4da,#a7c4b4)' }}>{initialsOf(name)}</div>
+          <div className="font-semibold text-[14px] leading-[1.1]">{name}<small className="block text-muted font-medium text-[11px] mt-0.5">Principal · Admin</small></div>
+          <span className="text-[#9aa39b] flex-none"><Glyph d={GLYPH.chevronDown} size={16} stroke={2.2} /></span>
+        </div>
         <div className="ml-auto font-serif text-[16px] text-green">Good morning</div>
       </div>
       <div className="grid grid-cols-2 gap-2.5 mb-3">
         {stats.map((s) => (
-          <Card key={s.label} className="p-[15px]"><div className="font-serif text-[28px] leading-none text-green">{s.n}</div><small className="text-[11px] text-muted font-semibold block mt-1">{s.label}</small></Card>
+          <Card key={s.label} onClick={() => go(s.to)} className="p-[15px]"><div className="font-serif text-[28px] leading-none text-green">{s.n}</div><small className="text-[11px] text-muted font-semibold block mt-1">{s.label}</small></Card>
         ))}
       </div>
       <div onClick={() => go('staff')} className="bg-green text-white rounded-[20px] p-[15px] mb-3 flex items-center gap-[13px] cursor-pointer">
@@ -364,74 +391,347 @@ function ClassesList({ classes, teacherName, onAdd, onOpen }: { classes: AdminCl
   );
 }
 
-// ---------- CLASS DETAIL ----------
+// ---------- CLASS DETAIL (tabbed) ----------
+type ClassTab = 'students' | 'teachers' | 'subjects' | 'exams';
+
 function ClassDetail({
-  cls, teachers, teacherName, setClasses,
+  cls, teachers, teacherName, setTeachers, setClasses, classSubjects, setClassSubjects, classExams, setClassExams,
 }: {
   cls: AdminClass; teachers: Teacher[]; teacherName: (id: string) => string;
+  setTeachers: React.Dispatch<React.SetStateAction<Teacher[]>>;
   setClasses: React.Dispatch<React.SetStateAction<AdminClass[]>>;
+  classSubjects: Record<string, string[]>;
+  setClassSubjects: React.Dispatch<React.SetStateAction<Record<string, string[]>>>;
+  classExams: Record<string, ClassExam[]>;
+  setClassExams: React.Dispatch<React.SetStateAction<Record<string, ClassExam[]>>>;
 }) {
+  const [tab, setTab] = useState<ClassTab>('students');
+  // students
+  const [addStudentOpen, setAddStudentOpen] = useState(false);
+  const [studEditIdx, setStudEditIdx] = useState<number | null>(null);
   const [newStudent, setNewStudent] = useState('');
   const [gName, setGName] = useState('');
   const [gPhone, setGPhone] = useState('');
   const [gRel, setGRel] = useState('Mother');
+  // teachers / subjects / exams
+  const [clsTAddOpen, setClsTAddOpen] = useState(false);
+  const [subjAddOpen, setSubjAddOpen] = useState(false);
+  const [newSubj, setNewSubj] = useState('');
+  const [examAddOpen, setExamAddOpen] = useState(false);
+  const [newExam, setNewExam] = useState('');
 
-  const teachesHere = teachers.filter((t) => cls.id in teachOf(t)).map((t) => ({ name: t.name, subjects: teachOf(t)[cls.id].join(', '), isCt: cls.ctId === t.id }));
+  const subjects = classSubjects[cls.id] || DEFAULT_CLASS_SUBJECTS;
+  const exams = classExams[cls.id] || DEFAULT_CLASS_EXAMS;
+  const teachersInClass = teachers.filter((t) => t.classes.includes(cls.id));
+  const availableTeachers = teachers.filter((t) => !t.classes.includes(cls.id));
   const ready = newStudent.trim().length > 0 && gPhone.replace(/\D/g, '').length === 10;
 
+  function switchTab(t: ClassTab) {
+    setTab(t); setAddStudentOpen(false); setStudEditIdx(null); setClsTAddOpen(false); setSubjAddOpen(false); setExamAddOpen(false);
+  }
+
+  // ---- students ----
   function addStudent() {
     if (!ready) return;
     setClasses((cs) => cs.map((c) => (c.id === cls.id ? { ...c, students: [...c.students, { name: newStudent.trim(), guardian: { name: gName.trim() || 'Guardian', phone: gPhone.replace(/\D/g, ''), relation: gRel } }] } : c)));
-    setNewStudent(''); setGName(''); setGPhone(''); setGRel('Mother');
+    setNewStudent(''); setGName(''); setGPhone(''); setGRel('Mother'); setAddStudentOpen(false);
   }
   function removeStudent(idx: number) {
     setClasses((cs) => cs.map((c) => (c.id === cls.id ? { ...c, students: c.students.filter((_, i) => i !== idx) } : c)));
+    setStudEditIdx(null);
   }
+  function setStudentField(idx: number, field: 'name' | 'gname' | 'gphone' | 'grel', val: string) {
+    setClasses((cs) => cs.map((c) => {
+      if (c.id !== cls.id) return c;
+      const arr = c.students.slice();
+      const e = { ...arr[idx] };
+      if (field === 'name') e.name = val;
+      else {
+        const g = { name: '', phone: '', relation: 'Mother', ...(e.guardian || {}) };
+        if (field === 'gname') g.name = val;
+        if (field === 'gphone') g.phone = val.replace(/\D/g, '').slice(0, 10);
+        if (field === 'grel') g.relation = val;
+        e.guardian = g;
+      }
+      arr[idx] = e;
+      return { ...c, students: arr };
+    }));
+  }
+
+  // ---- teachers ----
+  function addTeacherToClass(tid: string) {
+    setTeachers((ts) => ts.map((t) => {
+      if (t.id !== tid || t.classes.includes(cls.id)) return t;
+      const teach = { ...teachOf(t) }; teach[cls.id] = subjects.slice(0, 1);
+      return { ...t, classes: [...t.classes, cls.id], teach };
+    }));
+    setClsTAddOpen(false);
+  }
+  function removeTeacherFromClass(tid: string) {
+    setTeachers((ts) => ts.map((t) => { if (t.id !== tid) return t; const teach = { ...teachOf(t) }; delete teach[cls.id]; return { ...t, classes: t.classes.filter((c) => c !== cls.id), ct: t.ct === cls.id ? '' : t.ct, teach }; }));
+    setClasses((cs) => cs.map((c) => (c.id === cls.id && c.ctId === tid ? { ...c, ctId: '' } : c)));
+  }
+  function setClassCt(tid: string) {
+    const cur = teachers.find((t) => t.id === tid);
+    const isCt = cur?.ct === cls.id;
+    setTeachers((ts) => ts.map((t) => {
+      if (t.id === tid) return { ...t, classes: t.classes.includes(cls.id) ? t.classes : [...t.classes, cls.id], ct: isCt ? '' : cls.id };
+      return !isCt && t.ct === cls.id ? { ...t, ct: '' } : t;
+    }));
+    setClasses((cs) => cs.map((c) => (c.id === cls.id ? { ...c, ctId: isCt ? '' : tid } : c)));
+  }
+  function toggleTeachSubject(tid: string, su: string) {
+    setTeachers((ts) => ts.map((t) => { if (t.id !== tid) return t; const teach = { ...teachOf(t) }; const arr = (teach[cls.id] || []).slice(); const i = arr.indexOf(su); if (i >= 0) arr.splice(i, 1); else arr.push(su); teach[cls.id] = arr; return { ...t, teach }; }));
+  }
+
+  // ---- subjects ----
+  function addSubject() {
+    const nm = newSubj.trim();
+    if (!nm || subjects.some((s) => s.toLowerCase() === nm.toLowerCase())) { setNewSubj(''); setSubjAddOpen(false); return; }
+    setClassSubjects((m) => ({ ...m, [cls.id]: [...subjects, nm] }));
+    setNewSubj(''); setSubjAddOpen(false);
+  }
+  function removeSubject(nm: string) {
+    setClassSubjects((m) => ({ ...m, [cls.id]: subjects.filter((s) => s !== nm) }));
+    setTeachers((ts) => ts.map((t) => { const teach = teachOf(t); if (!(cls.id in teach)) return t; return { ...t, teach: { ...teach, [cls.id]: (teach[cls.id] || []).filter((s) => s !== nm) } }; }));
+  }
+
+  // ---- exams ----
+  function addExam() {
+    const nm = newExam.trim();
+    if (!nm) return;
+    setClassExams((m) => ({ ...m, [cls.id]: [...exams, { id: 'ex' + Date.now(), name: nm }] }));
+    setNewExam(''); setExamAddOpen(false);
+  }
+  function removeExam(id: string) {
+    setClassExams((m) => ({ ...m, [cls.id]: exams.filter((e) => e.id !== id) }));
+  }
+
+  const tabs: { key: ClassTab; label: string }[] = [
+    { key: 'students', label: 'Students' }, { key: 'teachers', label: 'Teachers' },
+    { key: 'subjects', label: 'Subjects' }, { key: 'exams', label: 'Exams' },
+  ];
 
   return (
     <div className="px-[15px] py-4 pb-6">
       <Card className="p-3.5 mb-3 flex items-center gap-[11px]">
-        <div className="w-10 h-10 rounded-xl bg-mist grid place-items-center flex-none text-green"><Glyph d={GLYPH.staff} size={20} stroke={1.9} /></div>
-        <div className="flex-1"><small className="text-[10px] tracking-[0.1em] uppercase text-muted font-semibold block mb-0.5">Class teacher</small>
-          {cls.ctId ? <b className="text-[14px] font-bold">{teacherName(cls.ctId)}</b> : <span className="text-[12px] text-[#8a6d1f] font-semibold">Not set — assign from a teacher's profile</span>}
+        <div className="w-[38px] h-[38px] rounded-[11px] bg-mist grid place-items-center flex-none text-green"><Glyph d={GLYPH.staff} size={19} stroke={1.9} /></div>
+        <div className="flex-1"><small className="text-[9.5px] tracking-[0.1em] uppercase text-muted font-semibold block">Class teacher</small>
+          {cls.ctId ? <b className="text-[13.5px] font-bold">{teacherName(cls.ctId)}</b> : <span className="text-[12px] text-[#8a6d1f] font-semibold">Not set — pick one in Teachers</span>}
         </div>
       </Card>
-      <Card className="p-3.5 mb-3">
-        <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-1.5">Teaches here</div>
-        {teachesHere.length === 0 ? <div className="text-[12.5px] text-muted py-1">No teachers assigned to this class yet.</div> : teachesHere.map((t, i) => (
-          <div key={i} className="flex items-center gap-2.5 py-2.25 border-t border-[#f0f3ef] first:border-t-0">
-            <div className="flex-1 min-w-0"><b className="text-[13px] font-semibold block">{t.name}</b><small className="text-[11px] text-muted">{t.subjects}</small></div>
-            {t.isCt && <span className="text-[9.5px] font-bold text-[#8a6d1f] bg-gold-soft px-2 py-1 rounded-[7px]">CLASS TEACHER</span>}
-          </div>
+
+      <div className="flex gap-[3px] bg-[#eef1ec] rounded-[13px] p-1 mb-3.5">
+        {tabs.map((t) => (
+          <button key={t.key} onClick={() => switchTab(t.key)} className={cx('flex-1 py-2.25 rounded-[10px] text-[12px] font-bold', tab === t.key ? 'bg-green text-white' : 'text-muted')}>{t.label}</button>
         ))}
-      </Card>
-      <Card className="p-3.5 mb-3.5">
-        <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-2.5">Add a student</div>
-        <input value={newStudent} onChange={(e) => setNewStudent(e.target.value)} placeholder="Student's full name" className={cx(inputCls, 'mb-2.25')} />
-        <input value={gName} onChange={(e) => setGName(e.target.value)} placeholder="Guardian's name" className={cx(inputCls, 'mb-2.25')} />
-        <div className="flex items-center bg-white border-[1.5px] border-line rounded-[11px] overflow-hidden mb-2.25">
-          <span className="px-[11px] text-[13px] font-semibold border-r border-line h-[42px] flex items-center">+91</span>
-          <input value={gPhone} onChange={(e) => setGPhone(e.target.value)} inputMode="numeric" placeholder="Guardian mobile (for login)" className="flex-1 min-w-0 border-none px-3 h-[42px] text-[13px] bg-transparent" />
-        </div>
-        <div className="flex gap-1.5 mb-3">
-          {['Mother', 'Father', 'Guardian'].map((r) => <Chip key={r} active={gRel === r} onClick={() => setGRel(r)} className="flex-1 text-center py-2">{r}</Chip>)}
-        </div>
-        <button onClick={addStudent} disabled={!ready} className={cx('w-full py-3 rounded-xl font-bold text-[13.5px]', ready ? 'bg-green text-white' : 'bg-[#dfe5df] text-[#9aa39b]')}>Add student</button>
-      </Card>
-      <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-2.5">{cls.students.length} students</div>
-      {cls.students.map((s, i) => {
-        const g = s.guardian;
-        return (
-          <Card key={i} className="p-3 mb-2 flex gap-[11px] items-center rounded-[14px]">
-            <span className="w-[26px] h-[26px] rounded-lg bg-[#f1f5f1] text-muted text-[11px] font-bold grid place-items-center flex-none">{('0' + (i + 1)).slice(-2)}</span>
-            <div className="flex-1 min-w-0"><b className="text-[13.5px] font-semibold block">{s.name}</b>
-              {g ? <small className="text-[10.5px] text-muted">{g.relation} · {g.name} · {maskPhone(g.phone)}</small> : <small className="text-[10.5px] text-[#a9761b] font-semibold">No guardian phone — can't log in yet</small>}
-            </div>
-            <button onClick={() => removeStudent(i)} className="w-7 h-7 rounded-[9px] bg-[#f6ecec] text-danger text-[16px] font-bold flex-none">×</button>
-          </Card>
-        );
-      })}
-      {cls.students.length === 0 && <div className="text-center text-muted text-[12.5px] py-5">No students yet. Add the first one above.</div>}
+      </div>
+
+      {tab === 'students' && (
+        <>
+          {addStudentOpen ? (
+            <Card className="p-3.5 mb-3.5">
+              <div className="flex items-center mb-2.5">
+                <div className="flex-1 text-[10px] tracking-[0.13em] uppercase font-semibold text-muted">Add a student</div>
+                <button onClick={() => setAddStudentOpen(false)} className="w-[26px] h-[26px] rounded-lg border border-line bg-white text-muted text-[15px] font-bold flex-none">×</button>
+              </div>
+              <input value={newStudent} onChange={(e) => setNewStudent(e.target.value)} placeholder="Student's full name" className={cx(inputCls, 'mb-2.25')} />
+              <input value={gName} onChange={(e) => setGName(e.target.value)} placeholder="Guardian's name" className={cx(inputCls, 'mb-2.25')} />
+              <div className="flex items-center bg-white border-[1.5px] border-line rounded-[11px] overflow-hidden mb-2.25">
+                <span className="px-[11px] text-[13px] font-semibold border-r border-line h-[42px] flex items-center">+91</span>
+                <input value={gPhone} onChange={(e) => setGPhone(e.target.value)} inputMode="numeric" placeholder="Guardian mobile (for login)" className="flex-1 min-w-0 border-none px-3 h-[42px] text-[13px] bg-transparent" />
+              </div>
+              <div className="flex gap-1.5 mb-3">
+                {['Mother', 'Father', 'Guardian'].map((r) => <Chip key={r} active={gRel === r} onClick={() => setGRel(r)} className="flex-1 text-center py-2">{r}</Chip>)}
+              </div>
+              <button onClick={addStudent} disabled={!ready} className={cx('w-full py-3 rounded-xl font-bold text-[13.5px]', ready ? 'bg-green text-white' : 'bg-[#dfe5df] text-[#9aa39b]')}>Add student</button>
+            </Card>
+          ) : (
+            <button onClick={() => setAddStudentOpen(true)} className="w-full mb-3.5 py-3.5 rounded-[14px] bg-green text-white font-bold text-[14px] flex items-center justify-center gap-2"><Glyph d={GLYPH.plus} size={18} stroke={2.2} />Add student</button>
+          )}
+          <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-2.5">{cls.students.length} students</div>
+          {cls.students.map((s, i) => {
+            const g = s.guardian;
+            const editing = studEditIdx === i;
+            return (
+              <Card key={i} className="p-3 mb-2 rounded-[14px]">
+                {editing ? (
+                  <div>
+                    <div className="text-[9.5px] tracking-[0.1em] uppercase font-semibold text-[#9aa39b] mb-1.5">Editing #{('0' + (i + 1)).slice(-2)}</div>
+                    <input value={s.name} onChange={(e) => setStudentField(i, 'name', e.target.value)} placeholder="Student's full name" className={cx(inputCls, 'mb-2', 'rounded-[10px]')} />
+                    <input value={g?.name || ''} onChange={(e) => setStudentField(i, 'gname', e.target.value)} placeholder="Guardian's name" className={cx(inputCls, 'mb-2', 'rounded-[10px]')} />
+                    <div className="flex items-center bg-white border-[1.5px] border-line rounded-[10px] overflow-hidden mb-2">
+                      <span className="px-2.5 text-[12.5px] font-semibold border-r border-line h-10 flex items-center">+91</span>
+                      <input value={g?.phone || ''} onChange={(e) => setStudentField(i, 'gphone', e.target.value)} inputMode="numeric" placeholder="Guardian mobile (login)" className="flex-1 min-w-0 border-none px-2.5 h-10 text-[13px] bg-transparent" />
+                    </div>
+                    <div className="flex gap-1.5 mb-2.5">
+                      {['Mother', 'Father', 'Guardian'].map((rel) => <Chip key={rel} active={(g?.relation || 'Mother') === rel} onClick={() => setStudentField(i, 'grel', rel)} className="flex-1 text-center py-1.5">{rel}</Chip>)}
+                    </div>
+                    <div className="flex gap-2">
+                      <button onClick={() => setStudEditIdx(null)} className="flex-1 py-2.75 rounded-[11px] bg-green text-white font-bold text-[13px]">Done</button>
+                      <button onClick={() => removeStudent(i)} className="px-4 rounded-[11px] bg-[#f6ecec] text-danger font-bold text-[13px]">Remove</button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex gap-[11px] items-center">
+                    <span className="w-[26px] h-[26px] rounded-lg bg-[#f1f5f1] text-muted text-[11px] font-bold grid place-items-center flex-none">{('0' + (i + 1)).slice(-2)}</span>
+                    <div className="flex-1 min-w-0"><b className="text-[13.5px] font-semibold block">{s.name}</b>
+                      {g ? <small className="text-[10.5px] text-muted">{g.relation} · {g.name} · {maskPhone(g.phone)}</small> : <small className="text-[10.5px] text-[#a9761b] font-semibold">No guardian phone — can't log in yet</small>}
+                    </div>
+                    <button onClick={() => setStudEditIdx(i)} className="w-7 h-7 rounded-[9px] border border-[#dbe5db] bg-white text-green grid place-items-center flex-none" aria-label="Edit"><Glyph d={GLYPH.edit} size={14} stroke={2} /></button>
+                    <button onClick={() => removeStudent(i)} className="w-7 h-7 rounded-[9px] bg-[#f6ecec] text-danger text-[16px] font-bold flex-none">×</button>
+                  </div>
+                )}
+              </Card>
+            );
+          })}
+          {cls.students.length === 0 && <div className="text-center text-muted text-[12.5px] py-5">No students yet. Add the first one above.</div>}
+        </>
+      )}
+
+      {tab === 'teachers' && (
+        <>
+          {clsTAddOpen ? (
+            <Card className="p-3 mb-3.5">
+              <div className="flex items-center mb-2.5">
+                <div className="flex-1 text-[10px] tracking-[0.13em] uppercase font-semibold text-muted">Pick a teacher</div>
+                <button onClick={() => setClsTAddOpen(false)} className="w-[26px] h-[26px] rounded-lg border border-line bg-white text-muted text-[15px] font-bold flex-none">×</button>
+              </div>
+              {availableTeachers.length === 0 ? <div className="text-[12.5px] text-muted px-0.5 py-1">Every teacher is already in this class.</div> : availableTeachers.map((t) => (
+                <button key={t.id} onClick={() => addTeacherToClass(t.id)} className="w-full text-left flex items-center gap-2 px-[11px] py-2.5 border-[1.5px] border-line rounded-[11px] bg-white mb-1.75 text-[12.5px] font-semibold text-ink">
+                  <Glyph d={GLYPH.plus} size={15} stroke={2} />{t.name} · {subjectsOf(t).join(', ')}
+                </button>
+              ))}
+            </Card>
+          ) : (
+            <button onClick={() => setClsTAddOpen(true)} className="w-full mb-3.5 py-3.5 rounded-[14px] bg-green text-white font-bold text-[14px] flex items-center justify-center gap-2"><Glyph d={GLYPH.plus} size={18} stroke={2.2} />Add teacher to class</button>
+          )}
+          {teachersInClass.length === 0 && <div className="text-center text-muted text-[12.5px] py-4">No teachers in this class yet.</div>}
+          {teachersInClass.map((t) => {
+            const subs = teachOf(t)[cls.id] || [];
+            const isCt = cls.ctId === t.id;
+            return (
+              <Card key={t.id} className="p-3 mb-2.25">
+                <div className="flex items-center gap-2.5 mb-2.25">
+                  <b className="flex-1 min-w-0 text-[13.5px] font-bold">{t.name}</b>
+                  <button onClick={() => setClassCt(t.id)} className={cx('px-2.5 py-1.5 rounded-[9px] text-[10.5px] font-bold border-[1.5px] flex-none', isCt ? 'border-green bg-green text-white' : 'border-[#dbe5db] bg-white text-green')}>{isCt ? 'Class teacher ✓' : 'Make CT'}</button>
+                  <button onClick={() => removeTeacherFromClass(t.id)} className="w-7 h-7 rounded-[9px] bg-[#f6ecec] text-danger text-[16px] font-bold flex-none">×</button>
+                </div>
+                <div className="text-[9.5px] tracking-[0.1em] uppercase font-semibold text-[#9aa39b] mb-1.5">Subjects taught here</div>
+                <div className="flex gap-1.5 flex-wrap">
+                  {subjects.map((su) => {
+                    const on = subs.includes(su);
+                    return <button key={su} onClick={() => toggleTeachSubject(t.id, su)} className={cx('px-2.5 py-1 rounded-lg text-[10.5px] font-semibold border', on ? 'border-green bg-green text-white' : 'border-[#dbe5db] bg-white text-green')}>{su}</button>;
+                  })}
+                </div>
+                {subs.length === 0 && <div className="text-[10.5px] text-[#a9761b] font-semibold mt-1.5">No subject set for this teacher.</div>}
+              </Card>
+            );
+          })}
+        </>
+      )}
+
+      {tab === 'subjects' && (
+        <>
+          {subjAddOpen ? (
+            <Card className="p-3 mb-3.5">
+              <div className="flex items-center mb-2.5">
+                <div className="flex-1 text-[10px] tracking-[0.13em] uppercase font-semibold text-muted">New subject</div>
+                <button onClick={() => { setSubjAddOpen(false); setNewSubj(''); }} className="w-[26px] h-[26px] rounded-lg border border-line bg-white text-muted text-[15px] font-bold flex-none">×</button>
+              </div>
+              <div className="flex gap-2">
+                <input value={newSubj} onChange={(e) => setNewSubj(e.target.value)} placeholder="e.g. French" className="flex-1 min-w-0 border-[1.5px] border-line rounded-[11px] px-3 py-2.5 text-[13px] bg-white" />
+                <button onClick={addSubject} disabled={!newSubj.trim()} className={cx('flex-none px-4 rounded-[11px] font-bold text-[13px]', newSubj.trim() ? 'bg-green text-white' : 'bg-[#dfe5df] text-[#9aa39b]')}>Add</button>
+              </div>
+            </Card>
+          ) : (
+            <button onClick={() => setSubjAddOpen(true)} className="w-full mb-3.5 py-3.5 rounded-[14px] bg-green text-white font-bold text-[14px] flex items-center justify-center gap-2"><Glyph d={GLYPH.plus} size={18} stroke={2.2} />Add subject</button>
+          )}
+          <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-2.5">{subjects.length} subjects in {cls.label}</div>
+          {subjects.map((nm) => (
+            <Card key={nm} className="p-3 mb-2 rounded-[13px] flex gap-[11px] items-center">
+              <div className="w-8 h-8 rounded-[9px] bg-mist grid place-items-center flex-none text-green"><Glyph d={GLYPH.diary} size={16} stroke={1.9} /></div>
+              <b className="flex-1 min-w-0 text-[13.5px] font-semibold">{nm}</b>
+              <button onClick={() => removeSubject(nm)} className="w-7 h-7 rounded-[9px] bg-[#f6ecec] text-danger text-[16px] font-bold flex-none">×</button>
+            </Card>
+          ))}
+        </>
+      )}
+
+      {tab === 'exams' && (
+        <>
+          {examAddOpen ? (
+            <Card className="p-3 mb-3.5">
+              <div className="flex items-center mb-2.5">
+                <div className="flex-1 text-[10px] tracking-[0.13em] uppercase font-semibold text-muted">New examination</div>
+                <button onClick={() => { setExamAddOpen(false); setNewExam(''); }} className="w-[26px] h-[26px] rounded-lg border border-line bg-white text-muted text-[15px] font-bold flex-none">×</button>
+              </div>
+              <div className="flex gap-2">
+                <input value={newExam} onChange={(e) => setNewExam(e.target.value)} placeholder="e.g. Annual Exam" className="flex-1 min-w-0 border-[1.5px] border-line rounded-[11px] px-3 py-2.5 text-[13px] bg-white" />
+                <button onClick={addExam} disabled={!newExam.trim()} className={cx('flex-none px-4 rounded-[11px] font-bold text-[13px]', newExam.trim() ? 'bg-green text-white' : 'bg-[#dfe5df] text-[#9aa39b]')}>Add</button>
+              </div>
+            </Card>
+          ) : (
+            <button onClick={() => setExamAddOpen(true)} className="w-full mb-3.5 py-3.5 rounded-[14px] bg-green text-white font-bold text-[14px] flex items-center justify-center gap-2"><Glyph d={GLYPH.plus} size={18} stroke={2.2} />Add examination</button>
+          )}
+          <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-2.5">{exams.length} examinations in {cls.label}</div>
+          {exams.map((e) => (
+            <Card key={e.id} className="p-3 mb-2 rounded-[13px] flex gap-[11px] items-center">
+              <div className="w-8 h-8 rounded-[9px] bg-mist grid place-items-center flex-none text-green"><Glyph d={GLYPH.results} size={16} stroke={1.9} /></div>
+              <b className="flex-1 min-w-0 text-[13.5px] font-semibold">{e.name}</b>
+              <button onClick={() => removeExam(e.id)} className="w-7 h-7 rounded-[9px] bg-[#f6ecec] text-danger text-[16px] font-bold flex-none">×</button>
+            </Card>
+          ))}
+        </>
+      )}
+    </div>
+  );
+}
+
+// ---------- ADMIN ATTENDANCE (all classes) ----------
+type ClassAtt = { id: string; label: string; roster: { name: string; roll: string; present: boolean }[]; present: number; absent: number; total: number; pct: number };
+
+function AdminAttendance({ classAtt, schoolPct, schoolPresent, onOpen }: { classAtt: ClassAtt[]; schoolPct: number; schoolPresent: number; onOpen: (id: string) => void }) {
+  const barColor = (p: number) => (p >= 90 ? '#1f8a5b' : p >= 80 ? '#c2882a' : '#c0392b');
+  return (
+    <div className="px-[15px] py-4 pb-6">
+      <div className="bg-green text-white rounded-[20px] p-4 mb-3.5 flex items-center gap-3.5">
+        <div className="font-serif text-[36px] leading-none">{schoolPct}<span className="text-[16px]">%</span></div>
+        <div className="flex-1"><b className="text-[14px] font-bold block">Present today</b><small className="text-[#cfe0d6] text-[11.5px]">{schoolPresent} students across the school · 25 Jun</small></div>
+      </div>
+      <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-2.5">By class</div>
+      {classAtt.map((c) => (
+        <Card key={c.id} onClick={() => onOpen(c.id)} className="p-[13px] mb-2.25 rounded-[16px]">
+          <div className="flex items-center gap-2.5 mb-2.25">
+            <b className="flex-1 min-w-0 text-[13.5px] font-bold">{c.label}</b>
+            <small className="text-[11px] text-muted">{c.present} / {c.total} present</small>
+            <span className="text-[13px] font-bold flex-none" style={{ color: barColor(c.pct) }}>{c.pct}%</span>
+            <span className="text-[#c3ccc5] flex-none"><Glyph d={GLYPH.chevronRight} size={16} stroke={2.2} /></span>
+          </div>
+          <div className="h-1.5 rounded-[3px] bg-[#eef1ec]"><div className="h-1.5 rounded-[3px]" style={{ width: `${c.pct}%`, background: barColor(c.pct) }} /></div>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+// ---------- ADMIN ATTENDANCE (one class) ----------
+function AdminAttendanceClass({ att }: { att: ClassAtt }) {
+  return (
+    <div className="px-[15px] py-4 pb-6">
+      <div className="flex gap-2.5 mb-3.5">
+        <div className="flex-1 bg-[#eaf4ee] border border-[#cfe3d6] rounded-2xl p-[13px] text-center"><div className="font-serif text-[26px] leading-none text-success">{att.present}</div><small className="text-[10px] uppercase text-muted font-semibold">Present</small></div>
+        <div className="flex-1 bg-[#f6ecec] border border-[#eccfcf] rounded-2xl p-[13px] text-center"><div className="font-serif text-[26px] leading-none text-danger">{att.absent}</div><small className="text-[10px] uppercase text-muted font-semibold">Absent</small></div>
+        <div className="flex-1 bg-cloud border border-line rounded-2xl p-[13px] text-center"><div className="font-serif text-[26px] leading-none text-green">{att.pct}%</div><small className="text-[10px] uppercase text-muted font-semibold">Rate</small></div>
+      </div>
+      <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-2.5">{att.total} students</div>
+      {att.roster.map((r, i) => (
+        <Card key={i} className="p-3 mb-2 rounded-[13px] flex gap-[11px] items-center">
+          <span className="w-[26px] h-[26px] rounded-lg bg-[#f1f5f1] text-muted text-[11px] font-bold grid place-items-center flex-none">{r.roll}</span>
+          <b className="flex-1 min-w-0 text-[13.5px] font-semibold">{r.name}</b>
+          <span className={cx('text-[10.5px] font-bold px-2.5 py-1 rounded-lg flex-none', r.present ? 'bg-[#eaf4ee] text-success' : 'bg-[#f6ecec] text-danger')}>{r.present ? 'Present' : 'Absent'}</span>
+        </Card>
+      ))}
     </div>
   );
 }

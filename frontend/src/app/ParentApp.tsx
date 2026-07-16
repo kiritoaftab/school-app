@@ -167,7 +167,7 @@ export function ParentApp() {
         />
       }
     >
-      {screen === 'home' && <HomeParent diary={diary} acked={acked} toggle={toggle} go={go} openNotice={(id) => { setActiveNoticeId(id); go('notice'); }} />}
+      {screen === 'home' && <HomeParent diary={diary} acked={acked} toggle={toggle} go={go} openAcct={() => setAcctOpen(true)} openNotice={(id) => { setActiveNoticeId(id); go('notice'); }} />}
       {screen === 'attendance' && <AttendanceParent go={go} />}
       {screen === 'leave' && (leaveSent ? (
         <SuccessScreen title="Request sent" body="Ms. Kapoor will see this right away. You'll get a notification once it's approved." buttonLabel="Back to home" onButton={() => { setLeaveSent(false); go('home'); }} />
@@ -194,12 +194,13 @@ export function ParentApp() {
 
 // ---------- HOME ----------
 function HomeParent({
-  diary, acked, toggle, go, openNotice,
+  diary, acked, toggle, go, openAcct, openNotice,
 }: {
   diary: Record<string, DiaryDay>;
   acked: Record<string, boolean>;
   toggle: (dk: string, i: number) => void;
   go: (s: Screen) => void;
+  openAcct: () => void;
   openNotice: (id: string) => void;
 }) {
   const today = diary[TODAY_DATE];
@@ -211,10 +212,13 @@ function HomeParent({
   return (
     <div className="px-[15px] pt-4 pb-6">
       <div className="flex items-center gap-2.5 mb-4">
-        <div className="w-[38px] h-[38px] rounded-[13px] grid place-items-center text-green font-bold text-[15px] flex-none" style={{ background: 'linear-gradient(140deg,#d7e4da,#a7c4b4)' }}>A</div>
-        <div className="font-semibold text-[14px] leading-[1.1]">
-          {CHILD.name}
-          <small className="block text-muted font-medium text-[11px] mt-0.5">{CHILD.klass}</small>
+        <div onClick={openAcct} className="flex items-center gap-2.5 cursor-pointer">
+          <div className="w-[38px] h-[38px] rounded-[13px] grid place-items-center text-green font-bold text-[15px] flex-none" style={{ background: 'linear-gradient(140deg,#d7e4da,#a7c4b4)' }}>A</div>
+          <div className="font-semibold text-[14px] leading-[1.1]">
+            {CHILD.name}
+            <small className="block text-muted font-medium text-[11px] mt-0.5">{CHILD.klass}</small>
+          </div>
+          <span className="text-[#9aa39b] flex-none"><Glyph d={GLYPH.chevronDown} size={16} stroke={2.2} /></span>
         </div>
         <div className="ml-auto font-serif text-[16px] text-green">Good morning</div>
       </div>
