@@ -316,13 +316,20 @@ export function AppHeader({
   onBack,
   onAccount,
   onBell,
+  brand,
+  logo,
 }: {
   title: string;
   sub?: string;
   onBack?: () => void;
   onAccount?: () => void;
   onBell: () => void;
+  /** School name — its first letter is the avatar fallback when no logo. */
+  brand?: string;
+  /** School logo URL. Falls back to the brand initial when absent/broken. */
+  logo?: string | null;
 }) {
+  const initial = (brand?.trim()?.[0] ?? 'G').toUpperCase();
   return (
     <header className="flex items-center gap-[11px] px-4 pt-3 pb-[13px] bg-white border-b border-line z-10">
       {onBack ? (
@@ -336,10 +343,28 @@ export function AppHeader({
       ) : (
         <button
           onClick={onAccount}
-          className="w-[38px] h-[38px] rounded-full bg-green grid place-items-center flex-none shadow-[0_0_0_1.5px_#c2a04e,0_0_0_4px_#fff,0_0_0_5px_#efe6cf]"
+          className="w-[38px] h-[38px] rounded-full bg-green grid place-items-center flex-none overflow-hidden shadow-[0_0_0_1.5px_#c2a04e,0_0_0_4px_#fff,0_0_0_5px_#efe6cf]"
           aria-label="Account"
         >
-          <span className="font-serif text-white text-xl leading-none">G</span>
+          {logo ? (
+            <img
+              src={logo}
+              alt={brand ?? 'School'}
+              className="w-full h-full object-contain bg-white"
+              onError={(e) => {
+                // Hide a broken image so the initial fallback shows through.
+                (e.currentTarget as HTMLImageElement).style.display = 'none';
+                const sib = e.currentTarget.nextElementSibling as HTMLElement | null;
+                if (sib) sib.style.display = 'flex';
+              }}
+            />
+          ) : null}
+          <span
+            className="font-serif text-white text-xl leading-none w-full h-full items-center justify-center"
+            style={{ display: logo ? 'none' : 'flex' }}
+          >
+            {initial}
+          </span>
         </button>
       )}
       <div className="flex-1 min-w-0">

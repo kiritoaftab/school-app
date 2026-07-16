@@ -101,7 +101,9 @@ authRouter.get(
       phone: user.phone,
       role: user.role,
       schoolId: user.schoolId,
-      school: user.school ? { id: user.school.id, name: user.school.name } : null,
+      school: user.school
+        ? { id: user.school.id, name: user.school.name, logo: user.school.logo }
+        : null,
       students: user.parentLinks.map((l) => ({
         id: l.student.id,
         name: l.student.name,

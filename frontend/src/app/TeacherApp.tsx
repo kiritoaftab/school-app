@@ -113,7 +113,7 @@ export function TeacherApp() {
   }
 
   // header
-  let title = 'Greenwood';
+  let title = user?.school?.name ?? 'Greenwood';
   let sub: string | undefined = `${name.toUpperCase()} · TEACHER`;
   if (screen === 'diary') { title = 'Class Diary'; sub = curClass.label.toUpperCase(); }
   else if (screen === 'calendar') { title = 'Calendar'; sub = SCHOOL.toUpperCase(); }
@@ -137,7 +137,7 @@ export function TeacherApp() {
 
   return (
     <Shell
-      header={<AppHeader title={title} sub={sub} onBack={onBack} onAccount={() => setAcctOpen(true)} onBell={() => go('notifs')} />}
+      header={<AppHeader title={title} sub={sub} onBack={onBack} onAccount={() => setAcctOpen(true)} onBell={() => go('notifs')} brand={user?.school?.name} logo={user?.school?.logo} />}
       classBar={
         showClassBar ? (
           <div className="flex items-center gap-2 px-4 py-[9px] bg-[#eef3ee] border-b border-[#e0e7e0]">

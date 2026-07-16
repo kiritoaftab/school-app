@@ -53,7 +53,7 @@ export function AdminApp() {
   }
 
   // header
-  let title = 'Greenwood';
+  let title = user?.school?.name ?? 'Greenwood';
   let sub: string | undefined = `${name.toUpperCase()} · ADMIN`;
   const M: Record<string, [string, string]> = {
     staff: ['Staff', 'MANAGE TEACHERS'],
@@ -119,7 +119,7 @@ export function AdminApp() {
 
   return (
     <Shell
-      header={<AppHeader title={title} sub={sub} onBack={onBack} onAccount={() => setAcctOpen(true)} onBell={() => go('notifs')} />}
+      header={<AppHeader title={title} sub={sub} onBack={onBack} onAccount={() => setAcctOpen(true)} onBell={() => go('notifs')} brand={user?.school?.name} logo={user?.school?.logo} />}
       tabs={tabs}
       overlays={<AccountSheet open={acctOpen} onClose={() => setAcctOpen(false)} name={name} phone={user?.phone ?? '9800011122'} roleLabel="Admin" onSignOut={() => { logout(); navigate('/login'); }} />}
     >

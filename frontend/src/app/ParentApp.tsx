@@ -111,8 +111,8 @@ export function ParentApp() {
   const exam = year.exams.find((e) => e.id === resExam) || year.exams[year.exams.length - 1];
 
   // header
-  let title = 'Greenwood';
-  let sub: string | undefined = SCHOOL.toUpperCase();
+  let title = user?.school?.name ?? 'Greenwood';
+  let sub: string | undefined = (user?.school?.name ?? SCHOOL).toUpperCase();
   if (screen === 'diary') { title = 'Diary'; sub = `AARAV · ${selDate} JUNE`; }
   else if (screen === 'calendar') { title = 'Calendar'; sub = SCHOOL.toUpperCase(); }
   else if (screen === 'results') { title = 'Report Card'; sub = `${year.short} · ${exam.name}`.toUpperCase(); }
@@ -150,6 +150,8 @@ export function ParentApp() {
           onBack={onBack}
           onAccount={() => setAcctOpen(true)}
           onBell={() => go('notifs')}
+          brand={user?.school?.name}
+          logo={user?.school?.logo}
         />
       }
       tabs={tabs}

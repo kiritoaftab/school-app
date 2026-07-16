@@ -16,7 +16,7 @@ export interface AuthUser {
   phone: string;
   role: Role;
   schoolId: number;
-  school?: { id: number; name: string };
+  school?: { id: number; name: string; logo?: string | null };
   students?: { id: number; name: string; relation: string }[];
 }
 
