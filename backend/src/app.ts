@@ -8,6 +8,7 @@ import { authRouter } from './routes/auth.js';
 import { parentRouter } from './routes/parent.js';
 import { teacherRouter } from './routes/teacher.js';
 import { adminRouter } from './routes/admin.js';
+import { platformRouter } from './routes/platform.js';
 
 export function createApp() {
   const app = express();
@@ -27,6 +28,7 @@ export function createApp() {
   app.use('/parent', parentRouter);
   app.use('/teacher', teacherRouter);
   app.use('/admin', adminRouter);
+  app.use('/platform', platformRouter);
 
   // 404
   app.use((_req, res) => res.status(404).json({ error: 'Not found' }));

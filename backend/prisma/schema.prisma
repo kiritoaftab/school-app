@@ -14,6 +14,7 @@ enum Role {
   PARENT
   TEACHER
   ADMIN
+  SUPER_ADMIN
 }
 
 enum AttendanceStatus {
@@ -60,13 +61,14 @@ model School {
 
 model User {
   id        Int      @id @default(autoincrement())
-  schoolId  Int
+  // Null for SUPER_ADMIN (platform owner) — every other role is bound to a school.
+  schoolId  Int?
   phone     String
   name      String
   role      Role
   createdAt DateTime @default(now())
 
-  school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  school School? @relation(fields: [schoolId], references: [id], onDelete: Cascade)
 
   // relations by role
   parentLinks     ParentStudentLink[]

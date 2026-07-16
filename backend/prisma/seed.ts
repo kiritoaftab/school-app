@@ -6,9 +6,16 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('🌱 Seeding Greenwood…');
 
-  // wipe (dev only) — order respects FKs via cascade from School
+  // wipe (dev only) — order respects FKs via cascade from School.
+  // SUPER_ADMIN users have no schoolId, so clear them explicitly.
   await prisma.otpCode.deleteMany();
+  await prisma.user.deleteMany({ where: { role: 'SUPER_ADMIN' } });
   await prisma.school.deleteMany();
+
+  // Platform owner — logs in via the same phone/OTP flow, no school attached.
+  await prisma.user.create({
+    data: { schoolId: null, name: 'Platform Owner', phone: '9000000000', role: 'SUPER_ADMIN' },
+  });
 
   const school = await prisma.school.create({
     data: { name: 'Greenwood International School' },
@@ -221,6 +228,7 @@ async function main() {
 
   console.log('✅ Seed complete.');
   console.log('   Login (phone / role):');
+  console.log(`   • Platform 9000000000  SUPER_ADMIN`);
   console.log(`   • Admin   9000000001  ADMIN`);
   console.log(`   • Teacher 9000000002  TEACHER`);
   console.log(`   • Parent  9000000003  PARENT`);

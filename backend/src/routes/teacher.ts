@@ -2,20 +2,21 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { prisma } from '../db.js';
 import { ah, HttpError } from '../lib/http.js';
-import { requireAuth, requireRole } from '../middleware/auth.js';
+import { requireAuth, requireRole, requireSchoolId } from '../middleware/auth.js';
 
 export const teacherRouter = Router();
 teacherRouter.use(requireAuth, requireRole('TEACHER'));
 
 /** Terms in the school (for results entry). */
 teacherRouter.get('/terms', ah(async (req, res) => {
-  const { schoolId } = req.auth!;
+  const schoolId = requireSchoolId(req);
   res.json(await prisma.term.findMany({ where: { schoolId }, orderBy: { id: 'asc' } }));
 }));
 
 /** Classes this teacher is class-teacher of. */
 teacherRouter.get('/classes', ah(async (req, res) => {
-  const { userId, schoolId } = req.auth!;
+  const { userId } = req.auth!;
+  const schoolId = requireSchoolId(req);
   const classes = await prisma.klass.findMany({
     where: { schoolId, classTeacherId: userId },
     orderBy: [{ grade: 'asc' }, { section: 'asc' }],
@@ -25,7 +26,7 @@ teacherRouter.get('/classes', ah(async (req, res) => {
 
 /** Roster for a class, with today's attendance status prefilled. */
 teacherRouter.get('/classes/:id/roster', ah(async (req, res) => {
-  const { schoolId } = req.auth!;
+  const schoolId = requireSchoolId(req);
   const klassId = Number(req.params.id);
   const klass = await prisma.klass.findFirst({ where: { id: klassId, schoolId } });
   if (!klass) throw new HttpError(404, 'Class not found');
@@ -61,7 +62,8 @@ const markSchema = z.object({
   ),
 });
 teacherRouter.post('/attendance', ah(async (req, res) => {
-  const { userId, schoolId } = req.auth!;
+  const { userId } = req.auth!;
+  const schoolId = requireSchoolId(req);
   const { date, marks } = markSchema.parse(req.body);
   const day = new Date(date);
   await prisma.$transaction(
@@ -84,7 +86,8 @@ const noticeSchema = z.object({
   audienceClassId: z.number().nullable().optional(),
 });
 teacherRouter.post('/notices', ah(async (req, res) => {
-  const { userId, schoolId } = req.auth!;
+  const { userId } = req.auth!;
+  const schoolId = requireSchoolId(req);
   const data = noticeSchema.parse(req.body);
   const notice = await prisma.notice.create({
     data: {
@@ -109,7 +112,8 @@ const diarySchema = z.object({
   note: z.string().optional(),
 });
 teacherRouter.post('/diary', ah(async (req, res) => {
-  const { userId, schoolId } = req.auth!;
+  const { userId } = req.auth!;
+  const schoolId = requireSchoolId(req);
   const data = diarySchema.parse(req.body);
   const entry = await prisma.diaryEntry.create({
     data: {
@@ -164,7 +168,8 @@ teacherRouter.post('/results', ah(async (req, res) => {
 
 /** Leave requests for students in this teacher's classes. */
 teacherRouter.get('/leave', ah(async (req, res) => {
-  const { userId, schoolId } = req.auth!;
+  const { userId } = req.auth!;
+  const schoolId = requireSchoolId(req);
   const classes = await prisma.klass.findMany({ where: { schoolId, classTeacherId: userId } });
   const enrollments = await prisma.enrollment.findMany({
     where: { klassId: { in: classes.map((c) => c.id) } },

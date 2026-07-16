@@ -2,14 +2,14 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { prisma } from '../db.js';
 import { ah, HttpError } from '../lib/http.js';
-import { requireAuth, requireRole } from '../middleware/auth.js';
+import { requireAuth, requireRole, requireSchoolId } from '../middleware/auth.js';
 
 export const adminRouter = Router();
 adminRouter.use(requireAuth, requireRole('ADMIN'));
 
 // --- Users ---
 adminRouter.get('/users', ah(async (req, res) => {
-  const { schoolId } = req.auth!;
+  const schoolId = requireSchoolId(req);
   const role = req.query.role as string | undefined;
   const users = await prisma.user.findMany({
     where: { schoolId, ...(role ? { role: role as any } : {}) },
@@ -24,7 +24,7 @@ const userSchema = z.object({
   role: z.enum(['PARENT', 'TEACHER', 'ADMIN']),
 });
 adminRouter.post('/users', ah(async (req, res) => {
-  const { schoolId } = req.auth!;
+  const schoolId = requireSchoolId(req);
   const data = userSchema.parse(req.body);
   const exists = await prisma.user.findFirst({ where: { schoolId, phone: data.phone, role: data.role } });
   if (exists) throw new HttpError(409, 'User with this phone and role already exists');
@@ -34,7 +34,7 @@ adminRouter.post('/users', ah(async (req, res) => {
 
 // --- Students ---
 adminRouter.get('/students', ah(async (req, res) => {
-  const { schoolId } = req.auth!;
+  const schoolId = requireSchoolId(req);
   const students = await prisma.student.findMany({
     where: { schoolId },
     orderBy: { name: 'asc' },
@@ -60,7 +60,7 @@ const studentSchema = z.object({
   academicYear: z.string().default(String(new Date().getFullYear())),
 });
 adminRouter.post('/students', ah(async (req, res) => {
-  const { schoolId } = req.auth!;
+  const schoolId = requireSchoolId(req);
   const data = studentSchema.parse(req.body);
   const student = await prisma.student.create({
     data: { schoolId, name: data.name, admissionNo: data.admissionNo },
@@ -75,7 +75,7 @@ adminRouter.post('/students', ah(async (req, res) => {
 
 // --- Classes ---
 adminRouter.get('/classes', ah(async (req, res) => {
-  const { schoolId } = req.auth!;
+  const schoolId = requireSchoolId(req);
   const classes = await prisma.klass.findMany({
     where: { schoolId },
     orderBy: [{ grade: 'asc' }, { section: 'asc' }],
@@ -97,7 +97,7 @@ const classSchema = z.object({
   classTeacherId: z.number().nullable().optional(),
 });
 adminRouter.post('/classes', ah(async (req, res) => {
-  const { schoolId } = req.auth!;
+  const schoolId = requireSchoolId(req);
   const data = classSchema.parse(req.body);
   const klass = await prisma.klass.create({
     data: { schoolId, grade: data.grade, section: data.section, classTeacherId: data.classTeacherId ?? null },
@@ -112,7 +112,7 @@ const linkSchema = z.object({
   relation: z.string().default('Parent'),
 });
 adminRouter.post('/parent-links', ah(async (req, res) => {
-  const { schoolId } = req.auth!;
+  const schoolId = requireSchoolId(req);
   const data = linkSchema.parse(req.body);
   const [parent, student] = await Promise.all([
     prisma.user.findFirst({ where: { id: data.parentUserId, schoolId, role: 'PARENT' } }),
@@ -135,7 +135,8 @@ const noticeSchema = z.object({
   pinned: z.boolean().default(false),
 });
 adminRouter.post('/notices', ah(async (req, res) => {
-  const { userId, schoolId } = req.auth!;
+  const { userId } = req.auth!;
+  const schoolId = requireSchoolId(req);
   const data = noticeSchema.parse(req.body);
   const notice = await prisma.notice.create({
     data: { schoolId, ...data, audienceType: 'SCHOOL', createdById: userId },
@@ -149,12 +150,12 @@ const eventSchema = z.object({
   date: z.string(),
 });
 adminRouter.get('/events', ah(async (req, res) => {
-  const { schoolId } = req.auth!;
+  const schoolId = requireSchoolId(req);
   const events = await prisma.event.findMany({ where: { schoolId }, orderBy: { date: 'asc' } });
   res.json(events.map((e) => ({ ...e, date: e.date.toISOString().slice(0, 10) })));
 }));
 adminRouter.post('/events', ah(async (req, res) => {
-  const { schoolId } = req.auth!;
+  const schoolId = requireSchoolId(req);
   const data = eventSchema.parse(req.body);
   const event = await prisma.event.create({
     data: { schoolId, title: data.title, description: data.description, date: new Date(data.date) },

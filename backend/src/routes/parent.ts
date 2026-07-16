@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { prisma } from '../db.js';
 import { ah, HttpError } from '../lib/http.js';
-import { requireAuth, requireRole } from '../middleware/auth.js';
+import { requireAuth, requireRole, requireSchoolId } from '../middleware/auth.js';
 import { assertParentOwnsStudent, studentClassId } from '../lib/access.js';
 
 export const parentRouter = Router();
@@ -36,7 +36,8 @@ parentRouter.get(
 parentRouter.get(
   '/students/:id/attendance',
   ah(async (req, res) => {
-    const { userId, schoolId } = req.auth!;
+    const { userId } = req.auth!;
+    const schoolId = requireSchoolId(req);
     const studentId = Number(req.params.id);
     await assertParentOwnsStudent(userId, schoolId, studentId);
 
@@ -98,7 +99,8 @@ parentRouter.get(
 parentRouter.get(
   '/notices',
   ah(async (req, res) => {
-    const { userId, schoolId } = req.auth!;
+    const { userId } = req.auth!;
+    const schoolId = requireSchoolId(req);
     const notices = await prisma.notice.findMany({
       where: { schoolId },
       orderBy: [{ pinned: 'desc' }, { createdAt: 'desc' }],
@@ -123,7 +125,8 @@ parentRouter.get(
 parentRouter.get(
   '/notices/:id',
   ah(async (req, res) => {
-    const { userId, schoolId } = req.auth!;
+    const { userId } = req.auth!;
+    const schoolId = requireSchoolId(req);
     const notice = await prisma.notice.findFirst({
       where: { id: Number(req.params.id), schoolId },
       include: { _count: { select: { acks: true } }, acks: { where: { parentUserId: userId } } },
@@ -147,7 +150,8 @@ parentRouter.get(
 parentRouter.post(
   '/notices/:id/ack',
   ah(async (req, res) => {
-    const { userId, schoolId } = req.auth!;
+    const { userId } = req.auth!;
+    const schoolId = requireSchoolId(req);
     const noticeId = Number(req.params.id);
     const notice = await prisma.notice.findFirst({ where: { id: noticeId, schoolId } });
     if (!notice) throw new HttpError(404, 'Notice not found');
@@ -164,7 +168,8 @@ parentRouter.post(
 parentRouter.get(
   '/students/:id/diary',
   ah(async (req, res) => {
-    const { userId, schoolId } = req.auth!;
+    const { userId } = req.auth!;
+    const schoolId = requireSchoolId(req);
     const studentId = Number(req.params.id);
     await assertParentOwnsStudent(userId, schoolId, studentId);
     const klassId = await studentClassId(studentId);
@@ -193,7 +198,8 @@ const diaryDoneSchema = z.object({ studentId: z.number(), done: z.boolean() });
 parentRouter.post(
   '/diary/:entryId/done',
   ah(async (req, res) => {
-    const { userId, schoolId } = req.auth!;
+    const { userId } = req.auth!;
+    const schoolId = requireSchoolId(req);
     const { studentId, done } = diaryDoneSchema.parse(req.body);
     await assertParentOwnsStudent(userId, schoolId, studentId);
     const entryId = Number(req.params.entryId);
@@ -213,14 +219,15 @@ parentRouter.post(
 
 // --- Results ---
 parentRouter.get('/terms', ah(async (req, res) => {
-  const { schoolId } = req.auth!;
+  const schoolId = requireSchoolId(req);
   res.json(await prisma.term.findMany({ where: { schoolId }, orderBy: { id: 'asc' } }));
 }));
 
 parentRouter.get(
   '/students/:id/results',
   ah(async (req, res) => {
-    const { userId, schoolId } = req.auth!;
+    const { userId } = req.auth!;
+    const schoolId = requireSchoolId(req);
     const studentId = Number(req.params.id);
     await assertParentOwnsStudent(userId, schoolId, studentId);
 
@@ -256,7 +263,7 @@ parentRouter.get(
 
 // --- Calendar events ---
 parentRouter.get('/events', ah(async (req, res) => {
-  const { schoolId } = req.auth!;
+  const schoolId = requireSchoolId(req);
   const events = await prisma.event.findMany({
     where: { schoolId, date: { gte: new Date(new Date().toDateString()) } },
     orderBy: { date: 'asc' },
@@ -266,7 +273,7 @@ parentRouter.get('/events', ah(async (req, res) => {
 
 // --- Photo albums ---
 parentRouter.get('/albums', ah(async (req, res) => {
-  const { schoolId } = req.auth!;
+  const schoolId = requireSchoolId(req);
   const albums = await prisma.photoAlbum.findMany({
     where: { schoolId },
     orderBy: { createdAt: 'desc' },
@@ -284,7 +291,7 @@ parentRouter.get('/albums', ah(async (req, res) => {
 }));
 
 parentRouter.get('/albums/:id', ah(async (req, res) => {
-  const { schoolId } = req.auth!;
+  const schoolId = requireSchoolId(req);
   const album = await prisma.photoAlbum.findFirst({
     where: { id: Number(req.params.id), schoolId },
     include: { photos: true },
@@ -324,7 +331,8 @@ const leaveSchema = z.object({
   reason: z.string().min(1),
 });
 parentRouter.post('/leave', ah(async (req, res) => {
-  const { userId, schoolId } = req.auth!;
+  const { userId } = req.auth!;
+  const schoolId = requireSchoolId(req);
   const data = leaveSchema.parse(req.body);
   await assertParentOwnsStudent(userId, schoolId, data.studentId);
   const leave = await prisma.leaveRequest.create({

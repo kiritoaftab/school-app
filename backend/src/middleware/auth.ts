@@ -1,6 +1,7 @@
 import type { NextFunction, Request, Response } from 'express';
 import type { Role } from '@prisma/client';
 import { verifyToken, type AuthPayload } from '../lib/jwt.js';
+import { HttpError } from '../lib/http.js';
 
 declare global {
   // eslint-disable-next-line @typescript-eslint/no-namespace
@@ -38,4 +39,14 @@ export function requireRole(...roles: Role[]) {
 export function auth(req: Request): AuthPayload {
   if (!req.auth) throw new Error('auth() called without requireAuth');
   return req.auth;
+}
+
+/**
+ * Return the caller's schoolId, or 403 if they have none (e.g. a SUPER_ADMIN
+ * hitting a school-scoped route). Use in every school-bound handler.
+ */
+export function requireSchoolId(req: Request): number {
+  const schoolId = req.auth?.schoolId;
+  if (schoolId == null) throw new HttpError(403, 'This action requires a school-scoped account');
+  return schoolId;
 }

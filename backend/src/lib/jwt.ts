@@ -5,7 +5,8 @@ import type { Role } from '@prisma/client';
 export interface AuthPayload {
   userId: number;
   role: Role;
-  schoolId: number;
+  /** Null for SUPER_ADMIN (platform owner); a real id for every school-bound role. */
+  schoolId: number | null;
 }
 
 export function signToken(payload: AuthPayload): string {
