@@ -12,7 +12,15 @@ import { platformRouter } from './routes/platform.js';
 
 export function createApp() {
   const app = express();
-  app.use(cors({ origin: config.corsOrigin }));
+  app.use(
+    cors({
+      origin(origin, cb) {
+        // Allow non-browser requests (curl, health checks) that send no Origin.
+        if (!origin || config.corsOrigins.includes(origin)) return cb(null, true);
+        cb(new Error('Not allowed by CORS: ' + origin));
+      },
+    }),
+  );
   app.use(express.json());
 
   app.get('/health', async (_req, res) => {
