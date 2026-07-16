@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Super Admin Dashboard</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --border: #334155;
+      --text: #e2e8f0;
+      --muted: #94a3b8;
+      --primary: #6366f1;
+      --primary-hover: #4f46e5;
+      --danger: #ef4444;
+      --success: #22c55e;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+    }
+    .hidden { display: none !important; }
+    a { color: var(--primary); }
+
+    /* Login */
+    .login-wrap {
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+    .login-card {
+      width: 100%;
+      max-width: 380px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 32px;
+    }
+    .brand { font-size: 22px; font-weight: 700; margin: 0 0 4px; }
+    .sub { color: var(--muted); font-size: 14px; margin: 0 0 24px; }
+
+    /* App shell */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 24px;
+      background: var(--card);
+      border-bottom: 1px solid var(--border);
+    }
+    header .who { font-size: 14px; color: var(--muted); }
+    main {
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 24px;
+      display: grid;
+      gap: 24px;
+      grid-template-columns: 1fr 1fr;
+    }
+    @media (max-width: 720px) { main { grid-template-columns: 1fr; } }
+
+    .panel {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+    }
+    .panel h2 { margin: 0 0 16px; font-size: 17px; }
+    .full { grid-column: 1 / -1; }
+
+    label { display: block; font-size: 13px; color: var(--muted); margin: 12px 0 6px; }
+    input, select {
+      width: 100%;
+      padding: 10px 12px;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      font-size: 14px;
+    }
+    input:focus, select:focus { outline: none; border-color: var(--primary); }
+
+    button {
+      margin-top: 16px;
+      width: 100%;
+      padding: 11px;
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:hover { background: var(--primary-hover); }
+    button.ghost {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+      width: auto;
+      margin: 0;
+      padding: 8px 14px;
+    }
+    button:disabled { opacity: .55; cursor: not-allowed; }
+
+    .msg { margin-top: 12px; font-size: 13px; min-height: 18px; }
+    .msg.err { color: var(--danger); }
+    .msg.ok { color: var(--success); }
+
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); }
+    th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; }
+    .empty { color: var(--muted); font-size: 14px; padding: 8px 0; }
+    .hint { font-size: 12px; color: var(--muted); margin-top: 6px; }
+  </style>
+</head>
+<body>
+  <!-- ========== LOGIN ========== -->
+  <div id="loginView" class="login-wrap">
+    <div class="login-card">
+      <h1 class="brand">Super Admin</h1>
+      <p class="sub">Sign in with your registered phone number.</p>
+
+      <!-- Step 1: phone -->
+      <div id="stepPhone">
+        <label for="loginPhone">Phone number</label>
+        <input id="loginPhone" type="tel" placeholder="+91 98765 43210" autocomplete="tel" />
+        <button id="requestOtpBtn">Send OTP</button>
+      </div>
+
+      <!-- Step 2: otp -->
+      <div id="stepOtp" class="hidden">
+        <label for="loginOtp">Enter OTP</label>
+        <input id="loginOtp" type="text" inputmode="numeric" placeholder="6-digit code" autocomplete="one-time-code" />
+        <button id="verifyOtpBtn">Verify & Sign in</button>
+        <button class="ghost" id="backBtn" style="margin-top:10px;">Use a different number</button>
+        <p class="hint" id="devHint"></p>
+      </div>
+
+      <div class="msg" id="loginMsg"></div>
+    </div>
+  </div>
+
+  <!-- ========== APP ========== -->
+  <div id="appView" class="hidden">
+    <header>
+      <strong>Super Admin Dashboard</strong>
+      <div style="display:flex;align-items:center;gap:14px;">
+        <span class="who" id="whoami"></span>
+        <button class="ghost" id="logoutBtn">Logout</button>
+      </div>
+    </header>
+
+    <main>
+      <!-- Add School -->
+      <section class="panel">
+        <h2>Add a School</h2>
+        <label for="schoolName">School name</label>
+        <input id="schoolName" placeholder="Springfield High" />
+        <label for="schoolTz">Timezone (optional)</label>
+        <input id="schoolTz" placeholder="Asia/Kolkata" />
+        <button id="addSchoolBtn">Create School</button>
+        <div class="msg" id="schoolMsg"></div>
+      </section>
+
+      <!-- Add School Admin -->
+      <section class="panel">
+        <h2>Add School Admin</h2>
+        <label for="adminSchool">School</label>
+        <select id="adminSchool"></select>
+        <label for="adminName">Admin name</label>
+        <input id="adminName" placeholder="Jane Doe" />
+        <label for="adminPhone">Admin phone</label>
+        <input id="adminPhone" type="tel" placeholder="+91 90000 00000" />
+        <button id="addAdminBtn">Add Admin</button>
+        <div class="msg" id="adminMsg"></div>
+      </section>
+
+      <!-- Schools list -->
+      <section class="panel full">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <h2 style="margin:0;">Schools</h2>
+          <button class="ghost" id="refreshBtn">Refresh</button>
+        </div>
+        <table>
+          <thead>
+            <tr><th>ID</th><th>Name</th><th>Timezone</th><th>Users</th><th>Students</th><th>Classes</th></tr>
+          </thead>
+          <tbody id="schoolsBody"></tbody>
+        </table>
+        <div class="empty hidden" id="schoolsEmpty">No schools yet. Create one above.</div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const BASE_URL = "https://schoolapp.shopyoume.in/api";
+    const TOKEN_KEY = "sa_token";
+    const USER_KEY = "sa_user";
+
+    // ---- tiny helpers ----
+    const $ = (id) => document.getElementById(id);
+    const token = () => localStorage.getItem(TOKEN_KEY);
+    const setMsg = (el, text, kind) => {
+      el.textContent = text || "";
+      el.className = "msg" + (kind ? " " + kind : "");
+    };
+
+    async function api(path, { method = "GET", body, auth = true } = {}) {
+      const headers = { "Content-Type": "application/json" };
+      if (auth && token()) headers.Authorization = "Bearer " + token();
+      const res = await fetch(BASE_URL + path, {
+        method,
+        headers,
+        body: body ? JSON.stringify(body) : undefined,
+      });
+      let data = null;
+      try { data = await res.json(); } catch (_) {}
+      if (!res.ok) {
+        throw new Error((data && (data.error || data.message)) || ("Request failed (" + res.status + ")"));
+      }
+      return data;
+    }
+
+    // ================= LOGIN =================
+    let pendingPhone = "";
+
+    $("requestOtpBtn").addEventListener("click", async () => {
+      const phone = $("loginPhone").value.trim();
+      if (!phone) return setMsg($("loginMsg"), "Enter your phone number.", "err");
+      $("requestOtpBtn").disabled = true;
+      setMsg($("loginMsg"), "Sending OTP…");
+      try {
+        const data = await api("/auth/request-otp", { method: "POST", auth: false, body: { phone } });
+        pendingPhone = phone;
+        $("stepPhone").classList.add("hidden");
+        $("stepOtp").classList.remove("hidden");
+        setMsg($("loginMsg"), "OTP sent to " + phone, "ok");
+        // devCode is only returned by the API in non-production.
+        $("devHint").textContent = data && data.devCode ? "Dev code: " + data.devCode : "";
+        $("loginOtp").focus();
+      } catch (e) {
+        setMsg($("loginMsg"), e.message, "err");
+      } finally {
+        $("requestOtpBtn").disabled = false;
+      }
+    });
+
+    $("backBtn").addEventListener("click", () => {
+      $("stepOtp").classList.add("hidden");
+      $("stepPhone").classList.remove("hidden");
+      setMsg($("loginMsg"), "");
+      $("devHint").textContent = "";
+    });
+
+    $("verifyOtpBtn").addEventListener("click", async () => {
+      const otp = $("loginOtp").value.trim();
+      if (!otp) return setMsg($("loginMsg"), "Enter the OTP.", "err");
+      $("verifyOtpBtn").disabled = true;
+      setMsg($("loginMsg"), "Verifying…");
+      try {
+        const data = await api("/auth/verify-otp", { method: "POST", auth: false, body: { phone: pendingPhone, otp } });
+        if (!data.user || data.user.role !== "SUPER_ADMIN") {
+          throw new Error("This account is not a Super Admin.");
+        }
+        localStorage.setItem(TOKEN_KEY, data.token);
+        localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+        enterApp();
+      } catch (e) {
+        setMsg($("loginMsg"), e.message, "err");
+      } finally {
+        $("verifyOtpBtn").disabled = false;
+      }
+    });
+
+    // ================= APP =================
+    function enterApp() {
+      const user = JSON.parse(localStorage.getItem(USER_KEY) || "{}");
+      $("whoami").textContent = (user.name || "Super Admin") + " · " + (user.phone || "");
+      $("loginView").classList.add("hidden");
+      $("appView").classList.remove("hidden");
+      loadSchools();
+    }
+
+    function logout() {
+      localStorage.removeItem(TOKEN_KEY);
+      localStorage.removeItem(USER_KEY);
+      location.reload();
+    }
+    $("logoutBtn").addEventListener("click", logout);
+
+    async function loadSchools() {
+      try {
+        const schools = await api("/platform/schools");
+        const body = $("schoolsBody");
+        const select = $("adminSchool");
+        body.innerHTML = "";
+        select.innerHTML = "";
+        $("schoolsEmpty").classList.toggle("hidden", schools.length > 0);
+
+        for (const s of schools) {
+          const tr = document.createElement("tr");
+          tr.innerHTML =
+            "<td>" + s.id + "</td>" +
+            "<td>" + escapeHtml(s.name) + "</td>" +
+            "<td>" + escapeHtml(s.timezone || "—") + "</td>" +
+            "<td>" + s.counts.users + "</td>" +
+            "<td>" + s.counts.students + "</td>" +
+            "<td>" + s.counts.classes + "</td>";
+          body.appendChild(tr);
+
+          const opt = document.createElement("option");
+          opt.value = s.id;
+          opt.textContent = s.name;
+          select.appendChild(opt);
+        }
+      } catch (e) {
+        if (/401|403/.test(e.message)) return logout();
+        setMsg($("schoolMsg"), e.message, "err");
+      }
+    }
+    $("refreshBtn").addEventListener("click", loadSchools);
+
+    // Add School
+    $("addSchoolBtn").addEventListener("click", async () => {
+      const name = $("schoolName").value.trim();
+      const timezone = $("schoolTz").value.trim();
+      if (!name) return setMsg($("schoolMsg"), "Enter a school name.", "err");
+      $("addSchoolBtn").disabled = true;
+      setMsg($("schoolMsg"), "Creating…");
+      try {
+        const body = { name };
+        if (timezone) body.timezone = timezone;
+        const school = await api("/platform/schools", { method: "POST", body });
+        setMsg($("schoolMsg"), "Created \"" + school.name + "\" (ID " + school.id + ").", "ok");
+        $("schoolName").value = "";
+        $("schoolTz").value = "";
+        await loadSchools();
+      } catch (e) {
+        setMsg($("schoolMsg"), e.message, "err");
+      } finally {
+        $("addSchoolBtn").disabled = false;
+      }
+    });
+
+    // Add School Admin
+    $("addAdminBtn").addEventListener("click", async () => {
+      const schoolId = $("adminSchool").value;
+      const name = $("adminName").value.trim();
+      const phone = $("adminPhone").value.trim();
+      if (!schoolId) return setMsg($("adminMsg"), "Create a school first, then pick one.", "err");
+      if (!name || !phone) return setMsg($("adminMsg"), "Enter admin name and phone.", "err");
+      $("addAdminBtn").disabled = true;
+      setMsg($("adminMsg"), "Adding admin…");
+      try {
+        const admin = await api("/platform/schools/" + schoolId + "/admins", {
+          method: "POST",
+          body: { name, phone },
+        });
+        setMsg($("adminMsg"), "Added admin \"" + admin.name + "\".", "ok");
+        $("adminName").value = "";
+        $("adminPhone").value = "";
+        await loadSchools();
+      } catch (e) {
+        setMsg($("adminMsg"), e.message, "err");
+      } finally {
+        $("addAdminBtn").disabled = false;
+      }
+    });
+
+    function escapeHtml(str) {
+      return String(str).replace(/[&<>"']/g, (c) =>
+        ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+    }
+
+    // Auto-login if a token is already stored.
+    if (token()) enterApp();
+  </script>
+</body>
+</html>
