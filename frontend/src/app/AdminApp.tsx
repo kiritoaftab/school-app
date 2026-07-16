@@ -1,8 +1,13 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import {
-  AppHeader, Card, Chip, Glyph, PrimaryButton, Shell, SuccessScreen, cx, type TabDef,
+  listClasses, listTeachers, createClass,
+  type AdminKlass, type AdminTeacher,
+} from '../api/admin';
+import {
+  AppHeader, Card, Chip, EmptyState, Glyph, PrimaryButton, Shell, Spinner, SuccessScreen, cx,
+  type TabDef,
 } from './kit';
 import {
   CalendarScreen, NoticeBoardScreen, NoticeDetailScreen, NotificationsScreen,
@@ -29,12 +34,39 @@ export function AdminApp() {
   const [classes, setClasses] = useState<AdminClass[]>(() => JSON.parse(JSON.stringify(ADMIN_CLASSES)));
   const [notices, setNotices] = useState<Notice[]>(NOTICES);
   const [activeTeacherId, setActiveTeacherId] = useState('rao');
-  const [activeClassId, setActiveClassId] = useState('5-B');
+  const [activeClassId] = useState('5-B');
   const [activeNoticeId, setActiveNoticeId] = useState('ptm');
   const [attClassId, setAttClassId] = useState('5-B');
   // Per-class subject & exam catalogues (editable in class detail).
   const [classSubjects, setClassSubjects] = useState<Record<string, string[]>>({});
   const [classExams, setClassExams] = useState<Record<string, ClassExam[]>>({});
+
+  // Live classes & teachers from the backend (Classes list + Add Class flow).
+  const [apiClasses, setApiClasses] = useState<AdminKlass[] | null>(null);
+  const [apiTeachers, setApiTeachers] = useState<AdminTeacher[]>([]);
+  const [classesLoading, setClassesLoading] = useState(false);
+  const [classesError, setClassesError] = useState<string | null>(null);
+
+  const loadClasses = useCallback(async () => {
+    setClassesLoading(true);
+    setClassesError(null);
+    try {
+      const [cls, tch] = await Promise.all([listClasses(), listTeachers()]);
+      setApiClasses(cls);
+      setApiTeachers(tch);
+    } catch {
+      setClassesError("Couldn't load classes. Pull to retry.");
+    } finally {
+      setClassesLoading(false);
+    }
+  }, []);
+
+  // Load whenever the admin lands on the Classes or Add-Class screens.
+  useEffect(() => {
+    if (screen === 'classes' || screen === 'classAdd') {
+      if (apiClasses === null) loadClasses();
+    }
+  }, [screen, apiClasses, loadClasses]);
 
   const name = user?.name ?? 'Sridevi Menon';
   const teacherName = (id: string) => teachers.find((t) => t.id === id)?.name ?? '';
@@ -127,7 +159,7 @@ export function AdminApp() {
       {screen === 'staff' && <StaffList teachers={teachers} onAdd={() => go('staffAdd')} onOpen={(id) => { setActiveTeacherId(id); go('staffDetail'); }} />}
       {screen === 'staffDetail' && <StaffDetail teacher={activeTeacher} classes={classes} teacherName={teacherName} onMakeCt={makeCt} onUnassign={unassign} onAssign={assign} onToggleStatus={toggleStatus} />}
       {screen === 'staffAdd' && <StaffAdd classes={classes} onSent={(t) => { setTeachers((ts) => [...ts, t]); }} onDone={() => go('staff')} />}
-      {screen === 'classes' && <ClassesList classes={classes} teacherName={teacherName} onAdd={() => go('classAdd')} onOpen={(id) => { setActiveClassId(id); go('classDetail'); }} />}
+      {screen === 'classes' && <ClassesList classes={apiClasses} loading={classesLoading} error={classesError} onRetry={loadClasses} onAdd={() => go('classAdd')} />}
       {screen === 'classDetail' && (
         <ClassDetail
           cls={activeClass} teachers={teachers} teacherName={teacherName}
@@ -138,7 +170,7 @@ export function AdminApp() {
       )}
       {screen === 'adminAtt' && <AdminAttendance classAtt={classAtt} schoolPct={schoolPct} schoolPresent={schoolPresent} onOpen={(id) => { setAttClassId(id); go('adminAttClass'); }} />}
       {screen === 'adminAttClass' && <AdminAttendanceClass att={attClass} />}
-      {screen === 'classAdd' && <ClassAdd teachers={teachers} onCreate={(c, ctId) => { setClasses((cs) => cs.some((x) => x.id === c.id) ? cs : [...cs, c]); if (ctId) setTeachers((ts) => ts.map((t) => (t.id === ctId ? { ...t, classes: t.classes.includes(c.id) ? t.classes : [...t.classes, c.id], ct: c.id } : t.ct === c.id ? { ...t, ct: '' } : t))); go('classes'); }} />}
+      {screen === 'classAdd' && <ClassAdd teachers={apiTeachers} onCreated={async () => { await loadClasses(); go('classes'); }} />}
       {screen === 'noticeBoard' && <NoticeBoardScreen role="admin" notices={notices} acked={{}} onOpen={(id) => { setActiveNoticeId(id); go('notice'); }} onCompose={() => go('noticeCompose')} />}
       {screen === 'notice' && <NoticeDetailScreen notice={notices.find((n) => n.id === activeNoticeId)!} acked={false} showAck={false} onAcknowledge={() => {}} />}
       {screen === 'noticeCompose' && <NoticeCompose onPublish={(n) => setNotices((ns) => [n, ...ns])} onDone={() => go('noticeBoard')} />}
@@ -373,20 +405,37 @@ function StaffAdd({ classes, onSent, onDone }: { classes: AdminClass[]; onSent: 
   );
 }
 
-// ---------- CLASSES LIST ----------
-function ClassesList({ classes, teacherName, onAdd, onOpen }: { classes: AdminClass[]; teacherName: (id: string) => string; onAdd: () => void; onOpen: (id: string) => void }) {
+// ---------- CLASSES LIST (live) ----------
+function ClassesList({ classes, loading, error, onRetry, onAdd }: { classes: AdminKlass[] | null; loading: boolean; error: string | null; onRetry: () => void; onAdd: () => void }) {
   return (
     <div className="px-[15px] py-4 pb-6">
       <button onClick={onAdd} className="w-full mb-3.5 py-3 rounded-[14px] bg-green text-white font-semibold text-[13px] flex items-center justify-center gap-[7px]"><Glyph d={GLYPH.plus} size={17} stroke={2} />Add a class</button>
-      <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-2.5">{classes.length} classes</div>
-      {classes.map((c) => (
-        <Card key={c.id} onClick={() => onOpen(c.id)} className="p-[13px] mb-2.25 flex gap-3 items-center">
-          <div className="w-[42px] h-[42px] rounded-[13px] bg-mist grid place-items-center flex-none text-green"><Glyph d={GLYPH.classes} size={20} stroke={1.9} /></div>
-          <div className="flex-1 min-w-0"><b className="text-[14px] font-bold block">{c.label}</b><small className="text-[11px] text-muted">{c.ctId ? 'Class teacher · ' + teacherName(c.ctId) : 'No class teacher yet'}</small></div>
-          <span className="text-[12px] font-bold text-green bg-[#f1f5f1] rounded-[9px] px-2.5 py-1.5 flex-none">{c.students.length}</span>
-          <span className="text-[#c3ccc5] flex-none"><Glyph d={GLYPH.chevronRight} size={17} stroke={2.2} /></span>
+
+      {loading && classes === null && <div className="py-10"><Spinner /></div>}
+
+      {error && classes === null && !loading && (
+        <Card className="p-5 text-center">
+          <div className="text-[12.5px] text-danger mb-3">{error}</div>
+          <button onClick={onRetry} className="px-4 py-2 rounded-[11px] bg-green text-white font-semibold text-[12.5px]">Retry</button>
         </Card>
-      ))}
+      )}
+
+      {classes !== null && (
+        <>
+          <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-2.5">{classes.length} {classes.length === 1 ? 'class' : 'classes'}</div>
+          {classes.length === 0 ? (
+            <EmptyState icon={GLYPH.classes} title="No classes yet">Add your first class with a grade and section.</EmptyState>
+          ) : (
+            classes.map((c) => (
+              <Card key={c.id} className="p-[13px] mb-2.25 flex gap-3 items-center">
+                <div className="w-[42px] h-[42px] rounded-[13px] bg-mist grid place-items-center flex-none text-green"><Glyph d={GLYPH.classes} size={20} stroke={1.9} /></div>
+                <div className="flex-1 min-w-0"><b className="text-[14px] font-bold block">{c.label}</b><small className="text-[11px] text-muted">{c.teacher ? 'Class teacher · ' + c.teacher : 'No class teacher yet'}</small></div>
+                <span className="text-[12px] font-bold text-green bg-[#f1f5f1] rounded-[9px] px-2.5 py-1.5 flex-none">{c.students}</span>
+              </Card>
+            ))
+          )}
+        </>
+      )}
     </div>
   );
 }
@@ -736,18 +785,35 @@ function AdminAttendanceClass({ att }: { att: ClassAtt }) {
   );
 }
 
-// ---------- CLASS ADD ----------
-function ClassAdd({ teachers, onCreate }: { teachers: Teacher[]; onCreate: (c: AdminClass, ctId: string) => void }) {
+// ---------- CLASS ADD (live) ----------
+function ClassAdd({ teachers, onCreated }: { teachers: AdminTeacher[]; onCreated: () => void | Promise<void> }) {
   const [grade, setGrade] = useState('');
   const [section, setSection] = useState('');
-  const [ct, setCt] = useState('');
-  function create() {
-    const g = grade.trim();
-    const sec = section.trim().toUpperCase();
-    if (!g || !sec) return;
-    const id = `${g}-${sec}`;
-    onCreate({ id, label: 'Grade ' + id, ctId: ct, students: [] }, ct);
+  // '' = "Assign later" (the default). Otherwise the selected teacher's id.
+  const [ct, setCt] = useState<number | ''>('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const ready = grade.trim().length > 0 && section.trim().length > 0 && !submitting;
+
+  async function create() {
+    if (!ready) return;
+    setSubmitting(true);
+    setError(null);
+    try {
+      await createClass({
+        grade: grade.trim(),
+        section: section.trim().toUpperCase(),
+        classTeacherId: ct === '' ? null : ct,
+      });
+      await onCreated();
+    } catch (e) {
+      const status = (e as { response?: { status?: number; data?: { error?: string } } }).response;
+      setError(status?.data?.error ?? "Couldn't create the class. Please try again.");
+      setSubmitting(false);
+    }
   }
+
   return (
     <div className="px-[15px] py-4 pb-6">
       <div className="flex gap-2.5 mb-3.5">
@@ -757,11 +823,13 @@ function ClassAdd({ teachers, onCreate }: { teachers: Teacher[]; onCreate: (c: A
       <Field label="Class teacher · optional">
         <div className="flex gap-1.5 flex-wrap">
           <Chip active={ct === ''} onClick={() => setCt('')}>Assign later</Chip>
-          {teachers.filter((t) => t.status !== 'inactive').map((t) => <Chip key={t.id} active={ct === t.id} onClick={() => setCt(t.id)}>{t.name}</Chip>)}
+          {teachers.map((t) => <Chip key={t.id} active={ct === t.id} onClick={() => setCt(t.id)}>{t.name}</Chip>)}
         </div>
+        {teachers.length === 0 && <div className="text-[11.5px] text-muted mt-2">No teachers yet — you can add them later and assign a class teacher then.</div>}
       </Field>
-      <PrimaryButton onClick={create}>Create class</PrimaryButton>
-      <div className="text-center text-[11px] text-muted leading-[1.5] mt-3">The class teacher can also be set or changed later from any teacher's profile. Subjects a teacher takes here are set when you add or edit the teacher.</div>
+      {error && <div className="text-[12px] text-danger bg-[#f6ecec] border border-[#eccfcf] rounded-[11px] px-3 py-2.5 mb-3">{error}</div>}
+      <PrimaryButton disabled={!ready} onClick={create}>{submitting ? 'Creating…' : 'Create class'}</PrimaryButton>
+      <div className="text-center text-[11px] text-muted leading-[1.5] mt-3">The class teacher can also be set or changed later from any teacher's profile.</div>
     </div>
   );
 }

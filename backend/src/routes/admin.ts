@@ -85,6 +85,9 @@ adminRouter.get('/classes', ah(async (req, res) => {
     classes.map((c) => ({
       id: c.id,
       label: `${c.grade}-${c.section}`,
+      grade: c.grade,
+      section: c.section,
+      classTeacherId: c.classTeacherId,
       teacher: c.classTeacher?.name ?? null,
       students: c._count.enrollments,
     })),
@@ -99,10 +102,29 @@ const classSchema = z.object({
 adminRouter.post('/classes', ah(async (req, res) => {
   const schoolId = requireSchoolId(req);
   const data = classSchema.parse(req.body);
+  const grade = data.grade.trim();
+  const section = data.section.trim().toUpperCase();
+
+  const exists = await prisma.klass.findFirst({ where: { schoolId, grade, section } });
+  if (exists) throw new HttpError(409, `Class ${grade}-${section} already exists`);
+
+  if (data.classTeacherId != null) {
+    const teacher = await prisma.user.findFirst({
+      where: { id: data.classTeacherId, schoolId, role: 'TEACHER' },
+    });
+    if (!teacher) throw new HttpError(404, 'Selected teacher not found in this school');
+  }
+
   const klass = await prisma.klass.create({
-    data: { schoolId, grade: data.grade, section: data.section, classTeacherId: data.classTeacherId ?? null },
+    data: { schoolId, grade, section, classTeacherId: data.classTeacherId ?? null },
   });
-  res.status(201).json(klass);
+  res.status(201).json({
+    id: klass.id,
+    label: `${klass.grade}-${klass.section}`,
+    grade: klass.grade,
+    section: klass.section,
+    classTeacherId: klass.classTeacherId,
+  });
 }));
 
 // --- Parent-student links ---

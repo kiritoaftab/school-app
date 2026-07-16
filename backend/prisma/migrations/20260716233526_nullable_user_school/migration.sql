@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE `User` MODIFY `schoolId` INTEGER NULL,
+    MODIFY `role` ENUM('PARENT', 'TEACHER', 'ADMIN', 'SUPER_ADMIN') NOT NULL;
