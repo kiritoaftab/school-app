@@ -413,7 +413,7 @@ export function ClassBar({
 
 export function TabBar({ tabs }: { tabs: TabDef[] }) {
   return (
-    <nav className="flex justify-around items-center bg-white border-t border-line px-1.5 pt-2.5 pb-5">
+    <nav className="sticky bottom-0 z-20 flex-none flex justify-around items-center bg-white border-t border-line px-1.5 pt-2.5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-[0_-6px_16px_-8px_rgba(20,40,30,0.18)]">
       {tabs.map((t) => (
         <button
           key={t.key}
@@ -450,10 +450,12 @@ export function Shell({
 }) {
   return (
     <div className="min-h-full w-full flex justify-center">
-      <div className="w-full max-w-[420px] min-h-screen bg-cloud flex flex-col relative shadow-[0_20px_60px_-25px_rgba(20,40,30,0.35)] md:my-6 md:min-h-[calc(100vh-3rem)] md:rounded-[32px] md:overflow-hidden">
+      <div className="w-full max-w-[420px] h-dvh bg-cloud flex flex-col relative shadow-[0_20px_60px_-25px_rgba(20,40,30,0.35)] md:my-6 md:h-[calc(100dvh-3rem)] md:rounded-[32px] md:overflow-hidden">
         {header}
         {classBar}
-        <main className="gw-scroll flex-1 overflow-y-auto overflow-x-hidden relative">{children}</main>
+        {/* min-h-0 lets this flex child shrink so it scrolls internally,
+            keeping the header pinned at top and the tab bar pinned at bottom. */}
+        <main className="gw-scroll flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain relative">{children}</main>
         <TabBar tabs={tabs} />
         {overlays}
       </div>
