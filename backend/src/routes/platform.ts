@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '../db.js';
 import { ah, HttpError } from '../lib/http.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
+import { presignLogoUpload, isS3Configured, EXT_BY_TYPE } from '../lib/s3.js';
 
 // Platform-owner surface: create/manage schools and their admins.
 // Guarded by SUPER_ADMIN — the only role not bound to a single school.
@@ -21,6 +22,19 @@ const adminInput = z.object({
   phone: z.string().min(6),
 });
 
+// --- Logo uploads ---
+// Hand the browser a short-lived presigned S3 URL to PUT the logo to directly,
+// then it saves the returned publicUrl as the school's `logo`.
+const presignSchema = z.object({
+  contentType: z.string().refine((t) => t in EXT_BY_TYPE, 'Unsupported image type'),
+});
+platformRouter.post('/uploads/logo', ah(async (req, res) => {
+  if (!isS3Configured) throw new HttpError(503, 'Logo uploads are not configured on the server');
+  const { contentType } = presignSchema.parse(req.body);
+  const result = await presignLogoUpload(contentType);
+  res.json(result);
+}));
+
 // --- Schools ---
 platformRouter.get('/schools', ah(async (_req, res) => {
   const schools = await prisma.school.findMany({
@@ -32,6 +46,9 @@ platformRouter.get('/schools', ah(async (_req, res) => {
       id: s.id,
       name: s.name,
       timezone: s.timezone,
+      logo: s.logo,
+      locality: s.locality,
+      city: s.city,
       createdAt: s.createdAt,
       counts: { users: s._count.users, students: s._count.students, classes: s._count.classes },
     })),
@@ -41,6 +58,9 @@ platformRouter.get('/schools', ah(async (_req, res) => {
 const createSchoolSchema = z.object({
   name: z.string().min(1),
   timezone: z.string().min(1).optional(),
+  logo: z.string().url().optional(),
+  locality: z.string().min(1).optional(),
+  city: z.string().min(1).optional(),
   // Optionally provision the school's first admin in the same request.
   admin: adminInput.optional(),
 });
@@ -48,7 +68,13 @@ platformRouter.post('/schools', ah(async (req, res) => {
   const data = createSchoolSchema.parse(req.body);
   const { school, admin } = await prisma.$transaction(async (tx) => {
     const school = await tx.school.create({
-      data: { name: data.name, ...(data.timezone ? { timezone: data.timezone } : {}) },
+      data: {
+        name: data.name,
+        ...(data.timezone ? { timezone: data.timezone } : {}),
+        logo: data.logo ?? null,
+        locality: data.locality ?? null,
+        city: data.city ?? null,
+      },
     });
     const admin = data.admin
       ? await tx.user.create({
@@ -61,6 +87,9 @@ platformRouter.post('/schools', ah(async (req, res) => {
     id: school.id,
     name: school.name,
     timezone: school.timezone,
+    logo: school.logo,
+    locality: school.locality,
+    city: school.city,
     createdAt: school.createdAt,
     admin: admin ? { id: admin.id, name: admin.name, phone: admin.phone } : null,
   });
@@ -80,6 +109,9 @@ platformRouter.get('/schools/:id', ah(async (req, res) => {
     id: school.id,
     name: school.name,
     timezone: school.timezone,
+    logo: school.logo,
+    locality: school.locality,
+    city: school.city,
     createdAt: school.createdAt,
     counts: { users: school._count.users, students: school._count.students, classes: school._count.classes },
     admins: school.users,
@@ -131,4 +163,26 @@ platformRouter.post('/schools/:id/admins', ah(async (req, res) => {
     data: { schoolId, name: data.name, phone: data.phone, role: 'ADMIN' },
   });
   res.status(201).json({ id: admin.id, name: admin.name, phone: admin.phone });
+}));
+
+const updateAdminSchema = z
+  .object({ name: z.string().min(1).optional(), phone: z.string().min(6).optional() })
+  .refine((d) => d.name !== undefined || d.phone !== undefined, { message: 'Nothing to update' });
+platformRouter.patch('/schools/:id/admins/:adminId', ah(async (req, res) => {
+  const schoolId = parseId(req.params.id);
+  const adminId = parseId(req.params.adminId);
+  const data = updateAdminSchema.parse(req.body);
+  const admin = await prisma.user.findFirst({ where: { id: adminId, schoolId, role: 'ADMIN' } });
+  if (!admin) throw new HttpError(404, 'Admin not found in this school');
+  if (data.phone && data.phone !== admin.phone) {
+    const dup = await prisma.user.findFirst({
+      where: { schoolId, phone: data.phone, role: 'ADMIN', id: { not: adminId } },
+    });
+    if (dup) throw new HttpError(409, 'An admin with this phone already exists in this school');
+  }
+  const updated = await prisma.user.update({
+    where: { id: adminId },
+    data: { ...(data.name ? { name: data.name } : {}), ...(data.phone ? { phone: data.phone } : {}) },
+  });
+  res.json({ id: updated.id, name: updated.name, phone: updated.phone });
 }));

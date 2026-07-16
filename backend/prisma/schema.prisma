@@ -45,6 +45,9 @@ model School {
   id        Int      @id @default(autoincrement())
   name      String
   timezone  String   @default("Asia/Kolkata")
+  logo      String?  @db.Text
+  locality  String?
+  city      String?
   createdAt DateTime @default(now())
 
   users        User[]

@@ -119,6 +119,30 @@
     th { color: var(--muted); font-weight: 600; font-size: 12px; text-transform: uppercase; }
     .empty { color: var(--muted); font-size: 14px; padding: 8px 0; }
     .hint { font-size: 12px; color: var(--muted); margin-top: 6px; }
+
+    .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .logo-preview { margin-top: 12px; max-height: 64px; border-radius: 8px; border: 1px solid var(--border); background: #fff; padding: 4px; }
+    .school-logo { width: 28px; height: 28px; border-radius: 6px; object-fit: cover; background: #fff; vertical-align: middle; }
+    tr.school-row { cursor: pointer; }
+    tr.school-row:hover td { background: rgba(99,102,241,.08); }
+    tr.school-row.active td { background: rgba(99,102,241,.14); }
+    .caret { display: inline-block; width: 14px; color: var(--muted); transition: transform .15s; }
+    tr.school-row.active .caret { transform: rotate(90deg); }
+    .admins-cell { padding: 0 !important; }
+    .admins-box { padding: 12px 16px; background: var(--bg); }
+    .admins-box h4 { margin: 0 0 8px; font-size: 12px; text-transform: uppercase; color: var(--muted); }
+    .admin-line { display: flex; align-items: center; gap: 10px; padding: 6px 0; flex-wrap: wrap; }
+    .admin-line .nm { font-weight: 600; min-width: 120px; }
+    .admin-line .ph { color: var(--muted); font-variant-numeric: tabular-nums; }
+    .admin-line input {
+      width: auto; flex: 1; min-width: 160px; padding: 6px 10px; font-size: 13px;
+    }
+    .btn-sm {
+      width: auto; margin: 0; padding: 6px 12px; font-size: 13px;
+      background: transparent; border: 1px solid var(--border); color: var(--text);
+    }
+    .btn-sm.primary { background: var(--primary); border-color: var(--primary); color: #fff; }
+    .btn-sm:hover { border-color: var(--primary); }
   </style>
 </head>
 <body>
@@ -164,8 +188,21 @@
         <h2>Add a School</h2>
         <label for="schoolName">School name</label>
         <input id="schoolName" placeholder="Springfield High" />
+        <div class="row2">
+          <div>
+            <label for="schoolLocality">Locality</label>
+            <input id="schoolLocality" placeholder="Andheri West" />
+          </div>
+          <div>
+            <label for="schoolCity">City</label>
+            <input id="schoolCity" placeholder="Mumbai" />
+          </div>
+        </div>
         <label for="schoolTz">Timezone (optional)</label>
         <input id="schoolTz" placeholder="Asia/Kolkata" />
+        <label for="schoolLogo">School logo (optional)</label>
+        <input id="schoolLogo" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" />
+        <img id="logoPreview" class="logo-preview hidden" alt="logo preview" />
         <button id="addSchoolBtn">Create School</button>
         <div class="msg" id="schoolMsg"></div>
       </section>
@@ -191,11 +228,12 @@
         </div>
         <table>
           <thead>
-            <tr><th>ID</th><th>Name</th><th>Timezone</th><th>Users</th><th>Students</th><th>Classes</th></tr>
+            <tr><th></th><th>Name</th><th>Location</th><th>Users</th><th>Students</th><th>Classes</th></tr>
           </thead>
           <tbody id="schoolsBody"></tbody>
         </table>
         <div class="empty hidden" id="schoolsEmpty">No schools yet. Create one above.</div>
+        <p class="hint">Tip: click a school row to view and edit its admins.</p>
       </section>
     </main>
   </div>
@@ -227,6 +265,22 @@
         throw new Error((data && (data.error || data.message)) || ("Request failed (" + res.status + ")"));
       }
       return data;
+    }
+
+    // Upload a logo file to S3 via a backend-issued presigned URL.
+    // Returns the public URL to store on the school.
+    async function uploadLogo(file) {
+      const { uploadUrl, publicUrl } = await api("/platform/uploads/logo", {
+        method: "POST",
+        body: { contentType: file.type },
+      });
+      const put = await fetch(uploadUrl, {
+        method: "PUT",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      if (!put.ok) throw new Error("Logo upload to S3 failed (" + put.status + ")");
+      return publicUrl;
     }
 
     // ================= LOGIN =================
@@ -296,6 +350,8 @@
     }
     $("logoutBtn").addEventListener("click", logout);
 
+    let expandedSchoolId = null;
+
     async function loadSchools() {
       try {
         const schools = await api("/platform/schools");
@@ -306,20 +362,41 @@
         $("schoolsEmpty").classList.toggle("hidden", schools.length > 0);
 
         for (const s of schools) {
+          const location = [s.locality, s.city].filter(Boolean).join(", ") || "—";
+          const logoImg = s.logo
+            ? '<img class="school-logo" src="' + escapeHtml(s.logo) + '" alt="" /> '
+            : "";
           const tr = document.createElement("tr");
+          tr.className = "school-row";
+          tr.dataset.id = s.id;
           tr.innerHTML =
-            "<td>" + s.id + "</td>" +
-            "<td>" + escapeHtml(s.name) + "</td>" +
-            "<td>" + escapeHtml(s.timezone || "—") + "</td>" +
+            '<td><span class="caret">▶</span></td>' +
+            "<td>" + logoImg + escapeHtml(s.name) + "</td>" +
+            "<td>" + escapeHtml(location) + "</td>" +
             "<td>" + s.counts.users + "</td>" +
             "<td>" + s.counts.students + "</td>" +
             "<td>" + s.counts.classes + "</td>";
+          tr.addEventListener("click", () => toggleSchool(s.id));
           body.appendChild(tr);
+
+          // Hidden detail row for this school's admins.
+          const detail = document.createElement("tr");
+          detail.className = "admins-row hidden";
+          detail.dataset.for = s.id;
+          detail.innerHTML =
+            '<td class="admins-cell" colspan="6"><div class="admins-box" data-box="' + s.id + '">Loading…</div></td>';
+          body.appendChild(detail);
 
           const opt = document.createElement("option");
           opt.value = s.id;
           opt.textContent = s.name;
           select.appendChild(opt);
+        }
+        // Re-open a previously expanded school after refresh.
+        if (expandedSchoolId && body.querySelector('tr.school-row[data-id="' + expandedSchoolId + '"]')) {
+          const id = expandedSchoolId;
+          expandedSchoolId = null;
+          toggleSchool(id);
         }
       } catch (e) {
         if (/401|403/.test(e.message)) return logout();
@@ -328,20 +405,142 @@
     }
     $("refreshBtn").addEventListener("click", loadSchools);
 
+    async function toggleSchool(id) {
+      const row = document.querySelector('tr.school-row[data-id="' + id + '"]');
+      const detail = document.querySelector('tr.admins-row[data-for="' + id + '"]');
+      if (!row || !detail) return;
+      const isOpen = !detail.classList.contains("hidden");
+      // Close any other open school (single-open accordion).
+      document.querySelectorAll("tr.admins-row").forEach((r) => r.classList.add("hidden"));
+      document.querySelectorAll("tr.school-row").forEach((r) => r.classList.remove("active"));
+      if (isOpen) { expandedSchoolId = null; return; }
+      row.classList.add("active");
+      detail.classList.remove("hidden");
+      expandedSchoolId = id;
+      await renderAdmins(id);
+    }
+
+    async function renderAdmins(schoolId) {
+      const box = document.querySelector('div[data-box="' + schoolId + '"]');
+      box.textContent = "Loading…";
+      try {
+        const school = await api("/platform/schools/" + schoolId);
+        const admins = school.admins || [];
+        box.innerHTML = "<h4>School Admins (" + admins.length + ")</h4>";
+        if (admins.length === 0) {
+          const p = document.createElement("div");
+          p.className = "empty";
+          p.textContent = "No admins yet. Add one from the “Add School Admin” panel.";
+          box.appendChild(p);
+        }
+        for (const a of admins) {
+          box.appendChild(adminLine(schoolId, a));
+        }
+      } catch (e) {
+        box.textContent = e.message;
+      }
+    }
+
+    // One admin row with an inline "edit phone" toggle.
+    function adminLine(schoolId, admin) {
+      const line = document.createElement("div");
+      line.className = "admin-line";
+
+      const render = (editing) => {
+        line.innerHTML = "";
+        const nm = document.createElement("span");
+        nm.className = "nm";
+        nm.textContent = admin.name;
+        line.appendChild(nm);
+
+        if (!editing) {
+          const ph = document.createElement("span");
+          ph.className = "ph";
+          ph.textContent = "📞 " + admin.phone;
+          const btn = document.createElement("button");
+          btn.className = "btn-sm";
+          btn.textContent = "Edit phone";
+          btn.onclick = () => render(true);
+          line.appendChild(ph);
+          line.appendChild(btn);
+        } else {
+          const input = document.createElement("input");
+          input.type = "tel";
+          input.value = admin.phone;
+          const save = document.createElement("button");
+          save.className = "btn-sm primary";
+          save.textContent = "Save";
+          const cancel = document.createElement("button");
+          cancel.className = "btn-sm";
+          cancel.textContent = "Cancel";
+          cancel.onclick = () => render(false);
+          save.onclick = async () => {
+            const phone = input.value.trim();
+            if (!phone) return;
+            save.disabled = cancel.disabled = true;
+            save.textContent = "Saving…";
+            try {
+              const updated = await api(
+                "/platform/schools/" + schoolId + "/admins/" + admin.id,
+                { method: "PATCH", body: { phone } },
+              );
+              admin.phone = updated.phone;
+              render(false);
+            } catch (e) {
+              save.disabled = cancel.disabled = false;
+              save.textContent = "Save";
+              alert(e.message);
+            }
+          };
+          line.appendChild(input);
+          line.appendChild(save);
+          line.appendChild(cancel);
+        }
+      };
+
+      render(false);
+      return line;
+    }
+
+    // Logo preview
+    $("schoolLogo").addEventListener("change", () => {
+      const file = $("schoolLogo").files[0];
+      const img = $("logoPreview");
+      if (file) {
+        img.src = URL.createObjectURL(file);
+        img.classList.remove("hidden");
+      } else {
+        img.classList.add("hidden");
+      }
+    });
+
     // Add School
     $("addSchoolBtn").addEventListener("click", async () => {
       const name = $("schoolName").value.trim();
       const timezone = $("schoolTz").value.trim();
+      const locality = $("schoolLocality").value.trim();
+      const city = $("schoolCity").value.trim();
+      const logoFile = $("schoolLogo").files[0];
       if (!name) return setMsg($("schoolMsg"), "Enter a school name.", "err");
       $("addSchoolBtn").disabled = true;
-      setMsg($("schoolMsg"), "Creating…");
       try {
         const body = { name };
         if (timezone) body.timezone = timezone;
+        if (locality) body.locality = locality;
+        if (city) body.city = city;
+        if (logoFile) {
+          setMsg($("schoolMsg"), "Uploading logo…");
+          body.logo = await uploadLogo(logoFile);
+        }
+        setMsg($("schoolMsg"), "Creating…");
         const school = await api("/platform/schools", { method: "POST", body });
         setMsg($("schoolMsg"), "Created \"" + school.name + "\" (ID " + school.id + ").", "ok");
         $("schoolName").value = "";
         $("schoolTz").value = "";
+        $("schoolLocality").value = "";
+        $("schoolCity").value = "";
+        $("schoolLogo").value = "";
+        $("logoPreview").classList.add("hidden");
         await loadSchools();
       } catch (e) {
         setMsg($("schoolMsg"), e.message, "err");

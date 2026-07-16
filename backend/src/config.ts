@@ -13,4 +13,21 @@ export const config = {
     .map((o) => o.trim())
     .filter(Boolean),
   isProd: process.env.NODE_ENV === 'production',
+
+  // --- S3 (school logo uploads) ---
+  s3: {
+    region: process.env.AWS_REGION ?? '',
+    bucket: process.env.AWS_S3_BUCKET ?? '',
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID ?? '',
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY ?? '',
+    // Prefix (folder) uploaded logos are stored under.
+    prefix: process.env.AWS_S3_PREFIX ?? 'school-logos',
+    // Public base URL for reading objects. Defaults to the standard S3 URL;
+    // set to a CloudFront/custom domain if you serve logos through one.
+    publicBaseUrl: process.env.AWS_S3_PUBLIC_BASE_URL ?? '',
+  },
 };
+
+export const isS3Configured = Boolean(
+  config.s3.region && config.s3.bucket && config.s3.accessKeyId && config.s3.secretAccessKey,
+);
