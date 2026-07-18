@@ -77,7 +77,7 @@ export function AdminApp() {
     if (screen === 'classes' || screen === 'classAdd') {
       if (apiClasses === null) loadClasses();
     }
-    if (screen === 'classAdd' && apiSubjects === null) loadSubjects();
+    if ((screen === 'classes' || screen === 'classAdd') && apiSubjects === null) loadSubjects();
   }, [screen, apiClasses, loadClasses, apiSubjects, loadSubjects]);
 
   const name = user?.name ?? 'Sridevi Menon';
@@ -171,7 +171,7 @@ export function AdminApp() {
       {screen === 'staff' && <StaffList teachers={teachers} onAdd={() => go('staffAdd')} onOpen={(id) => { setActiveTeacherId(id); go('staffDetail'); }} />}
       {screen === 'staffDetail' && <StaffDetail teacher={activeTeacher} classes={classes} teacherName={teacherName} onMakeCt={makeCt} onUnassign={unassign} onAssign={assign} onToggleStatus={toggleStatus} />}
       {screen === 'staffAdd' && <StaffAdd classes={classes} onSent={(t) => { setTeachers((ts) => [...ts, t]); }} onDone={() => go('staff')} />}
-      {screen === 'classes' && <ClassesList classes={apiClasses} loading={classesLoading} error={classesError} onRetry={loadClasses} onAdd={() => go('classAdd')} />}
+      {screen === 'classes' && <ClassesList classes={apiClasses} subjects={apiSubjects} loading={classesLoading} error={classesError} onRetry={loadClasses} onAdd={() => go('classAdd')} />}
       {screen === 'classDetail' && (
         <ClassDetail
           cls={activeClass} teachers={teachers} teacherName={teacherName}
@@ -425,10 +425,10 @@ function StaffAdd({ classes, onSent, onDone }: { classes: AdminClass[]; onSent: 
 }
 
 // ---------- CLASSES LIST (live) ----------
-function ClassesList({ classes, loading, error, onRetry, onAdd }: { classes: AdminKlass[] | null; loading: boolean; error: string | null; onRetry: () => void; onAdd: () => void }) {
+function ClassesList({ classes, subjects, loading, error, onRetry, onAdd }: { classes: AdminKlass[] | null; subjects: AdminSubject[] | null; loading: boolean; error: string | null; onRetry: () => void; onAdd: () => void }) {
   return (
     <div className="px-[15px] py-4 pb-6">
-      <button onClick={onAdd} className="w-full mb-3.5 py-3 rounded-[14px] bg-green text-white font-semibold text-[13px] flex items-center justify-center gap-[7px]"><Glyph d={GLYPH.plus} size={17} stroke={2} />Add a class</button>
+      <button onClick={onAdd} className="w-full mb-3.5 py-3 rounded-[14px] bg-green text-white font-semibold text-[13px] flex items-center justify-center gap-[7px]"><Glyph d={GLYPH.plus} size={17} stroke={2} />Add class or subject</button>
 
       {loading && classes === null && <div className="py-10"><Spinner /></div>}
 
@@ -452,6 +452,23 @@ function ClassesList({ classes, loading, error, onRetry, onAdd }: { classes: Adm
                 <span className="text-[12px] font-bold text-green bg-[#f1f5f1] rounded-[9px] px-2.5 py-1.5 flex-none">{c.students}</span>
               </Card>
             ))
+          )}
+
+          <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-2.5 mt-5">
+            {subjects === null ? 'Subjects' : `${subjects.length} ${subjects.length === 1 ? 'subject' : 'subjects'}`}
+          </div>
+          {subjects === null ? (
+            <div className="py-4"><Spinner /></div>
+          ) : subjects.length === 0 ? (
+            <EmptyState icon={GLYPH.results} title="No subjects yet">Add your school's subjects from the Add screen — they'll apply across every class.</EmptyState>
+          ) : (
+            <div className="flex gap-1.5 flex-wrap">
+              {subjects.map((s) => (
+                <span key={s.id} className="text-[12px] font-semibold text-green bg-mist rounded-[10px] px-3 py-1.5 flex items-center gap-1.5">
+                  <Glyph d={GLYPH.results} size={14} stroke={1.9} />{s.name}
+                </span>
+              ))}
+            </div>
           )}
         </>
       )}
