@@ -44,12 +44,13 @@ export async function getTeacher(id: number): Promise<AdminTeacherDetail> {
   return data;
 }
 
-export async function assignClass(
+// Sets the exact subject set for one class; an empty list unassigns the class.
+export async function setClassSubjects(
   teacherId: number,
   klassId: number,
   subjectIds: number[],
 ): Promise<void> {
-  await api.post(`/admin/teachers/${teacherId}/assignments`, { klassId, subjectIds });
+  await api.put(`/admin/teachers/${teacherId}/assignments/${klassId}`, { subjectIds });
 }
 
 export async function unassignClass(teacherId: number, klassId: number): Promise<void> {

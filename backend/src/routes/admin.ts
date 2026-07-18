@@ -130,33 +130,41 @@ adminRouter.get('/teachers/:id', ah(async (req, res) => {
   });
 }));
 
-// Assign a class to a teacher (adds one row per subject).
-const assignSchema = z.object({
-  klassId: z.number(),
-  subjectIds: z.array(z.number()).min(1),
-});
-adminRouter.post('/teachers/:id/assignments', ah(async (req, res) => {
+// Set exactly which subjects a teacher covers in one class.
+// An empty list drops the class from their load entirely.
+const classSubjectsSchema = z.object({ subjectIds: z.array(z.number()) });
+adminRouter.put('/teachers/:id/assignments/:klassId', ah(async (req, res) => {
   const schoolId = requireSchoolId(req);
   const teacherId = Number(req.params.id);
-  const { klassId, subjectIds } = assignSchema.parse(req.body);
+  const klassId = Number(req.params.klassId);
+  const { subjectIds } = classSubjectsSchema.parse(req.body);
+  const wanted = [...new Set(subjectIds)];
 
   const [teacher, klass, subjects] = await Promise.all([
     prisma.user.findFirst({ where: { id: teacherId, schoolId, role: 'TEACHER' } }),
     prisma.klass.findFirst({ where: { id: klassId, schoolId } }),
-    prisma.subject.findMany({ where: { id: { in: subjectIds }, schoolId }, select: { id: true } }),
+    wanted.length
+      ? prisma.subject.findMany({ where: { id: { in: wanted }, schoolId }, select: { id: true } })
+      : Promise.resolve([]),
   ]);
   if (!teacher) throw new HttpError(404, 'Teacher not found');
   if (!klass) throw new HttpError(404, 'Class not found in this school');
-  if (subjects.length !== new Set(subjectIds).size) {
+  if (subjects.length !== wanted.length) {
     throw new HttpError(404, 'A selected subject was not found in this school');
   }
 
-  // skipDuplicates keeps re-assigning an existing pairing idempotent.
-  await prisma.teachingAssignment.createMany({
-    data: subjects.map((s) => ({ schoolId, teacherId, klassId, subjectId: s.id })),
-    skipDuplicates: true,
-  });
-  res.status(201).json({ ok: true });
+  // Replace the whole set for this class so the write matches the chips exactly.
+  await prisma.$transaction([
+    prisma.teachingAssignment.deleteMany({ where: { schoolId, teacherId, klassId } }),
+    ...(subjects.length
+      ? [
+          prisma.teachingAssignment.createMany({
+            data: subjects.map((s) => ({ schoolId, teacherId, klassId, subjectId: s.id })),
+          }),
+        ]
+      : []),
+  ]);
+  res.json({ ok: true });
 }));
 
 // Remove a whole class from a teacher (every subject they teach in it).

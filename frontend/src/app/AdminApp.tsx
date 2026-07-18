@@ -5,7 +5,7 @@ import {
   listClasses,
   listTeachers,
   getTeacher,
-  assignClass,
+  setClassSubjects,
   unassignClass,
   setClassTeacher,
   createClass,
@@ -189,7 +189,8 @@ export function AdminApp() {
     if (
       (screen === "classes" ||
         screen === "classAdd" ||
-        screen === "staffAdd") &&
+        screen === "staffAdd" ||
+        screen === "staffDetail") &&
       apiSubjects === null
     )
       loadSubjects();
@@ -377,6 +378,7 @@ export function AdminApp() {
           detail={teacherDetail}
           detailError={teacherDetailError}
           classes={apiClasses}
+          subjects={apiSubjects}
           onRefresh={refreshTeacherDetail}
         />
       )}
@@ -689,12 +691,14 @@ function StaffDetail({
   detail,
   detailError,
   classes,
+  subjects,
   onRefresh,
 }: {
   teacher: AdminTeacher | null;
   detail: AdminTeacherDetail | null;
   detailError: string | null;
   classes: AdminKlass[] | null;
+  subjects: AdminSubject[] | null;
   onRefresh: () => void | Promise<void>;
 }) {
   // Keyed by the class row being mutated, so only that row shows as busy.
@@ -778,46 +782,91 @@ function StaffDetail({
               {assignments.map((a) => {
                 const isCT = ctIds.has(a.klassId);
                 const busy = busyKlassId === a.klassId;
+                const onIds = a.subjects.map((s) => s.id);
                 return (
                   <div
                     key={a.klassId}
                     className={cx(
-                      "border-[1.5px] border-line rounded-[13px] p-3 flex items-center gap-2.5",
+                      "border-[1.5px] border-line rounded-[13px] p-3",
                       busy && "opacity-60",
                     )}
                   >
-                    <div className="flex-1 min-w-0">
-                      <b className="text-[13.5px] font-bold block">{a.label}</b>
-                      <small className="text-[11.5px] text-muted">
-                        {a.subjects.map((s) => s.name).join(", ")}
-                      </small>
+                    <div className="flex items-center gap-2.5">
+                      <b className="text-[13.5px] font-bold flex-1 min-w-0">
+                        {a.label}
+                      </b>
+                      <button
+                        disabled={busy}
+                        onClick={() =>
+                          run(a.klassId, () =>
+                            setClassTeacher(teacherId, a.klassId, !isCT),
+                          )
+                        }
+                        className={cx(
+                          "px-3 py-2 rounded-[11px] text-[12px] font-semibold border-[1.5px] flex-none transition",
+                          isCT
+                            ? "bg-green border-green text-white"
+                            : "bg-white border-line text-green",
+                        )}
+                      >
+                        {isCT ? "Class teacher ✓" : "Make CT"}
+                      </button>
+                      <button
+                        disabled={busy}
+                        aria-label={`Remove ${a.label}`}
+                        onClick={() =>
+                          run(a.klassId, () =>
+                            unassignClass(teacherId, a.klassId),
+                          )
+                        }
+                        className="w-9 h-9 rounded-[11px] grid place-items-center bg-[#f6ecec] text-danger flex-none"
+                      >
+                        <Glyph d={GLYPH.close} size={15} stroke={2.4} />
+                      </button>
                     </div>
-                    <button
-                      disabled={busy}
-                      onClick={() =>
-                        run(a.klassId, () =>
-                          setClassTeacher(teacherId, a.klassId, !isCT),
-                        )
-                      }
-                      className={cx(
-                        "px-3 py-2 rounded-[11px] text-[12px] font-semibold border-[1.5px] flex-none transition",
-                        isCT
-                          ? "bg-green border-green text-white"
-                          : "bg-white border-line text-green",
-                      )}
-                    >
-                      {isCT ? "Class teacher ✓" : "Make CT"}
-                    </button>
-                    <button
-                      disabled={busy}
-                      aria-label={`Remove ${a.label}`}
-                      onClick={() =>
-                        run(a.klassId, () => unassignClass(teacherId, a.klassId))
-                      }
-                      className="w-9 h-9 rounded-[11px] grid place-items-center bg-[#f6ecec] text-danger flex-none"
-                    >
-                      <Glyph d={GLYPH.close} size={15} stroke={2.4} />
-                    </button>
+
+                    <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mt-3 mb-2">
+                      Subjects in this class
+                    </div>
+                    <div className="flex gap-1.5 flex-wrap">
+                      {(subjects ?? []).map((s) => {
+                        const on = onIds.includes(s.id);
+                        // Turning off the last subject would leave an empty
+                        // class, which is the same as unassigning it — use ×.
+                        const locked = on && onIds.length === 1;
+                        return (
+                          <button
+                            key={s.id}
+                            disabled={busy || locked}
+                            title={
+                              locked
+                                ? "A class needs at least one subject — use × to remove it"
+                                : undefined
+                            }
+                            onClick={() =>
+                              run(a.klassId, () =>
+                                setClassSubjects(
+                                  teacherId,
+                                  a.klassId,
+                                  on
+                                    ? onIds.filter((x) => x !== s.id)
+                                    : [...onIds, s.id],
+                                ),
+                              )
+                            }
+                            className={cx(
+                              "px-2.5 py-1.5 rounded-lg text-[11.5px] font-semibold border-[1.5px] transition",
+                              on
+                                ? "border-green bg-green text-white"
+                                : "border-line bg-white text-green",
+                              locked && "opacity-70",
+                            )}
+                          >
+                            {s.name}
+                          </button>
+                        );
+                      })}
+                    </div>
                   </div>
                 );
               })}
@@ -842,7 +891,7 @@ function StaffDetail({
                       disabled={busyKlassId === c.id}
                       onClick={() =>
                         run(c.id, () =>
-                          assignClass(teacherId, c.id, ownSubjectIds),
+                          setClassSubjects(teacherId, c.id, ownSubjectIds),
                         )
                       }
                       className="px-3 py-2 rounded-[10px] text-[12px] font-semibold border-[1.5px] border-line bg-mist text-green disabled:opacity-60"
