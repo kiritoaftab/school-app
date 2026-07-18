@@ -300,6 +300,60 @@ export async function getDashboard(): Promise<AdminDashboard> {
   return data;
 }
 
+// --- Attendance screens ---
+export type AttendanceStatus = 'PRESENT' | 'ABSENT' | 'LATE' | 'HOLIDAY';
+
+/** School-wide attendance for one day, split by class. */
+export interface AttendanceOverview {
+  date: string;
+  present: number;
+  late: number;
+  absent: number;
+  marked: number;
+  pct: number;
+  classesPending: number;
+  byClass: DashboardClassAttendance[];
+}
+
+export interface AttendanceRosterEntry {
+  id: number;
+  roll: string;
+  name: string;
+  admissionNo: string;
+  /** null when nobody has marked this student for the day. */
+  status: AttendanceStatus | null;
+}
+
+export interface ClassAttendance {
+  date: string;
+  klass: { id: number; label: string };
+  students: number;
+  present: number;
+  late: number;
+  absent: number;
+  marked: number;
+  pct: number;
+  roster: AttendanceRosterEntry[];
+}
+
+export async function getAttendanceOverview(date?: string): Promise<AttendanceOverview> {
+  const { data } = await api.get<AttendanceOverview>('/admin/attendance', {
+    params: date ? { date } : undefined,
+  });
+  return data;
+}
+
+export async function getClassAttendance(
+  klassId: number,
+  date?: string,
+): Promise<ClassAttendance> {
+  const { data } = await api.get<ClassAttendance>(
+    `/admin/classes/${klassId}/attendance`,
+    { params: date ? { date } : undefined },
+  );
+  return data;
+}
+
 // --- Subjects (school-level catalogue) ---
 export interface AdminSubject {
   id: number;

@@ -22,9 +22,13 @@ import {
   deleteNotice,
   listEvents,
   getDashboard,
+  getAttendanceOverview,
+  getClassAttendance,
   type AdminDashboard,
   type DashboardTrendDay,
   type DashboardClassAttendance,
+  type AttendanceOverview,
+  type ClassAttendance,
   createEvent,
   updateEvent,
   deleteEvent,
@@ -67,11 +71,8 @@ import {
   SCHOOL,
   GLYPH,
   NOTICE_CATEGORIES,
-  ADMIN_CLASSES,
   initialsOf,
   maskPhone,
-  classAttendanceOf,
-  type AdminClass,
 } from "./data";
 
 type Screen =
@@ -96,12 +97,9 @@ export function AdminApp() {
 
   const [screen, setScreen] = useState<Screen>("home");
   const [acctOpen, setAcctOpen] = useState(false);
-  const [classes] = useState<AdminClass[]>(() =>
-    JSON.parse(JSON.stringify(ADMIN_CLASSES)),
-  );
   const [activeTeacherId, setActiveTeacherId] = useState<number | null>(null);
   const [activeKlassId, setActiveKlassId] = useState<number | null>(null);
-  const [attClassId, setAttClassId] = useState("5-B");
+  const [attClassId, setAttClassId] = useState<number | null>(null);
 
   // Live notices & events.
   const [apiNotices, setApiNotices] = useState<AdminNotice[] | null>(null);
@@ -119,6 +117,16 @@ export function AdminApp() {
   const [dashboard, setDashboard] = useState<AdminDashboard | null>(null);
   const [dashLoading, setDashLoading] = useState(false);
   const [dashError, setDashError] = useState<string | null>(null);
+
+  // Live attendance: the school overview, then the drilled-into class.
+  const [attOverview, setAttOverview] = useState<AttendanceOverview | null>(
+    null,
+  );
+  const [attOverviewLoading, setAttOverviewLoading] = useState(false);
+  const [attOverviewError, setAttOverviewError] = useState<string | null>(null);
+  const [attClassData, setAttClassData] = useState<ClassAttendance | null>(null);
+  const [attClassLoading, setAttClassLoading] = useState(false);
+  const [attClassError, setAttClassError] = useState<string | null>(null);
 
   // Live classes & teachers from the backend.
   const [apiClasses, setApiClasses] = useState<AdminKlass[] | null>(null);
@@ -196,6 +204,31 @@ export function AdminApp() {
       setDashLoading(false);
     }
   }, []);
+
+  const loadAttOverview = useCallback(async () => {
+    setAttOverviewLoading(true);
+    setAttOverviewError(null);
+    try {
+      setAttOverview(await getAttendanceOverview());
+    } catch {
+      setAttOverviewError("Couldn't load attendance.");
+    } finally {
+      setAttOverviewLoading(false);
+    }
+  }, []);
+
+  const loadAttClass = useCallback(async () => {
+    if (attClassId === null) return;
+    setAttClassLoading(true);
+    setAttClassError(null);
+    try {
+      setAttClassData(await getClassAttendance(attClassId));
+    } catch {
+      setAttClassError("Couldn't load this class's attendance.");
+    } finally {
+      setAttClassLoading(false);
+    }
+  }, [attClassId]);
 
   const loadSubjects = useCallback(async () => {
     try {
@@ -276,10 +309,13 @@ export function AdminApp() {
     if (screen === "noticeCompose" && apiClasses === null) loadClasses();
     if (screen === "calendar" && apiEvents === null) loadEvents();
     if (screen === "home" && dashboard === null) loadDashboard();
+    if (screen === "adminAtt" && attOverview === null) loadAttOverview();
   }, [
     screen,
     dashboard,
     loadDashboard,
+    attOverview,
+    loadAttOverview,
     apiClasses,
     loadClasses,
     apiSubjects,
@@ -298,18 +334,27 @@ export function AdminApp() {
   const activeApiKlass =
     apiClasses?.find((c) => c.id === activeKlassId) ?? null;
 
-  // Attendance aggregates (simulated) for the admin overview.
-  const classAtt = classes.map((c) => ({
-    id: c.id,
-    label: c.label,
-    ...classAttendanceOf(c.students),
-  }));
-  const schoolPresent = classAtt.reduce((a, c) => a + c.present, 0);
-  const schoolTotal = classAtt.reduce((a, c) => a + c.total, 0);
-  const schoolPct = schoolTotal
-    ? Math.round((schoolPresent / schoolTotal) * 100)
-    : 0;
-  const attClass = classAtt.find((c) => c.id === attClassId) || classAtt[0];
+  // The drilled-into class refetches whenever a different one is opened.
+  useEffect(() => {
+    if (screen !== "adminAttClass" || attClassId === null) return;
+    let stale = false;
+    setAttClassData(null);
+    setAttClassError(null);
+    setAttClassLoading(true);
+    getClassAttendance(attClassId)
+      .then((d) => {
+        if (!stale) setAttClassData(d);
+      })
+      .catch(() => {
+        if (!stale) setAttClassError("Couldn't load this class's attendance.");
+      })
+      .finally(() => {
+        if (!stale) setAttClassLoading(false);
+      });
+    return () => {
+      stale = true;
+    };
+  }, [screen, attClassId]);
 
   function go(s: Screen) {
     setScreen(s);
@@ -343,8 +388,15 @@ export function AdminApp() {
       ? `CLASS TEACHER · ${activeApiKlass.teacher.toUpperCase()}`
       : "NO CLASS TEACHER";
   } else if (screen === "adminAttClass") {
-    title = attClass.label;
-    sub = `${attClass.present} / ${attClass.total} PRESENT`;
+    title =
+      attClassData?.klass.label ??
+      attOverview?.byClass.find((c) => c.id === attClassId)?.label ??
+      "Class";
+    sub = attClassData
+      ? attClassData.marked > 0
+        ? `${attClassData.present + attClassData.late} / ${attClassData.marked} PRESENT`
+        : "NOT MARKED YET"
+      : undefined;
   } else if (screen === "notice") {
     title = "Notice";
     sub = (
@@ -500,16 +552,24 @@ export function AdminApp() {
       )}
       {screen === "adminAtt" && (
         <AdminAttendance
-          classAtt={classAtt}
-          schoolPct={schoolPct}
-          schoolPresent={schoolPresent}
+          data={attOverview}
+          loading={attOverviewLoading}
+          error={attOverviewError}
+          onRetry={loadAttOverview}
           onOpen={(id) => {
             setAttClassId(id);
             go("adminAttClass");
           }}
         />
       )}
-      {screen === "adminAttClass" && <AdminAttendanceClass att={attClass} />}
+      {screen === "adminAttClass" && (
+        <AdminAttendanceClass
+          att={attClassData}
+          loading={attClassLoading}
+          error={attClassError}
+          onRetry={loadAttClass}
+        />
+      )}
       {screen === "classAdd" && (
         <ClassOrSubjectAdd
           teachers={apiTeachers ?? []}
@@ -2432,47 +2492,77 @@ function ClassDetail({
 }
 
 // ---------- ADMIN ATTENDANCE (all classes) ----------
-type ClassAtt = {
-  id: string;
-  label: string;
-  roster: { name: string; roll: string; present: boolean }[];
-  present: number;
-  absent: number;
-  total: number;
-  pct: number;
-};
+// A class's rate only means something once someone has marked it, so an
+// unmarked class stays neutral instead of being painted red at 0%.
+function rateColor(pct: number) {
+  return pct >= 90 ? "#1f8a5b" : pct >= 80 ? "#c2882a" : "#c0392b";
+}
 
 function AdminAttendance({
-  classAtt,
-  schoolPct,
-  schoolPresent,
+  data,
+  loading,
+  error,
+  onRetry,
   onOpen,
 }: {
-  classAtt: ClassAtt[];
-  schoolPct: number;
-  schoolPresent: number;
-  onOpen: (id: string) => void;
+  data: AttendanceOverview | null;
+  loading: boolean;
+  error: string | null;
+  onRetry: () => void;
+  onOpen: (id: number) => void;
 }) {
-  const barColor = (p: number) =>
-    p >= 90 ? "#1f8a5b" : p >= 80 ? "#c2882a" : "#c0392b";
+  if (loading && data === null) {
+    return (
+      <div className="py-10">
+        <Spinner />
+      </div>
+    );
+  }
+  if (error && data === null) {
+    return (
+      <div className="px-[15px] py-4">
+        <Card className="p-5 text-center">
+          <div className="text-[12.5px] text-danger mb-3">{error}</div>
+          <button
+            onClick={onRetry}
+            className="px-4 py-2 rounded-[11px] bg-green text-white font-semibold text-[12.5px]"
+          >
+            Retry
+          </button>
+        </Card>
+      </div>
+    );
+  }
+  if (!data) return null;
+
   return (
     <div className="px-[15px] py-4 pb-6">
       <div className="bg-green text-white rounded-[20px] p-4 mb-3.5 flex items-center gap-3.5">
         <div className="font-serif text-[36px] leading-none">
-          {schoolPct}
-          <span className="text-[16px]">%</span>
+          {data.marked > 0 ? data.pct : "—"}
+          {data.marked > 0 && <span className="text-[16px]">%</span>}
         </div>
         <div className="flex-1">
           <b className="text-[14px] font-bold block">Present today</b>
           <small className="text-[#cfe0d6] text-[11.5px]">
-            {schoolPresent} students across the school · 25 Jun
+            {data.marked > 0
+              ? `${data.present + data.late} of ${data.marked} marked · ${shortDay(data.date)}`
+              : `Nothing marked yet · ${shortDay(data.date)}`}
           </small>
         </div>
       </div>
+
       <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-2.5">
         By class
       </div>
-      {classAtt.map((c) => (
+
+      {data.byClass.length === 0 && (
+        <EmptyState icon={GLYPH.classes} title="No classes yet">
+          Add a class before attendance can be tracked.
+        </EmptyState>
+      )}
+
+      {data.byClass.map((c) => (
         <Card
           key={c.id}
           onClick={() => onOpen(c.id)}
@@ -2480,24 +2570,34 @@ function AdminAttendance({
         >
           <div className="flex items-center gap-2.5 mb-2.25">
             <b className="flex-1 min-w-0 text-[13.5px] font-bold">{c.label}</b>
-            <small className="text-[11px] text-muted">
-              {c.present} / {c.total} present
-            </small>
-            <span
-              className="text-[13px] font-bold flex-none"
-              style={{ color: barColor(c.pct) }}
-            >
-              {c.pct}%
-            </span>
+            {c.marked > 0 ? (
+              <>
+                <small className="text-[11px] text-muted">
+                  {c.present + c.late} / {c.marked} present
+                </small>
+                <span
+                  className="text-[13px] font-bold flex-none"
+                  style={{ color: rateColor(c.pct) }}
+                >
+                  {c.pct}%
+                </span>
+              </>
+            ) : (
+              <small className="text-[11px] text-muted font-semibold">
+                {c.students === 0 ? "No students" : "Not marked"}
+              </small>
+            )}
             <span className="text-[#c3ccc5] flex-none">
               <Glyph d={GLYPH.chevronRight} size={16} stroke={2.2} />
             </span>
           </div>
           <div className="h-1.5 rounded-[3px] bg-[#eef1ec]">
-            <div
-              className="h-1.5 rounded-[3px]"
-              style={{ width: `${c.pct}%`, background: barColor(c.pct) }}
-            />
+            {c.marked > 0 && (
+              <div
+                className="h-1.5 rounded-[3px]"
+                style={{ width: `${c.pct}%`, background: rateColor(c.pct) }}
+              />
+            )}
           </div>
         </Card>
       ))}
@@ -2506,13 +2606,54 @@ function AdminAttendance({
 }
 
 // ---------- ADMIN ATTENDANCE (one class) ----------
-function AdminAttendanceClass({ att }: { att: ClassAtt }) {
+const STATUS_PILL: Record<string, { label: string; className: string }> = {
+  PRESENT: { label: "Present", className: "bg-[#eaf4ee] text-success" },
+  LATE: { label: "Late", className: "bg-[#fbf3e2] text-[#8a6d1f]" },
+  ABSENT: { label: "Absent", className: "bg-[#f6ecec] text-danger" },
+  HOLIDAY: { label: "Holiday", className: "bg-mist text-muted" },
+};
+
+function AdminAttendanceClass({
+  att,
+  loading,
+  error,
+  onRetry,
+}: {
+  att: ClassAttendance | null;
+  loading: boolean;
+  error: string | null;
+  onRetry: () => void;
+}) {
+  if (loading && att === null) {
+    return (
+      <div className="py-10">
+        <Spinner />
+      </div>
+    );
+  }
+  if (error && att === null) {
+    return (
+      <div className="px-[15px] py-4">
+        <Card className="p-5 text-center">
+          <div className="text-[12.5px] text-danger mb-3">{error}</div>
+          <button
+            onClick={onRetry}
+            className="px-4 py-2 rounded-[11px] bg-green text-white font-semibold text-[12.5px]"
+          >
+            Retry
+          </button>
+        </Card>
+      </div>
+    );
+  }
+  if (!att) return null;
+
   return (
     <div className="px-[15px] py-4 pb-6">
       <div className="flex gap-2.5 mb-3.5">
         <div className="flex-1 bg-[#eaf4ee] border border-[#cfe3d6] rounded-2xl p-[13px] text-center">
           <div className="font-serif text-[26px] leading-none text-success">
-            {att.present}
+            {att.present + att.late}
           </div>
           <small className="text-[10px] uppercase text-muted font-semibold">
             Present
@@ -2528,37 +2669,49 @@ function AdminAttendanceClass({ att }: { att: ClassAtt }) {
         </div>
         <div className="flex-1 bg-cloud border border-line rounded-2xl p-[13px] text-center">
           <div className="font-serif text-[26px] leading-none text-green">
-            {att.pct}%
+            {att.marked > 0 ? `${att.pct}%` : "—"}
           </div>
           <small className="text-[10px] uppercase text-muted font-semibold">
             Rate
           </small>
         </div>
       </div>
+
       <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-2.5">
-        {att.total} students
+        {att.students} {att.students === 1 ? "student" : "students"}
+        {att.marked === 0 && att.students > 0 && " · not marked yet"}
       </div>
-      {att.roster.map((r, i) => (
-        <Card
-          key={i}
-          className="p-3 mb-2 rounded-[13px] flex gap-[11px] items-center"
-        >
-          <span className="w-[26px] h-[26px] rounded-lg bg-[#f1f5f1] text-muted text-[11px] font-bold grid place-items-center flex-none">
-            {r.roll}
-          </span>
-          <b className="flex-1 min-w-0 text-[13.5px] font-semibold">{r.name}</b>
-          <span
-            className={cx(
-              "text-[10.5px] font-bold px-2.5 py-1 rounded-lg flex-none",
-              r.present
-                ? "bg-[#eaf4ee] text-success"
-                : "bg-[#f6ecec] text-danger",
-            )}
+
+      {att.roster.length === 0 && (
+        <EmptyState icon={GLYPH.students} title="No students yet">
+          Add students to this class to track their attendance.
+        </EmptyState>
+      )}
+
+      {att.roster.map((r) => {
+        const pill = r.status ? STATUS_PILL[r.status] : null;
+        return (
+          <Card
+            key={r.id}
+            className="p-3 mb-2 rounded-[13px] flex gap-[11px] items-center"
           >
-            {r.present ? "Present" : "Absent"}
-          </span>
-        </Card>
-      ))}
+            <span className="w-[26px] h-[26px] rounded-lg bg-[#f1f5f1] text-muted text-[11px] font-bold grid place-items-center flex-none">
+              {r.roll}
+            </span>
+            <b className="flex-1 min-w-0 text-[13.5px] font-semibold truncate">
+              {r.name}
+            </b>
+            <span
+              className={cx(
+                "text-[10.5px] font-bold px-2.5 py-1 rounded-lg flex-none",
+                pill?.className ?? "bg-[#f1f5f1] text-muted",
+              )}
+            >
+              {pill?.label ?? "—"}
+            </span>
+          </Card>
+        );
+      })}
     </div>
   );
 }

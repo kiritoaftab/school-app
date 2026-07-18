@@ -726,6 +726,129 @@ function rateOf(present: number, late: number, absent: number) {
 
 const TREND_DAYS = 14;
 
+const blankTally = () => ({ present: 0, late: 0, absent: 0, holiday: 0 });
+type Tally = ReturnType<typeof blankTally>;
+
+/**
+ * One day's attendance for the whole school, split per class. Shared by the
+ * home dashboard and the attendance screens so both count the same way.
+ */
+async function attendanceForDay(schoolId: number, day: Date) {
+  const [classes, marks] = await Promise.all([
+    prisma.klass.findMany({
+      where: { schoolId },
+      orderBy: [{ grade: 'asc' }, { section: 'asc' }],
+      include: { _count: { select: { enrollments: true } } },
+    }),
+    prisma.attendance.findMany({
+      where: { schoolId, date: day },
+      select: {
+        status: true,
+        student: { select: { enrollments: { select: { klassId: true } } } },
+      },
+    }),
+  ]);
+
+  const school = blankTally();
+  const byKlass = new Map<number, Tally>();
+  for (const m of marks) {
+    const key = m.status.toLowerCase() as keyof Tally;
+    school[key] += 1;
+    // A student's current class is their latest enrollment, matching /students.
+    const klassId = m.student.enrollments.at(-1)?.klassId;
+    if (klassId === undefined) continue;
+    let k = byKlass.get(klassId);
+    if (!k) { k = blankTally(); byKlass.set(klassId, k); }
+    k[key] += 1;
+  }
+
+  const byClass = classes.map((c) => {
+    const a = byKlass.get(c.id) ?? blankTally();
+    return {
+      id: c.id,
+      label: `${c.grade}-${c.section}`,
+      students: c._count.enrollments,
+      present: a.present,
+      late: a.late,
+      absent: a.absent,
+      marked: a.present + a.late + a.absent,
+      pct: rateOf(a.present, a.late, a.absent),
+    };
+  });
+
+  return {
+    date: day.toISOString().slice(0, 10),
+    present: school.present,
+    late: school.late,
+    absent: school.absent,
+    marked: school.present + school.late + school.absent,
+    pct: rateOf(school.present, school.late, school.absent),
+    // Classes with a roster but nothing marked — the admin's nudge list.
+    classesPending: byClass.filter((c) => c.students > 0 && c.marked === 0).length,
+    byClass,
+  };
+}
+
+// The date the screens work off: ?date=YYYY-MM-DD, defaulting to today.
+function dayParam(req: { query: Record<string, unknown> }) {
+  const raw = req.query.date;
+  return typeof raw === 'string' && raw ? parseDay(raw) : utcDay(new Date());
+}
+
+// Attendance overview for one day, school-wide and by class.
+adminRouter.get('/attendance', ah(async (req, res) => {
+  const schoolId = requireSchoolId(req);
+  res.json(await attendanceForDay(schoolId, dayParam(req)));
+}));
+
+// One class's roster for a day, each student with their mark (null = unmarked).
+adminRouter.get('/classes/:id/attendance', ah(async (req, res) => {
+  const schoolId = requireSchoolId(req);
+  const klassId = Number(req.params.id);
+  const klass = await requireKlass(schoolId, klassId);
+  const day = dayParam(req);
+
+  const enrollments = await prisma.enrollment.findMany({
+    where: { klassId },
+    include: { student: { select: { id: true, name: true, admissionNo: true } } },
+    orderBy: { student: { name: 'asc' } },
+  });
+  const studentIds = enrollments.map((e) => e.studentId);
+  const marks = studentIds.length
+    ? await prisma.attendance.findMany({
+        where: { date: day, studentId: { in: studentIds } },
+        select: { studentId: true, status: true },
+      })
+    : [];
+  const statusOf = new Map(marks.map((m) => [m.studentId, m.status]));
+
+  const tally = blankTally();
+  const roster = enrollments.map((e, i) => {
+    const status = statusOf.get(e.studentId) ?? null;
+    if (status) tally[status.toLowerCase() as keyof Tally] += 1;
+    return {
+      id: e.student.id,
+      // Roll numbers are positional within the sorted roster, as elsewhere.
+      roll: String(i + 1).padStart(2, '0'),
+      name: e.student.name,
+      admissionNo: e.student.admissionNo,
+      status,
+    };
+  });
+
+  res.json({
+    date: day.toISOString().slice(0, 10),
+    klass: { id: klass.id, label: `${klass.grade}-${klass.section}` },
+    students: roster.length,
+    present: tally.present,
+    late: tally.late,
+    absent: tally.absent,
+    marked: tally.present + tally.late + tally.absent,
+    pct: rateOf(tally.present, tally.late, tally.absent),
+    roster,
+  });
+}));
+
 adminRouter.get('/dashboard', ah(async (req, res) => {
   const schoolId = requireSchoolId(req);
   const today = utcDay(new Date());
@@ -737,9 +860,8 @@ adminRouter.get('/dashboard', ah(async (req, res) => {
     teachers,
     parents,
     subjects,
-    classes,
+    attendance,
     pendingLeaves,
-    todayMarks,
     trendGroups,
     upcomingEvents,
     recentNotices,
@@ -749,19 +871,8 @@ adminRouter.get('/dashboard', ah(async (req, res) => {
     prisma.user.count({ where: { schoolId, role: 'TEACHER' } }),
     prisma.user.count({ where: { schoolId, role: 'PARENT' } }),
     prisma.subject.count({ where: { schoolId } }),
-    prisma.klass.findMany({
-      where: { schoolId },
-      orderBy: [{ grade: 'asc' }, { section: 'asc' }],
-      include: { _count: { select: { enrollments: true } } },
-    }),
+    attendanceForDay(schoolId, today),
     prisma.leaveRequest.count({ where: { schoolId, status: 'SUBMITTED' } }),
-    prisma.attendance.findMany({
-      where: { schoolId, date: today },
-      select: {
-        status: true,
-        student: { select: { enrollments: { select: { klassId: true } } } },
-      },
-    }),
     prisma.attendance.groupBy({
       by: ['date', 'status'],
       where: { schoolId, date: { gte: windowStart, lte: today } },
@@ -781,43 +892,13 @@ adminRouter.get('/dashboard', ah(async (req, res) => {
     prisma.user.count({ where: { schoolId, role: 'PARENT' } }),
   ]);
 
-  // --- Today, school-wide and per class ---
-  const blank = () => ({ present: 0, late: 0, absent: 0, holiday: 0 });
-  const schoolToday = blank();
-  const byKlass = new Map<number, ReturnType<typeof blank>>();
-  for (const m of todayMarks) {
-    const key = m.status.toLowerCase() as keyof ReturnType<typeof blank>;
-    schoolToday[key] += 1;
-    // A student's current class is their latest enrollment, matching /students.
-    const klassId = m.student.enrollments.at(-1)?.klassId;
-    if (klassId === undefined) continue;
-    let k = byKlass.get(klassId);
-    if (!k) { k = blank(); byKlass.set(klassId, k); }
-    k[key] += 1;
-  }
-
-  const classRows = classes.map((c) => {
-    const a = byKlass.get(c.id) ?? blank();
-    const marked = a.present + a.late + a.absent;
-    return {
-      id: c.id,
-      label: `${c.grade}-${c.section}`,
-      students: c._count.enrollments,
-      present: a.present,
-      late: a.late,
-      absent: a.absent,
-      marked,
-      pct: rateOf(a.present, a.late, a.absent),
-    };
-  });
-
   // --- 14-day trend, school days only (a day with no marks isn't plotted) ---
-  const byDate = new Map<string, ReturnType<typeof blank>>();
+  const byDate = new Map<string, Tally>();
   for (const g of trendGroups) {
     const key = g.date.toISOString().slice(0, 10);
     let d = byDate.get(key);
-    if (!d) { d = blank(); byDate.set(key, d); }
-    d[g.status.toLowerCase() as keyof ReturnType<typeof blank>] += g._count._all;
+    if (!d) { d = blankTally(); byDate.set(key, d); }
+    d[g.status.toLowerCase() as keyof Tally] += g._count._all;
   }
   const trend = [...byDate.entries()]
     .sort((a, b) => a[0].localeCompare(b[0]))
@@ -832,19 +913,14 @@ adminRouter.get('/dashboard', ah(async (req, res) => {
     .filter((d) => d.present + d.late + d.absent > 0);
 
   res.json({
-    counts: { students, teachers, parents, classes: classes.length, subjects },
-    attendance: {
-      date: today.toISOString().slice(0, 10),
-      present: schoolToday.present,
-      late: schoolToday.late,
-      absent: schoolToday.absent,
-      marked: schoolToday.present + schoolToday.late + schoolToday.absent,
-      pct: rateOf(schoolToday.present, schoolToday.late, schoolToday.absent),
-      // Classes with a roster but nothing marked today — the admin's nudge list.
-      classesPending: classRows.filter((c) => c.students > 0 && c.marked === 0).length,
-      byClass: classRows,
-      trend,
+    counts: {
+      students,
+      teachers,
+      parents,
+      classes: attendance.byClass.length,
+      subjects,
     },
+    attendance: { ...attendance, trend },
     pendingLeaves,
     upcomingEvents: upcomingEvents.map(eventView),
     recentNotices: recentNotices.map((n) => ({
