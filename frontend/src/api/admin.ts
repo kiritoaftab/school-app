@@ -17,6 +17,18 @@ export interface AdminTeacher {
   role: 'PARENT' | 'TEACHER' | 'ADMIN';
 }
 
+// A teacher's class × subject assignments, grouped by class.
+export interface AdminTeacherAssignment {
+  klassId: number;
+  label: string;
+  subjects: { id: number; name: string }[];
+}
+
+export interface AdminTeacherDetail extends AdminTeacher {
+  classTeacherOf: { id: number; label: string }[];
+  assignments: AdminTeacherAssignment[];
+}
+
 export async function listClasses(): Promise<AdminKlass[]> {
   const { data } = await api.get<AdminKlass[]>('/admin/classes');
   return data;
@@ -24,6 +36,11 @@ export async function listClasses(): Promise<AdminKlass[]> {
 
 export async function listTeachers(): Promise<AdminTeacher[]> {
   const { data } = await api.get<AdminTeacher[]>('/admin/users', { params: { role: 'TEACHER' } });
+  return data;
+}
+
+export async function getTeacher(id: number): Promise<AdminTeacherDetail> {
+  const { data } = await api.get<AdminTeacherDetail>(`/admin/teachers/${id}`);
   return data;
 }
 

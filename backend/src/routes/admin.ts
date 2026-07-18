@@ -90,6 +90,46 @@ adminRouter.post('/teachers', ah(async (req, res) => {
   res.status(201).json({ id: teacher.id, name: teacher.name, phone: teacher.phone, role: teacher.role });
 }));
 
+// One teacher with their class × subject assignments, grouped by class.
+adminRouter.get('/teachers/:id', ah(async (req, res) => {
+  const schoolId = requireSchoolId(req);
+  const id = Number(req.params.id);
+  const teacher = await prisma.user.findFirst({
+    where: { id, schoolId, role: 'TEACHER' },
+    include: {
+      classesTaught: { select: { id: true, grade: true, section: true } },
+      teachingAssignments: {
+        include: {
+          klass: { select: { id: true, grade: true, section: true } },
+          subject: { select: { id: true, name: true } },
+        },
+      },
+    },
+  });
+  if (!teacher) throw new HttpError(404, 'Teacher not found');
+
+  const byKlass = new Map<number, { klassId: number; label: string; subjects: { id: number; name: string }[] }>();
+  for (const a of teacher.teachingAssignments) {
+    let entry = byKlass.get(a.klassId);
+    if (!entry) {
+      entry = { klassId: a.klassId, label: `${a.klass.grade}-${a.klass.section}`, subjects: [] };
+      byKlass.set(a.klassId, entry);
+    }
+    entry.subjects.push({ id: a.subject.id, name: a.subject.name });
+  }
+  const assignments = [...byKlass.values()].sort((a, b) => a.label.localeCompare(b.label));
+  for (const a of assignments) a.subjects.sort((x, y) => x.name.localeCompare(y.name));
+
+  res.json({
+    id: teacher.id,
+    name: teacher.name,
+    phone: teacher.phone,
+    role: teacher.role,
+    classTeacherOf: teacher.classesTaught.map((k) => ({ id: k.id, label: `${k.grade}-${k.section}` })),
+    assignments,
+  });
+}));
+
 // --- Students ---
 adminRouter.get('/students', ah(async (req, res) => {
   const schoolId = requireSchoolId(req);
