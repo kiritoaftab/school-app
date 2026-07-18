@@ -90,6 +90,79 @@ export async function createClass(input: CreateClassInput): Promise<AdminKlass> 
   return data;
 }
 
+// --- Class detail tabs ---
+export type GuardianRelation = 'Mother' | 'Father' | 'Guardian';
+
+export interface ClassStudent {
+  id: number;
+  name: string;
+  admissionNo: string;
+  guardian: { id: number; name: string; phone: string; relation: string } | null;
+}
+
+export interface ClassTeacher {
+  id: number;
+  name: string;
+  phone: string;
+  isClassTeacher: boolean;
+  subjects: { id: number; name: string }[];
+}
+
+export interface ClassExam {
+  id: number;
+  name: string;
+  schoolWide: boolean;
+}
+
+export interface StudentInput {
+  name: string;
+  guardianName: string;
+  guardianPhone: string;
+  relation: GuardianRelation;
+}
+
+export async function listClassStudents(klassId: number): Promise<ClassStudent[]> {
+  const { data } = await api.get<ClassStudent[]>(`/admin/classes/${klassId}/students`);
+  return data;
+}
+
+export async function addClassStudent(klassId: number, input: StudentInput): Promise<void> {
+  await api.post(`/admin/classes/${klassId}/students`, input);
+}
+
+export async function updateStudent(
+  studentId: number,
+  input: Partial<StudentInput>,
+): Promise<void> {
+  await api.put(`/admin/students/${studentId}`, input);
+}
+
+export async function deleteStudent(studentId: number): Promise<void> {
+  await api.delete(`/admin/students/${studentId}`);
+}
+
+export async function listClassTeachers(klassId: number): Promise<ClassTeacher[]> {
+  const { data } = await api.get<ClassTeacher[]>(`/admin/classes/${klassId}/teachers`);
+  return data;
+}
+
+export async function listClassExams(klassId: number): Promise<ClassExam[]> {
+  const { data } = await api.get<ClassExam[]>(`/admin/classes/${klassId}/exams`);
+  return data;
+}
+
+export async function addClassExam(
+  klassId: number,
+  name: string,
+  allSchool: boolean,
+): Promise<void> {
+  await api.post(`/admin/classes/${klassId}/exams`, { name, allSchool });
+}
+
+export async function deleteExam(examId: number): Promise<void> {
+  await api.delete(`/admin/exams/${examId}`);
+}
+
 // --- Subjects (school-level catalogue) ---
 export interface AdminSubject {
   id: number;

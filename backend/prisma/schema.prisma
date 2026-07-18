@@ -139,6 +139,7 @@ model Klass {
   notices      Notice[]
   albums       PhotoAlbum[]
   teachingAssignments TeachingAssignment[]
+  terms        Term[]
 
   @@unique([schoolId, grade, section])
 }
@@ -316,13 +317,18 @@ model Event {
 model Term {
   id       Int    @id @default(autoincrement())
   schoolId Int
+  // Null for legacy school-wide terms. A school-wide exam created from the UI
+  // is fanned out as one row per class, so each class owns its own copy.
+  klassId  Int?
   name     String
 
   school     School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  klass      Klass?       @relation(fields: [klassId], references: [id], onDelete: Cascade)
   results    Result[]
   resultMeta ResultMeta[]
 
-  @@unique([schoolId, name])
+  @@unique([schoolId, klassId, name])
+  @@index([klassId])
 }
 
 model Result {

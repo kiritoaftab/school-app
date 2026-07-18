@@ -7,6 +7,19 @@ import {
   getTeacher,
   setClassSubjects,
   unassignClass,
+  listClassStudents,
+  addClassStudent,
+  updateStudent,
+  deleteStudent,
+  listClassTeachers,
+  listClassExams,
+  addClassExam,
+  deleteExam,
+  type ClassStudent,
+  type ClassTeacher,
+  type ClassExam,
+  type GuardianRelation,
+  type StudentInput,
   setClassTeacher,
   createClass,
   createTeacher,
@@ -47,17 +60,12 @@ import {
   NOTICE_CATEGORIES,
   TEACHERS,
   ADMIN_CLASSES,
-  DEFAULT_CLASS_SUBJECTS,
-  DEFAULT_CLASS_EXAMS,
-  subjectsOf,
-  teachOf,
   initialsOf,
   maskPhone,
   classAttendanceOf,
   type Teacher,
   type AdminClass,
   type Notice,
-  type ClassExam,
 } from "./data";
 
 type Screen =
@@ -82,22 +90,17 @@ export function AdminApp() {
 
   const [screen, setScreen] = useState<Screen>("home");
   const [acctOpen, setAcctOpen] = useState(false);
-  const [teachers, setTeachers] = useState<Teacher[]>(() =>
+  const [teachers] = useState<Teacher[]>(() =>
     JSON.parse(JSON.stringify(TEACHERS)),
   );
-  const [classes, setClasses] = useState<AdminClass[]>(() =>
+  const [classes] = useState<AdminClass[]>(() =>
     JSON.parse(JSON.stringify(ADMIN_CLASSES)),
   );
   const [notices, setNotices] = useState<Notice[]>(NOTICES);
   const [activeTeacherId, setActiveTeacherId] = useState<number | null>(null);
-  const [activeClassId] = useState("5-B");
+  const [activeKlassId, setActiveKlassId] = useState<number | null>(null);
   const [activeNoticeId, setActiveNoticeId] = useState("ptm");
   const [attClassId, setAttClassId] = useState("5-B");
-  // Per-class subject & exam catalogues (editable in class detail).
-  const [classSubjects, setClassSubjects] = useState<Record<string, string[]>>(
-    {},
-  );
-  const [classExams, setClassExams] = useState<Record<string, ClassExam[]>>({});
 
   // Live classes & teachers from the backend.
   const [apiClasses, setApiClasses] = useState<AdminKlass[] | null>(null);
@@ -177,31 +180,26 @@ export function AdminApp() {
   // Load live data whenever the admin lands on a screen that needs it.
   useEffect(() => {
     // Add-Teacher needs live classes + subjects to build its assignment picker.
-    // Staff Detail needs classes too, for its "assign a class" picker.
-    if (
-      (screen === "classes" ||
-        screen === "classAdd" ||
-        screen === "staffAdd" ||
-        screen === "staffDetail") &&
-      apiClasses === null
-    )
-      loadClasses();
-    if (
-      (screen === "classes" ||
-        screen === "classAdd" ||
-        screen === "staffAdd" ||
-        screen === "staffDetail") &&
-      apiSubjects === null
-    )
-      loadSubjects();
-    // Staff screens need teachers; Add-Class needs them for the class-teacher picker.
-    if (
-      (screen === "staff" ||
-        screen === "staffDetail" ||
-        screen === "classAdd") &&
-      apiTeachers === null
-    )
-      loadTeachers();
+    // Staff Detail needs classes for its "assign a class" picker; Class Detail
+    // needs the class itself, the subject chips, and the teacher picker.
+    const needsClasses = [
+      "classes",
+      "classAdd",
+      "classDetail",
+      "staffAdd",
+      "staffDetail",
+    ];
+    const needsSubjects = [
+      "classes",
+      "classAdd",
+      "classDetail",
+      "staffAdd",
+      "staffDetail",
+    ];
+    const needsTeachers = ["staff", "staffDetail", "classAdd", "classDetail"];
+    if (needsClasses.includes(screen) && apiClasses === null) loadClasses();
+    if (needsSubjects.includes(screen) && apiSubjects === null) loadSubjects();
+    if (needsTeachers.includes(screen) && apiTeachers === null) loadTeachers();
   }, [
     screen,
     apiClasses,
@@ -213,11 +211,10 @@ export function AdminApp() {
   ]);
 
   const name = user?.name ?? "Sridevi Menon";
-  const teacherName = (id: string) =>
-    teachers.find((t) => t.id === id)?.name ?? "";
-  const activeClass = classes.find((c) => c.id === activeClassId) || classes[0];
   const activeApiTeacher =
     apiTeachers?.find((t) => t.id === activeTeacherId) ?? null;
+  const activeApiKlass =
+    apiClasses?.find((c) => c.id === activeKlassId) ?? null;
 
   // Attendance aggregates (simulated) for the admin overview.
   const classAtt = classes.map((c) => ({
@@ -257,9 +254,9 @@ export function AdminApp() {
     sub = (primarySubjectOf(teacherDetail) ?? activeApiTeacher?.name ?? "")
       .toUpperCase();
   } else if (screen === "classDetail") {
-    title = activeClass.label;
-    sub = activeClass.ctId
-      ? `CLASS TEACHER · ${teacherName(activeClass.ctId).toUpperCase()}`
+    title = activeApiKlass?.label ?? "Class";
+    sub = activeApiKlass?.teacher
+      ? `CLASS TEACHER · ${activeApiKlass.teacher.toUpperCase()}`
       : "NO CLASS TEACHER";
   } else if (screen === "adminAttClass") {
     title = attClass.label;
@@ -401,19 +398,18 @@ export function AdminApp() {
           error={classesError}
           onRetry={loadClasses}
           onAdd={() => go("classAdd")}
+          onOpen={(id) => {
+            setActiveKlassId(id);
+            go("classDetail");
+          }}
         />
       )}
       {screen === "classDetail" && (
         <ClassDetail
-          cls={activeClass}
-          teachers={teachers}
-          teacherName={teacherName}
-          setTeachers={setTeachers}
-          setClasses={setClasses}
-          classSubjects={classSubjects}
-          setClassSubjects={setClassSubjects}
-          classExams={classExams}
-          setClassExams={setClassExams}
+          klass={activeApiKlass}
+          subjects={apiSubjects}
+          allTeachers={apiTeachers}
+          onClassesChanged={loadClasses}
         />
       )}
       {screen === "adminAtt" && (
@@ -1208,6 +1204,7 @@ function ClassesList({
   error,
   onRetry,
   onAdd,
+  onOpen,
 }: {
   classes: AdminKlass[] | null;
   subjects: AdminSubject[] | null;
@@ -1215,6 +1212,7 @@ function ClassesList({
   error: string | null;
   onRetry: () => void;
   onAdd: () => void;
+  onOpen: (id: number) => void;
 }) {
   return (
     <div className="px-[15px] py-4 pb-6">
@@ -1257,6 +1255,7 @@ function ClassesList({
             classes.map((c) => (
               <Card
                 key={c.id}
+                onClick={() => onOpen(c.id)}
                 className="p-[13px] mb-2.25 flex gap-3 items-center"
               >
                 <div className="w-[42px] h-[42px] rounded-[13px] bg-mist grid place-items-center flex-none text-green">
@@ -1272,6 +1271,9 @@ function ClassesList({
                 </div>
                 <span className="text-[12px] font-bold text-green bg-[#f1f5f1] rounded-[9px] px-2.5 py-1.5 flex-none">
                   {c.students}
+                </span>
+                <span className="text-[#c3ccc5] flex-none">
+                  <Glyph d={GLYPH.chevronRight} size={17} stroke={2.2} />
                 </span>
               </Card>
             ))
@@ -1310,87 +1312,122 @@ function ClassesList({
   );
 }
 
-// ---------- CLASS DETAIL (tabbed) ----------
+// ---------- CLASS DETAIL (live, 4 tabs) ----------
 type ClassTab = "students" | "teachers" | "subjects" | "exams";
 
 function ClassDetail({
-  cls,
-  teachers,
-  teacherName,
-  setTeachers,
-  setClasses,
-  classSubjects,
-  setClassSubjects,
-  classExams,
-  setClassExams,
+  klass,
+  subjects,
+  allTeachers,
+  onClassesChanged,
 }: {
-  cls: AdminClass;
-  teachers: Teacher[];
-  teacherName: (id: string) => string;
-  setTeachers: React.Dispatch<React.SetStateAction<Teacher[]>>;
-  setClasses: React.Dispatch<React.SetStateAction<AdminClass[]>>;
-  classSubjects: Record<string, string[]>;
-  setClassSubjects: React.Dispatch<
-    React.SetStateAction<Record<string, string[]>>
-  >;
-  classExams: Record<string, ClassExam[]>;
-  setClassExams: React.Dispatch<
-    React.SetStateAction<Record<string, ClassExam[]>>
-  >;
+  klass: AdminKlass | null;
+  subjects: AdminSubject[] | null;
+  allTeachers: AdminTeacher[] | null;
+  onClassesChanged: () => void | Promise<void>;
 }) {
   const [tab, setTab] = useState<ClassTab>("students");
-  // students
+  const [students, setStudents] = useState<ClassStudent[] | null>(null);
+  const [clsTeachers, setClsTeachers] = useState<ClassTeacher[] | null>(null);
+  const [exams, setExams] = useState<ClassExam[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  // students form
   const [addStudentOpen, setAddStudentOpen] = useState(false);
-  const [studEditIdx, setStudEditIdx] = useState<number | null>(null);
   const [newStudent, setNewStudent] = useState("");
   const [gName, setGName] = useState("");
   const [gPhone, setGPhone] = useState("");
-  const [gRel, setGRel] = useState("Mother");
-  // teachers / subjects / exams
+  const [gRel, setGRel] = useState<GuardianRelation>("Mother");
+  const [studEditId, setStudEditId] = useState<number | null>(null);
+  const [draft, setDraft] = useState<StudentInput | null>(null);
+  // teachers / exams
   const [clsTAddOpen, setClsTAddOpen] = useState(false);
-  const [subjAddOpen, setSubjAddOpen] = useState(false);
-  const [newSubj, setNewSubj] = useState("");
   const [examAddOpen, setExamAddOpen] = useState(false);
   const [newExam, setNewExam] = useState("");
+  const [examAllSchool, setExamAllSchool] = useState(false);
 
-  const subjects = classSubjects[cls.id] || DEFAULT_CLASS_SUBJECTS;
-  const exams = classExams[cls.id] || DEFAULT_CLASS_EXAMS;
-  const teachersInClass = teachers.filter((t) => t.classes.includes(cls.id));
-  const availableTeachers = teachers.filter((t) => !t.classes.includes(cls.id));
+  const klassId = klass?.id ?? null;
+
+  const load = useCallback(async () => {
+    if (klassId === null) return;
+    setError(null);
+    try {
+      const [s, t, e] = await Promise.all([
+        listClassStudents(klassId),
+        listClassTeachers(klassId),
+        listClassExams(klassId),
+      ]);
+      setStudents(s);
+      setClsTeachers(t);
+      setExams(e);
+    } catch {
+      setError("Couldn't load this class. Pull to retry.");
+    }
+  }, [klassId]);
+
+  useEffect(() => {
+    setStudents(null);
+    setClsTeachers(null);
+    setExams(null);
+    load();
+  }, [load]);
+
+  if (!klass)
+    return (
+      <div className="px-[15px] py-10">
+        <Spinner />
+      </div>
+    );
+
+  const ctName =
+    clsTeachers?.find((t) => t.isClassTeacher)?.name ?? klass.teacher ?? null;
+  const inClassIds = new Set((clsTeachers ?? []).map((t) => t.id));
+  const availableTeachers = (allTeachers ?? []).filter(
+    (t) => !inClassIds.has(t.id),
+  );
+  const phoneDigits = gPhone.replace(/\D/g, "");
   const ready =
-    newStudent.trim().length > 0 && gPhone.replace(/\D/g, "").length === 10;
+    newStudent.trim().length > 0 &&
+    gName.trim().length > 0 &&
+    phoneDigits.length === 10 &&
+    !busy;
+
+  // Every mutation refreshes this class, and the class list when a CT changed.
+  async function run(fn: () => Promise<void>, alsoClasses = false) {
+    setBusy(true);
+    setError(null);
+    try {
+      await fn();
+      await load();
+      if (alsoClasses) await onClassesChanged();
+    } catch (e) {
+      setError(
+        (e as { response?: { data?: { error?: string } } }).response?.data
+          ?.error ?? "That didn't save. Please try again.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
 
   function switchTab(t: ClassTab) {
     setTab(t);
     setAddStudentOpen(false);
-    setStudEditIdx(null);
+    setStudEditId(null);
     setClsTAddOpen(false);
-    setSubjAddOpen(false);
     setExamAddOpen(false);
   }
 
-  // ---- students ----
-  function addStudent() {
+  async function addStudent() {
     if (!ready) return;
-    setClasses((cs) =>
-      cs.map((c) =>
-        c.id === cls.id
-          ? {
-              ...c,
-              students: [
-                ...c.students,
-                {
-                  name: newStudent.trim(),
-                  guardian: {
-                    name: gName.trim() || "Guardian",
-                    phone: gPhone.replace(/\D/g, ""),
-                    relation: gRel,
-                  },
-                },
-              ],
-            }
-          : c,
-      ),
+    await run(() =>
+      addClassStudent(klass!.id, {
+        name: newStudent.trim(),
+        guardianName: gName.trim(),
+        guardianPhone: phoneDigits,
+        relation: gRel,
+      }),
     );
     setNewStudent("");
     setGName("");
@@ -1398,160 +1435,22 @@ function ClassDetail({
     setGRel("Mother");
     setAddStudentOpen(false);
   }
-  function removeStudent(idx: number) {
-    setClasses((cs) =>
-      cs.map((c) =>
-        c.id === cls.id
-          ? { ...c, students: c.students.filter((_, i) => i !== idx) }
-          : c,
-      ),
-    );
-    setStudEditIdx(null);
-  }
-  function setStudentField(
-    idx: number,
-    field: "name" | "gname" | "gphone" | "grel",
-    val: string,
-  ) {
-    setClasses((cs) =>
-      cs.map((c) => {
-        if (c.id !== cls.id) return c;
-        const arr = c.students.slice();
-        const e = { ...arr[idx] };
-        if (field === "name") e.name = val;
-        else {
-          const g = {
-            name: "",
-            phone: "",
-            relation: "Mother",
-            ...(e.guardian || {}),
-          };
-          if (field === "gname") g.name = val;
-          if (field === "gphone") g.phone = val.replace(/\D/g, "").slice(0, 10);
-          if (field === "grel") g.relation = val;
-          e.guardian = g;
-        }
-        arr[idx] = e;
-        return { ...c, students: arr };
-      }),
-    );
+
+  function beginEdit(s: ClassStudent) {
+    setStudEditId(s.id);
+    setDraft({
+      name: s.name,
+      guardianName: s.guardian?.name ?? "",
+      guardianPhone: s.guardian?.phone ?? "",
+      relation: (s.guardian?.relation as GuardianRelation) ?? "Mother",
+    });
   }
 
-  // ---- teachers ----
-  function addTeacherToClass(tid: string) {
-    setTeachers((ts) =>
-      ts.map((t) => {
-        if (t.id !== tid || t.classes.includes(cls.id)) return t;
-        const teach = { ...teachOf(t) };
-        teach[cls.id] = subjects.slice(0, 1);
-        return { ...t, classes: [...t.classes, cls.id], teach };
-      }),
-    );
-    setClsTAddOpen(false);
-  }
-  function removeTeacherFromClass(tid: string) {
-    setTeachers((ts) =>
-      ts.map((t) => {
-        if (t.id !== tid) return t;
-        const teach = { ...teachOf(t) };
-        delete teach[cls.id];
-        return {
-          ...t,
-          classes: t.classes.filter((c) => c !== cls.id),
-          ct: t.ct === cls.id ? "" : t.ct,
-          teach,
-        };
-      }),
-    );
-    setClasses((cs) =>
-      cs.map((c) =>
-        c.id === cls.id && c.ctId === tid ? { ...c, ctId: "" } : c,
-      ),
-    );
-  }
-  function setClassCt(tid: string) {
-    const cur = teachers.find((t) => t.id === tid);
-    const isCt = cur?.ct === cls.id;
-    setTeachers((ts) =>
-      ts.map((t) => {
-        if (t.id === tid)
-          return {
-            ...t,
-            classes: t.classes.includes(cls.id)
-              ? t.classes
-              : [...t.classes, cls.id],
-            ct: isCt ? "" : cls.id,
-          };
-        return !isCt && t.ct === cls.id ? { ...t, ct: "" } : t;
-      }),
-    );
-    setClasses((cs) =>
-      cs.map((c) => (c.id === cls.id ? { ...c, ctId: isCt ? "" : tid } : c)),
-    );
-  }
-  function toggleTeachSubject(tid: string, su: string) {
-    setTeachers((ts) =>
-      ts.map((t) => {
-        if (t.id !== tid) return t;
-        const teach = { ...teachOf(t) };
-        const arr = (teach[cls.id] || []).slice();
-        const i = arr.indexOf(su);
-        if (i >= 0) arr.splice(i, 1);
-        else arr.push(su);
-        teach[cls.id] = arr;
-        return { ...t, teach };
-      }),
-    );
-  }
-
-  // ---- subjects ----
-  function addSubject() {
-    const nm = newSubj.trim();
-    if (!nm || subjects.some((s) => s.toLowerCase() === nm.toLowerCase())) {
-      setNewSubj("");
-      setSubjAddOpen(false);
-      return;
-    }
-    setClassSubjects((m) => ({ ...m, [cls.id]: [...subjects, nm] }));
-    setNewSubj("");
-    setSubjAddOpen(false);
-  }
-  function removeSubject(nm: string) {
-    setClassSubjects((m) => ({
-      ...m,
-      [cls.id]: subjects.filter((s) => s !== nm),
-    }));
-    setTeachers((ts) =>
-      ts.map((t) => {
-        const teach = teachOf(t);
-        if (!(cls.id in teach)) return t;
-        return {
-          ...t,
-          teach: {
-            ...teach,
-            [cls.id]: (teach[cls.id] || []).filter((s) => s !== nm),
-          },
-        };
-      }),
-    );
-  }
-
-  // ---- exams ----
-  function addExam() {
-    const nm = newExam.trim();
-    if (!nm) return;
-    setClassExams((m) => ({
-      ...m,
-      [cls.id]: [...exams, { id: "ex" + Date.now(), name: nm }],
-    }));
-    setNewExam("");
-    setExamAddOpen(false);
-  }
-  function removeExam(id: string) {
-    setClassExams((m) => ({
-      ...m,
-      [cls.id]: exams.filter((e) => e.id !== id),
-    }));
+  async function saveEdit(id: number) {
+    if (!draft) return;
+    await run(() => updateStudent(id, draft));
+    setStudEditId(null);
+    setDraft(null);
   }
 
   const tabs: { key: ClassTab; label: string }[] = [
@@ -1571,8 +1470,8 @@ function ClassDetail({
           <small className="text-[9.5px] tracking-[0.1em] uppercase text-muted font-semibold block">
             Class teacher
           </small>
-          {cls.ctId ? (
-            <b className="text-[13.5px] font-bold">{teacherName(cls.ctId)}</b>
+          {ctName ? (
+            <b className="text-[13.5px] font-bold">{ctName}</b>
           ) : (
             <span className="text-[12px] text-[#8a6d1f] font-semibold">
               Not set — pick one in Teachers
@@ -1596,441 +1495,545 @@ function ClassDetail({
         ))}
       </div>
 
-      {tab === "students" && (
-        <>
-          {addStudentOpen ? (
-            <Card className="p-3.5 mb-3.5">
-              <div className="flex items-center mb-2.5">
-                <div className="flex-1 text-[10px] tracking-[0.13em] uppercase font-semibold text-muted">
-                  Add a student
+      {error && (
+        <Card className="p-3.5 mb-3 text-[12.5px] text-danger">{error}</Card>
+      )}
+
+      {/* ---------------- STUDENTS ---------------- */}
+      {tab === "students" &&
+        (students === null ? (
+          <div className="py-8">
+            <Spinner />
+          </div>
+        ) : (
+          <>
+            {addStudentOpen ? (
+              <Card className="p-3.5 mb-3.5">
+                <div className="flex items-center mb-2.5">
+                  <div className="flex-1 text-[10px] tracking-[0.13em] uppercase font-semibold text-muted">
+                    Add a student
+                  </div>
+                  <button
+                    onClick={() => setAddStudentOpen(false)}
+                    className="w-[26px] h-[26px] rounded-lg border border-line bg-white text-muted text-[15px] font-bold flex-none"
+                  >
+                    ×
+                  </button>
+                </div>
+                <input
+                  value={newStudent}
+                  onChange={(e) => setNewStudent(e.target.value)}
+                  placeholder="Student's full name"
+                  className={cx(inputCls, "mb-2.25")}
+                />
+                <input
+                  value={gName}
+                  onChange={(e) => setGName(e.target.value)}
+                  placeholder="Guardian's name"
+                  className={cx(inputCls, "mb-2.25")}
+                />
+                <div className="flex items-center bg-white border-[1.5px] border-line rounded-[11px] overflow-hidden mb-2.25">
+                  <span className="px-[11px] text-[13px] font-semibold border-r border-line h-[42px] flex items-center">
+                    +91
+                  </span>
+                  <input
+                    value={gPhone}
+                    onChange={(e) => setGPhone(e.target.value)}
+                    inputMode="numeric"
+                    placeholder="Guardian mobile (for login)"
+                    className="flex-1 min-w-0 border-none px-3 h-[42px] text-[13px] bg-transparent"
+                  />
+                </div>
+                <div className="flex gap-1.5 mb-3">
+                  {(["Mother", "Father", "Guardian"] as const).map((r) => (
+                    <Chip
+                      key={r}
+                      active={gRel === r}
+                      onClick={() => setGRel(r)}
+                      className="flex-1 text-center py-2"
+                    >
+                      {r}
+                    </Chip>
+                  ))}
                 </div>
                 <button
-                  onClick={() => setAddStudentOpen(false)}
-                  className="w-[26px] h-[26px] rounded-lg border border-line bg-white text-muted text-[15px] font-bold flex-none"
+                  onClick={addStudent}
+                  disabled={!ready}
+                  className={cx(
+                    "w-full py-3 rounded-xl font-bold text-[13.5px]",
+                    ready
+                      ? "bg-green text-white"
+                      : "bg-[#dfe5df] text-[#9aa39b]",
+                  )}
                 >
-                  ×
+                  {busy ? "Adding…" : "Add student"}
                 </button>
-              </div>
-              <input
-                value={newStudent}
-                onChange={(e) => setNewStudent(e.target.value)}
-                placeholder="Student's full name"
-                className={cx(inputCls, "mb-2.25")}
-              />
-              <input
-                value={gName}
-                onChange={(e) => setGName(e.target.value)}
-                placeholder="Guardian's name"
-                className={cx(inputCls, "mb-2.25")}
-              />
-              <div className="flex items-center bg-white border-[1.5px] border-line rounded-[11px] overflow-hidden mb-2.25">
-                <span className="px-[11px] text-[13px] font-semibold border-r border-line h-[42px] flex items-center">
-                  +91
-                </span>
-                <input
-                  value={gPhone}
-                  onChange={(e) => setGPhone(e.target.value)}
-                  inputMode="numeric"
-                  placeholder="Guardian mobile (for login)"
-                  className="flex-1 min-w-0 border-none px-3 h-[42px] text-[13px] bg-transparent"
-                />
-              </div>
-              <div className="flex gap-1.5 mb-3">
-                {["Mother", "Father", "Guardian"].map((r) => (
-                  <Chip
-                    key={r}
-                    active={gRel === r}
-                    onClick={() => setGRel(r)}
-                    className="flex-1 text-center py-2"
-                  >
-                    {r}
-                  </Chip>
-                ))}
-              </div>
+                <div className="flex gap-2 items-start mt-2.5">
+                  <span className="flex-none mt-px text-muted">
+                    <Glyph d={GLYPH.info} size={14} stroke={1.9} />
+                  </span>
+                  <div className="text-[11px] text-muted leading-[1.5]">
+                    The guardian's mobile is their login. They sign in with it
+                    and a one-time code — no separate sign-up.
+                  </div>
+                </div>
+              </Card>
+            ) : (
               <button
-                onClick={addStudent}
-                disabled={!ready}
-                className={cx(
-                  "w-full py-3 rounded-xl font-bold text-[13.5px]",
-                  ready ? "bg-green text-white" : "bg-[#dfe5df] text-[#9aa39b]",
-                )}
+                onClick={() => setAddStudentOpen(true)}
+                className="w-full mb-3.5 py-3.5 rounded-[14px] bg-green text-white font-bold text-[14px] flex items-center justify-center gap-2"
               >
+                <Glyph d={GLYPH.plus} size={18} stroke={2.2} />
                 Add student
               </button>
-            </Card>
-          ) : (
-            <button
-              onClick={() => setAddStudentOpen(true)}
-              className="w-full mb-3.5 py-3.5 rounded-[14px] bg-green text-white font-bold text-[14px] flex items-center justify-center gap-2"
-            >
-              <Glyph d={GLYPH.plus} size={18} stroke={2.2} />
-              Add student
-            </button>
-          )}
-          <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-2.5">
-            {cls.students.length} students
-          </div>
-          {cls.students.map((s, i) => {
-            const g = s.guardian;
-            const editing = studEditIdx === i;
-            return (
-              <Card key={i} className="p-3 mb-2 rounded-[14px]">
-                {editing ? (
-                  <div>
-                    <div className="text-[9.5px] tracking-[0.1em] uppercase font-semibold text-[#9aa39b] mb-1.5">
-                      Editing #{("0" + (i + 1)).slice(-2)}
-                    </div>
-                    <input
-                      value={s.name}
-                      onChange={(e) =>
-                        setStudentField(i, "name", e.target.value)
-                      }
-                      placeholder="Student's full name"
-                      className={cx(inputCls, "mb-2", "rounded-[10px]")}
-                    />
-                    <input
-                      value={g?.name || ""}
-                      onChange={(e) =>
-                        setStudentField(i, "gname", e.target.value)
-                      }
-                      placeholder="Guardian's name"
-                      className={cx(inputCls, "mb-2", "rounded-[10px]")}
-                    />
-                    <div className="flex items-center bg-white border-[1.5px] border-line rounded-[10px] overflow-hidden mb-2">
-                      <span className="px-2.5 text-[12.5px] font-semibold border-r border-line h-10 flex items-center">
-                        +91
-                      </span>
+            )}
+
+            <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-2.5">
+              {students.length} {students.length === 1 ? "student" : "students"}
+            </div>
+
+            {students.map((s, i) => {
+              const g = s.guardian;
+              const editing = studEditId === s.id;
+              return (
+                <Card key={s.id} className="p-3 mb-2 rounded-[14px]">
+                  {editing && draft ? (
+                    <div>
+                      <div className="text-[9.5px] tracking-[0.1em] uppercase font-semibold text-[#9aa39b] mb-1.5">
+                        Editing {s.admissionNo}
+                      </div>
                       <input
-                        value={g?.phone || ""}
+                        value={draft.name}
                         onChange={(e) =>
-                          setStudentField(i, "gphone", e.target.value)
+                          setDraft({ ...draft, name: e.target.value })
                         }
-                        inputMode="numeric"
-                        placeholder="Guardian mobile (login)"
-                        className="flex-1 min-w-0 border-none px-2.5 h-10 text-[13px] bg-transparent"
+                        placeholder="Student's full name"
+                        className={cx(inputCls, "mb-2", "rounded-[10px]")}
                       />
-                    </div>
-                    <div className="flex gap-1.5 mb-2.5">
-                      {["Mother", "Father", "Guardian"].map((rel) => (
-                        <Chip
-                          key={rel}
-                          active={(g?.relation || "Mother") === rel}
-                          onClick={() => setStudentField(i, "grel", rel)}
-                          className="flex-1 text-center py-1.5"
+                      <input
+                        value={draft.guardianName}
+                        onChange={(e) =>
+                          setDraft({ ...draft, guardianName: e.target.value })
+                        }
+                        placeholder="Guardian's name"
+                        className={cx(inputCls, "mb-2", "rounded-[10px]")}
+                      />
+                      <div className="flex items-center bg-white border-[1.5px] border-line rounded-[10px] overflow-hidden mb-2">
+                        <span className="px-2.5 text-[12.5px] font-semibold border-r border-line h-10 flex items-center">
+                          +91
+                        </span>
+                        <input
+                          value={draft.guardianPhone}
+                          onChange={(e) =>
+                            setDraft({
+                              ...draft,
+                              guardianPhone: e.target.value
+                                .replace(/\D/g, "")
+                                .slice(0, 10),
+                            })
+                          }
+                          inputMode="numeric"
+                          placeholder="Guardian mobile (login)"
+                          className="flex-1 min-w-0 border-none px-2.5 h-10 text-[13px] bg-transparent"
+                        />
+                      </div>
+                      <div className="flex gap-1.5 mb-2.5">
+                        {(["Mother", "Father", "Guardian"] as const).map(
+                          (rel) => (
+                            <Chip
+                              key={rel}
+                              active={draft.relation === rel}
+                              onClick={() =>
+                                setDraft({ ...draft, relation: rel })
+                              }
+                              className="flex-1 text-center py-1.5"
+                            >
+                              {rel}
+                            </Chip>
+                          ),
+                        )}
+                      </div>
+                      <div className="flex gap-2">
+                        <button
+                          disabled={busy}
+                          onClick={() => saveEdit(s.id)}
+                          className="flex-1 py-2.75 rounded-[11px] bg-green text-white font-bold text-[13px] disabled:opacity-60"
                         >
-                          {rel}
-                        </Chip>
-                      ))}
+                          {busy ? "Saving…" : "Done"}
+                        </button>
+                        <button
+                          disabled={busy}
+                          onClick={() => {
+                            setStudEditId(null);
+                            setDraft(null);
+                          }}
+                          className="px-4 rounded-[11px] bg-white border-[1.5px] border-line text-muted font-bold text-[13px]"
+                        >
+                          Cancel
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex gap-2">
+                  ) : (
+                    <div className="flex gap-[11px] items-center">
+                      <span className="w-[26px] h-[26px] rounded-lg bg-[#f1f5f1] text-muted text-[11px] font-bold grid place-items-center flex-none">
+                        {("0" + (i + 1)).slice(-2)}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <b className="text-[13.5px] font-semibold block">
+                          {s.name}
+                        </b>
+                        {g ? (
+                          <small className="text-[10.5px] text-muted">
+                            {g.relation} · {g.name} · {maskPhone(g.phone)}
+                          </small>
+                        ) : (
+                          <small className="text-[10.5px] text-[#a9761b] font-semibold">
+                            No guardian phone — can't log in yet
+                          </small>
+                        )}
+                      </div>
                       <button
-                        onClick={() => setStudEditIdx(null)}
-                        className="flex-1 py-2.75 rounded-[11px] bg-green text-white font-bold text-[13px]"
+                        onClick={() => beginEdit(s)}
+                        className="w-7 h-7 rounded-[9px] border border-[#dbe5db] bg-white text-green grid place-items-center flex-none"
+                        aria-label="Edit"
                       >
-                        Done
+                        <Glyph d={GLYPH.edit} size={14} stroke={2} />
                       </button>
                       <button
-                        onClick={() => removeStudent(i)}
-                        className="px-4 rounded-[11px] bg-[#f6ecec] text-danger font-bold text-[13px]"
+                        disabled={busy}
+                        onClick={() => run(() => deleteStudent(s.id))}
+                        aria-label={`Remove ${s.name}`}
+                        className="w-7 h-7 rounded-[9px] bg-[#f6ecec] text-danger text-[16px] font-bold flex-none"
                       >
-                        Remove
+                        ×
                       </button>
                     </div>
+                  )}
+                </Card>
+              );
+            })}
+            {students.length === 0 && (
+              <div className="text-center text-muted text-[12.5px] py-5">
+                No students yet. Add the first one above.
+              </div>
+            )}
+          </>
+        ))}
+
+      {/* ---------------- TEACHERS ---------------- */}
+      {tab === "teachers" &&
+        (clsTeachers === null ? (
+          <div className="py-8">
+            <Spinner />
+          </div>
+        ) : (
+          <>
+            {clsTAddOpen ? (
+              <Card className="p-3 mb-3.5">
+                <div className="flex items-center mb-2.5">
+                  <div className="flex-1 text-[10px] tracking-[0.13em] uppercase font-semibold text-muted">
+                    Pick a teacher
+                  </div>
+                  <button
+                    onClick={() => setClsTAddOpen(false)}
+                    className="w-[26px] h-[26px] rounded-lg border border-line bg-white text-muted text-[15px] font-bold flex-none"
+                  >
+                    ×
+                  </button>
+                </div>
+                {(subjects ?? []).length === 0 ? (
+                  <div className="text-[12px] text-[#8a6d1f] bg-[#fbf3e2] border border-[#ecd8ab] rounded-[11px] px-3 py-2.5">
+                    Add a subject to the school first — a teacher joins a class
+                    by teaching something in it.
+                  </div>
+                ) : availableTeachers.length === 0 ? (
+                  <div className="text-[12.5px] text-muted px-0.5 py-1">
+                    Every teacher is already in this class.
                   </div>
                 ) : (
-                  <div className="flex gap-[11px] items-center">
-                    <span className="w-[26px] h-[26px] rounded-lg bg-[#f1f5f1] text-muted text-[11px] font-bold grid place-items-center flex-none">
-                      {("0" + (i + 1)).slice(-2)}
-                    </span>
-                    <div className="flex-1 min-w-0">
-                      <b className="text-[13.5px] font-semibold block">
-                        {s.name}
-                      </b>
-                      {g ? (
-                        <small className="text-[10.5px] text-muted">
-                          {g.relation} · {g.name} · {maskPhone(g.phone)}
-                        </small>
-                      ) : (
-                        <small className="text-[10.5px] text-[#a9761b] font-semibold">
-                          No guardian phone — can't log in yet
-                        </small>
-                      )}
-                    </div>
+                  availableTeachers.map((t) => (
                     <button
-                      onClick={() => setStudEditIdx(i)}
-                      className="w-7 h-7 rounded-[9px] border border-[#dbe5db] bg-white text-green grid place-items-center flex-none"
-                      aria-label="Edit"
+                      key={t.id}
+                      disabled={busy}
+                      onClick={() =>
+                        run(async () => {
+                          await setClassSubjects(t.id, klass.id, [
+                            subjects![0].id,
+                          ]);
+                          setClsTAddOpen(false);
+                        })
+                      }
+                      className="w-full text-left flex items-center gap-2 px-[11px] py-2.5 border-[1.5px] border-line rounded-[11px] bg-white mb-1.75 text-[12.5px] font-semibold text-ink"
                     >
-                      <Glyph d={GLYPH.edit} size={14} stroke={2} />
+                      <Glyph d={GLYPH.plus} size={15} stroke={2} />
+                      {t.name}
+                    </button>
+                  ))
+                )}
+              </Card>
+            ) : (
+              <button
+                onClick={() => setClsTAddOpen(true)}
+                className="w-full mb-3.5 py-3.5 rounded-[14px] bg-green text-white font-bold text-[14px] flex items-center justify-center gap-2"
+              >
+                <Glyph d={GLYPH.plus} size={18} stroke={2.2} />
+                Add teacher to class
+              </button>
+            )}
+
+            {clsTeachers.length === 0 && (
+              <div className="text-center text-muted text-[12.5px] py-4">
+                No teachers in this class yet.
+              </div>
+            )}
+
+            {clsTeachers.map((t) => {
+              const onIds = t.subjects.map((s) => s.id);
+              return (
+                <Card key={t.id} className="p-3 mb-2.25">
+                  <div className="flex items-center gap-2.5 mb-2.25">
+                    <b className="flex-1 min-w-0 text-[13.5px] font-bold">
+                      {t.name}
+                    </b>
+                    <button
+                      disabled={busy}
+                      onClick={() =>
+                        run(
+                          () =>
+                            setClassTeacher(t.id, klass.id, !t.isClassTeacher),
+                          true,
+                        )
+                      }
+                      className={cx(
+                        "px-2.5 py-1.5 rounded-[9px] text-[10.5px] font-bold border-[1.5px] flex-none",
+                        t.isClassTeacher
+                          ? "border-green bg-green text-white"
+                          : "border-[#dbe5db] bg-white text-green",
+                      )}
+                    >
+                      {t.isClassTeacher ? "Class teacher ✓" : "Make CT"}
                     </button>
                     <button
-                      onClick={() => removeStudent(i)}
+                      disabled={busy}
+                      onClick={() =>
+                        run(() => unassignClass(t.id, klass.id), true)
+                      }
+                      aria-label={`Remove ${t.name}`}
                       className="w-7 h-7 rounded-[9px] bg-[#f6ecec] text-danger text-[16px] font-bold flex-none"
                     >
                       ×
                     </button>
                   </div>
-                )}
-              </Card>
-            );
-          })}
-          {cls.students.length === 0 && (
-            <div className="text-center text-muted text-[12.5px] py-5">
-              No students yet. Add the first one above.
-            </div>
-          )}
-        </>
-      )}
+                  <div className="text-[9.5px] tracking-[0.1em] uppercase font-semibold text-[#9aa39b] mb-1.5">
+                    Subjects taught here
+                  </div>
+                  <div className="flex gap-1.5 flex-wrap">
+                    {(subjects ?? []).map((su) => {
+                      const on = onIds.includes(su.id);
+                      // The last subject can't be toggled off — that would mean
+                      // no assignment at all, which is what × is for.
+                      const locked = on && onIds.length === 1;
+                      return (
+                        <button
+                          key={su.id}
+                          disabled={busy || locked}
+                          title={
+                            locked
+                              ? "A teacher needs at least one subject here — use × to remove them"
+                              : undefined
+                          }
+                          onClick={() =>
+                            run(() =>
+                              setClassSubjects(
+                                t.id,
+                                klass.id,
+                                on
+                                  ? onIds.filter((x) => x !== su.id)
+                                  : [...onIds, su.id],
+                              ),
+                            )
+                          }
+                          className={cx(
+                            "px-2.5 py-1 rounded-lg text-[10.5px] font-semibold border",
+                            on
+                              ? "border-green bg-green text-white"
+                              : "border-[#dbe5db] bg-white text-green",
+                            locked && "opacity-70",
+                          )}
+                        >
+                          {su.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </Card>
+              );
+            })}
+          </>
+        ))}
 
-      {tab === "teachers" && (
-        <>
-          {clsTAddOpen ? (
-            <Card className="p-3 mb-3.5">
-              <div className="flex items-center mb-2.5">
-                <div className="flex-1 text-[10px] tracking-[0.13em] uppercase font-semibold text-muted">
-                  Pick a teacher
-                </div>
-                <button
-                  onClick={() => setClsTAddOpen(false)}
-                  className="w-[26px] h-[26px] rounded-lg border border-line bg-white text-muted text-[15px] font-bold flex-none"
-                >
-                  ×
-                </button>
-              </div>
-              {availableTeachers.length === 0 ? (
-                <div className="text-[12.5px] text-muted px-0.5 py-1">
-                  Every teacher is already in this class.
-                </div>
-              ) : (
-                availableTeachers.map((t) => (
-                  <button
-                    key={t.id}
-                    onClick={() => addTeacherToClass(t.id)}
-                    className="w-full text-left flex items-center gap-2 px-[11px] py-2.5 border-[1.5px] border-line rounded-[11px] bg-white mb-1.75 text-[12.5px] font-semibold text-ink"
-                  >
-                    <Glyph d={GLYPH.plus} size={15} stroke={2} />
-                    {t.name} · {subjectsOf(t).join(", ")}
-                  </button>
-                ))
-              )}
-            </Card>
-          ) : (
-            <button
-              onClick={() => setClsTAddOpen(true)}
-              className="w-full mb-3.5 py-3.5 rounded-[14px] bg-green text-white font-bold text-[14px] flex items-center justify-center gap-2"
-            >
-              <Glyph d={GLYPH.plus} size={18} stroke={2.2} />
-              Add teacher to class
-            </button>
-          )}
-          {teachersInClass.length === 0 && (
-            <div className="text-center text-muted text-[12.5px] py-4">
-              No teachers in this class yet.
+      {/* ---------------- SUBJECTS (read-only, school-wide) ---------------- */}
+      {tab === "subjects" &&
+        (subjects === null ? (
+          <div className="py-8">
+            <Spinner />
+          </div>
+        ) : (
+          <>
+            <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-2.5">
+              {subjects.length} {subjects.length === 1 ? "subject" : "subjects"}{" "}
+              · school-wide
             </div>
-          )}
-          {teachersInClass.map((t) => {
-            const subs = teachOf(t)[cls.id] || [];
-            const isCt = cls.ctId === t.id;
-            return (
-              <Card key={t.id} className="p-3 mb-2.25">
-                <div className="flex items-center gap-2.5 mb-2.25">
-                  <b className="flex-1 min-w-0 text-[13.5px] font-bold">
-                    {t.name}
+            {subjects.length === 0 ? (
+              <div className="text-center text-muted text-[12.5px] py-5">
+                No subjects yet. Add them under Classes → Add.
+              </div>
+            ) : (
+              subjects.map((s) => (
+                <Card
+                  key={s.id}
+                  className="p-3 mb-2 rounded-[13px] flex gap-[11px] items-center"
+                >
+                  <div className="w-8 h-8 rounded-[9px] bg-mist grid place-items-center flex-none text-green">
+                    <Glyph d={GLYPH.diary} size={16} stroke={1.9} />
+                  </div>
+                  <b className="flex-1 min-w-0 text-[13.5px] font-semibold">
+                    {s.name}
                   </b>
+                </Card>
+              ))
+            )}
+            <div className="text-center text-[11px] text-muted leading-[1.5] mt-3">
+              Subjects are shared by every class. Manage them under Classes →
+              Add.
+            </div>
+          </>
+        ))}
+
+      {/* ---------------- EXAMS ---------------- */}
+      {tab === "exams" &&
+        (exams === null ? (
+          <div className="py-8">
+            <Spinner />
+          </div>
+        ) : (
+          <>
+            {examAddOpen ? (
+              <Card className="p-3 mb-3.5">
+                <div className="flex items-center mb-2.5">
+                  <div className="flex-1 text-[10px] tracking-[0.13em] uppercase font-semibold text-muted">
+                    New examination
+                  </div>
                   <button
-                    onClick={() => setClassCt(t.id)}
-                    className={cx(
-                      "px-2.5 py-1.5 rounded-[9px] text-[10.5px] font-bold border-[1.5px] flex-none",
-                      isCt
-                        ? "border-green bg-green text-white"
-                        : "border-[#dbe5db] bg-white text-green",
-                    )}
-                  >
-                    {isCt ? "Class teacher ✓" : "Make CT"}
-                  </button>
-                  <button
-                    onClick={() => removeTeacherFromClass(t.id)}
-                    className="w-7 h-7 rounded-[9px] bg-[#f6ecec] text-danger text-[16px] font-bold flex-none"
+                    onClick={() => {
+                      setExamAddOpen(false);
+                      setNewExam("");
+                    }}
+                    className="w-[26px] h-[26px] rounded-lg border border-line bg-white text-muted text-[15px] font-bold flex-none"
                   >
                     ×
                   </button>
                 </div>
-                <div className="text-[9.5px] tracking-[0.1em] uppercase font-semibold text-[#9aa39b] mb-1.5">
-                  Subjects taught here
+                <div className="flex gap-2 mb-2.5">
+                  <input
+                    value={newExam}
+                    onChange={(e) => setNewExam(e.target.value)}
+                    placeholder="e.g. Annual Exam"
+                    className="flex-1 min-w-0 border-[1.5px] border-line rounded-[11px] px-3 py-2.5 text-[13px] bg-white"
+                  />
+                  <button
+                    disabled={!newExam.trim() || busy}
+                    onClick={async () => {
+                      await run(() =>
+                        addClassExam(klass.id, newExam.trim(), examAllSchool),
+                      );
+                      setNewExam("");
+                      setExamAllSchool(false);
+                      setExamAddOpen(false);
+                    }}
+                    className={cx(
+                      "flex-none px-4 rounded-[11px] font-bold text-[13px]",
+                      newExam.trim() && !busy
+                        ? "bg-green text-white"
+                        : "bg-[#dfe5df] text-[#9aa39b]",
+                    )}
+                  >
+                    Add
+                  </button>
                 </div>
-                <div className="flex gap-1.5 flex-wrap">
-                  {subjects.map((su) => {
-                    const on = subs.includes(su);
-                    return (
-                      <button
-                        key={su}
-                        onClick={() => toggleTeachSubject(t.id, su)}
-                        className={cx(
-                          "px-2.5 py-1 rounded-lg text-[10.5px] font-semibold border",
-                          on
-                            ? "border-green bg-green text-white"
-                            : "border-[#dbe5db] bg-white text-green",
-                        )}
-                      >
-                        {su}
-                      </button>
-                    );
-                  })}
+                <div className="flex gap-1.5">
+                  <Chip
+                    active={!examAllSchool}
+                    onClick={() => setExamAllSchool(false)}
+                    className="flex-1 text-center py-2"
+                  >
+                    {klass.label} only
+                  </Chip>
+                  <Chip
+                    active={examAllSchool}
+                    onClick={() => setExamAllSchool(true)}
+                    className="flex-1 text-center py-2"
+                  >
+                    All school
+                  </Chip>
                 </div>
-                {subs.length === 0 && (
-                  <div className="text-[10.5px] text-[#a9761b] font-semibold mt-1.5">
-                    No subject set for this teacher.
-                  </div>
-                )}
+                <div className="text-[11px] text-muted leading-[1.5] mt-2">
+                  {examAllSchool
+                    ? "Creates this exam in every class. Each class keeps its own copy, so you can delete or grade them separately."
+                    : `Creates this exam in ${klass.label} only.`}
+                </div>
               </Card>
-            );
-          })}
-        </>
-      )}
-
-      {tab === "subjects" && (
-        <>
-          {subjAddOpen ? (
-            <Card className="p-3 mb-3.5">
-              <div className="flex items-center mb-2.5">
-                <div className="flex-1 text-[10px] tracking-[0.13em] uppercase font-semibold text-muted">
-                  New subject
-                </div>
-                <button
-                  onClick={() => {
-                    setSubjAddOpen(false);
-                    setNewSubj("");
-                  }}
-                  className="w-[26px] h-[26px] rounded-lg border border-line bg-white text-muted text-[15px] font-bold flex-none"
-                >
-                  ×
-                </button>
-              </div>
-              <div className="flex gap-2">
-                <input
-                  value={newSubj}
-                  onChange={(e) => setNewSubj(e.target.value)}
-                  placeholder="e.g. French"
-                  className="flex-1 min-w-0 border-[1.5px] border-line rounded-[11px] px-3 py-2.5 text-[13px] bg-white"
-                />
-                <button
-                  onClick={addSubject}
-                  disabled={!newSubj.trim()}
-                  className={cx(
-                    "flex-none px-4 rounded-[11px] font-bold text-[13px]",
-                    newSubj.trim()
-                      ? "bg-green text-white"
-                      : "bg-[#dfe5df] text-[#9aa39b]",
-                  )}
-                >
-                  Add
-                </button>
-              </div>
-            </Card>
-          ) : (
-            <button
-              onClick={() => setSubjAddOpen(true)}
-              className="w-full mb-3.5 py-3.5 rounded-[14px] bg-green text-white font-bold text-[14px] flex items-center justify-center gap-2"
-            >
-              <Glyph d={GLYPH.plus} size={18} stroke={2.2} />
-              Add subject
-            </button>
-          )}
-          <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-2.5">
-            {subjects.length} subjects in {cls.label}
-          </div>
-          {subjects.map((nm) => (
-            <Card
-              key={nm}
-              className="p-3 mb-2 rounded-[13px] flex gap-[11px] items-center"
-            >
-              <div className="w-8 h-8 rounded-[9px] bg-mist grid place-items-center flex-none text-green">
-                <Glyph d={GLYPH.diary} size={16} stroke={1.9} />
-              </div>
-              <b className="flex-1 min-w-0 text-[13.5px] font-semibold">{nm}</b>
+            ) : (
               <button
-                onClick={() => removeSubject(nm)}
-                className="w-7 h-7 rounded-[9px] bg-[#f6ecec] text-danger text-[16px] font-bold flex-none"
+                onClick={() => setExamAddOpen(true)}
+                className="w-full mb-3.5 py-3.5 rounded-[14px] bg-green text-white font-bold text-[14px] flex items-center justify-center gap-2"
               >
-                ×
+                <Glyph d={GLYPH.plus} size={18} stroke={2.2} />
+                Add examination
               </button>
-            </Card>
-          ))}
-        </>
-      )}
+            )}
 
-      {tab === "exams" && (
-        <>
-          {examAddOpen ? (
-            <Card className="p-3 mb-3.5">
-              <div className="flex items-center mb-2.5">
-                <div className="flex-1 text-[10px] tracking-[0.13em] uppercase font-semibold text-muted">
-                  New examination
-                </div>
-                <button
-                  onClick={() => {
-                    setExamAddOpen(false);
-                    setNewExam("");
-                  }}
-                  className="w-[26px] h-[26px] rounded-lg border border-line bg-white text-muted text-[15px] font-bold flex-none"
+            <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-2.5">
+              {exams.length}{" "}
+              {exams.length === 1 ? "examination" : "examinations"} in{" "}
+              {klass.label}
+            </div>
+            {exams.length === 0 ? (
+              <div className="text-center text-muted text-[12.5px] py-5">
+                No examinations yet.
+              </div>
+            ) : (
+              exams.map((e) => (
+                <Card
+                  key={e.id}
+                  className="p-3 mb-2 rounded-[13px] flex gap-[11px] items-center"
                 >
-                  ×
-                </button>
-              </div>
-              <div className="flex gap-2">
-                <input
-                  value={newExam}
-                  onChange={(e) => setNewExam(e.target.value)}
-                  placeholder="e.g. Annual Exam"
-                  className="flex-1 min-w-0 border-[1.5px] border-line rounded-[11px] px-3 py-2.5 text-[13px] bg-white"
-                />
-                <button
-                  onClick={addExam}
-                  disabled={!newExam.trim()}
-                  className={cx(
-                    "flex-none px-4 rounded-[11px] font-bold text-[13px]",
-                    newExam.trim()
-                      ? "bg-green text-white"
-                      : "bg-[#dfe5df] text-[#9aa39b]",
-                  )}
-                >
-                  Add
-                </button>
-              </div>
-            </Card>
-          ) : (
-            <button
-              onClick={() => setExamAddOpen(true)}
-              className="w-full mb-3.5 py-3.5 rounded-[14px] bg-green text-white font-bold text-[14px] flex items-center justify-center gap-2"
-            >
-              <Glyph d={GLYPH.plus} size={18} stroke={2.2} />
-              Add examination
-            </button>
-          )}
-          <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-2.5">
-            {exams.length} examinations in {cls.label}
-          </div>
-          {exams.map((e) => (
-            <Card
-              key={e.id}
-              className="p-3 mb-2 rounded-[13px] flex gap-[11px] items-center"
-            >
-              <div className="w-8 h-8 rounded-[9px] bg-mist grid place-items-center flex-none text-green">
-                <Glyph d={GLYPH.results} size={16} stroke={1.9} />
-              </div>
-              <b className="flex-1 min-w-0 text-[13.5px] font-semibold">
-                {e.name}
-              </b>
-              <button
-                onClick={() => removeExam(e.id)}
-                className="w-7 h-7 rounded-[9px] bg-[#f6ecec] text-danger text-[16px] font-bold flex-none"
-              >
-                ×
-              </button>
-            </Card>
-          ))}
-        </>
-      )}
+                  <div className="w-8 h-8 rounded-[9px] bg-mist grid place-items-center flex-none text-green">
+                    <Glyph d={GLYPH.results} size={16} stroke={1.9} />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <b className="text-[13.5px] font-semibold block">
+                      {e.name}
+                    </b>
+                    {e.schoolWide && (
+                      <small className="text-[10.5px] text-muted">
+                        School-wide
+                      </small>
+                    )}
+                  </div>
+                  <button
+                    disabled={busy}
+                    onClick={() => run(() => deleteExam(e.id))}
+                    aria-label={`Remove ${e.name}`}
+                    className="w-7 h-7 rounded-[9px] bg-[#f6ecec] text-danger text-[16px] font-bold flex-none"
+                  >
+                    ×
+                  </button>
+                </Card>
+              ))
+            )}
+          </>
+        ))}
     </div>
   );
 }

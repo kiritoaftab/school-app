@@ -297,6 +297,199 @@ adminRouter.post('/classes', ah(async (req, res) => {
   });
 }));
 
+// --- Class detail tabs: students, teachers, exams ---
+
+// Shared guard: the class must exist in the caller's school.
+async function requireKlass(schoolId: number, klassId: number) {
+  const klass = await prisma.klass.findFirst({ where: { id: klassId, schoolId } });
+  if (!klass) throw new HttpError(404, 'Class not found in this school');
+  return klass;
+}
+
+// Admission numbers are generated, not typed — "2026-0007" style, per school.
+async function nextAdmissionNo(schoolId: number) {
+  const year = new Date().getFullYear();
+  const count = await prisma.student.count({ where: { schoolId } });
+  return `${year}-${String(count + 1).padStart(4, '0')}`;
+}
+
+adminRouter.get('/classes/:id/students', ah(async (req, res) => {
+  const schoolId = requireSchoolId(req);
+  const klassId = Number(req.params.id);
+  await requireKlass(schoolId, klassId);
+
+  const enrollments = await prisma.enrollment.findMany({
+    where: { klassId },
+    include: { student: { include: { parentLinks: { include: { parent: true } } } } },
+    orderBy: { student: { name: 'asc' } },
+  });
+  res.json(
+    enrollments.map((e) => {
+      const link = e.student.parentLinks[0];
+      return {
+        id: e.student.id,
+        name: e.student.name,
+        admissionNo: e.student.admissionNo,
+        guardian: link
+          ? { id: link.parent.id, name: link.parent.name, phone: link.parent.phone, relation: link.relation }
+          : null,
+      };
+    }),
+  );
+}));
+
+// Guardian is mandatory: their mobile is the parent login.
+const classStudentSchema = z.object({
+  name: z.string().min(1),
+  guardianName: z.string().min(1),
+  guardianPhone: z.string().min(10),
+  relation: z.enum(['Mother', 'Father', 'Guardian']),
+  academicYear: z.string().default(String(new Date().getFullYear())),
+});
+
+adminRouter.post('/classes/:id/students', ah(async (req, res) => {
+  const schoolId = requireSchoolId(req);
+  const klassId = Number(req.params.id);
+  await requireKlass(schoolId, klassId);
+  const data = classStudentSchema.parse(req.body);
+  const phone = data.guardianPhone.replace(/\D/g, '');
+  if (phone.length !== 10) throw new HttpError(400, 'Guardian mobile must be 10 digits');
+
+  const admissionNo = await nextAdmissionNo(schoolId);
+  const student = await prisma.$transaction(async (tx) => {
+    const s = await tx.student.create({ data: { schoolId, name: data.name.trim(), admissionNo } });
+    await tx.enrollment.create({ data: { studentId: s.id, klassId, academicYear: data.academicYear } });
+    // One parent account per mobile — a second child reuses the same login.
+    const parent =
+      (await tx.user.findFirst({ where: { schoolId, phone, role: 'PARENT' } })) ??
+      (await tx.user.create({
+        data: { schoolId, phone, name: data.guardianName.trim(), role: 'PARENT' },
+      }));
+    await tx.parentStudentLink.create({
+      data: { parentUserId: parent.id, studentId: s.id, relation: data.relation },
+    });
+    return s;
+  });
+  res.status(201).json({ id: student.id, name: student.name, admissionNo: student.admissionNo });
+}));
+
+const studentEditSchema = classStudentSchema.partial().omit({ academicYear: true });
+adminRouter.put('/students/:id', ah(async (req, res) => {
+  const schoolId = requireSchoolId(req);
+  const id = Number(req.params.id);
+  const data = studentEditSchema.parse(req.body);
+  const student = await prisma.student.findFirst({
+    where: { id, schoolId },
+    include: { parentLinks: true },
+  });
+  if (!student) throw new HttpError(404, 'Student not found');
+
+  await prisma.$transaction(async (tx) => {
+    if (data.name) await tx.student.update({ where: { id }, data: { name: data.name.trim() } });
+
+    const link = student.parentLinks[0];
+    if (!link) return;
+    if (data.relation) {
+      await tx.parentStudentLink.update({ where: { id: link.id }, data: { relation: data.relation } });
+    }
+    const guardianData: { name?: string; phone?: string } = {};
+    if (data.guardianName) guardianData.name = data.guardianName.trim();
+    if (data.guardianPhone) {
+      const phone = data.guardianPhone.replace(/\D/g, '');
+      if (phone.length !== 10) throw new HttpError(400, 'Guardian mobile must be 10 digits');
+      const clash = await tx.user.findFirst({
+        where: { schoolId, phone, role: 'PARENT', id: { not: link.parentUserId } },
+      });
+      if (clash) throw new HttpError(409, 'Another guardian already uses this mobile');
+      guardianData.phone = phone;
+    }
+    if (Object.keys(guardianData).length) {
+      await tx.user.update({ where: { id: link.parentUserId }, data: guardianData });
+    }
+  });
+  res.json({ ok: true });
+}));
+
+adminRouter.delete('/students/:id', ah(async (req, res) => {
+  const schoolId = requireSchoolId(req);
+  const id = Number(req.params.id);
+  const student = await prisma.student.findFirst({ where: { id, schoolId } });
+  if (!student) throw new HttpError(404, 'Student not found');
+  // Enrollments, links, attendance and results cascade from Student.
+  await prisma.student.delete({ where: { id } });
+  res.status(204).end();
+}));
+
+// Teachers working in this class, with the subjects each covers here.
+adminRouter.get('/classes/:id/teachers', ah(async (req, res) => {
+  const schoolId = requireSchoolId(req);
+  const klassId = Number(req.params.id);
+  const klass = await requireKlass(schoolId, klassId);
+
+  const rows = await prisma.teachingAssignment.findMany({
+    where: { schoolId, klassId },
+    include: {
+      teacher: { select: { id: true, name: true, phone: true } },
+      subject: { select: { id: true, name: true } },
+    },
+  });
+  const byTeacher = new Map<number, { id: number; name: string; phone: string; isClassTeacher: boolean; subjects: { id: number; name: string }[] }>();
+  for (const r of rows) {
+    let t = byTeacher.get(r.teacherId);
+    if (!t) {
+      t = { ...r.teacher, isClassTeacher: klass.classTeacherId === r.teacherId, subjects: [] };
+      byTeacher.set(r.teacherId, t);
+    }
+    t.subjects.push({ id: r.subject.id, name: r.subject.name });
+  }
+  const teachers = [...byTeacher.values()].sort((a, b) => a.name.localeCompare(b.name));
+  for (const t of teachers) t.subjects.sort((a, b) => a.name.localeCompare(b.name));
+  res.json(teachers);
+}));
+
+// Exams for this class. Legacy school-wide terms (klassId null) show everywhere.
+adminRouter.get('/classes/:id/exams', ah(async (req, res) => {
+  const schoolId = requireSchoolId(req);
+  const klassId = Number(req.params.id);
+  await requireKlass(schoolId, klassId);
+  const terms = await prisma.term.findMany({
+    where: { schoolId, OR: [{ klassId }, { klassId: null }] },
+    orderBy: { id: 'asc' },
+  });
+  res.json(terms.map((t) => ({ id: t.id, name: t.name, schoolWide: t.klassId === null })));
+}));
+
+const examSchema = z.object({ name: z.string().min(1), allSchool: z.boolean().default(false) });
+adminRouter.post('/classes/:id/exams', ah(async (req, res) => {
+  const schoolId = requireSchoolId(req);
+  const klassId = Number(req.params.id);
+  await requireKlass(schoolId, klassId);
+  const { name: rawName, allSchool } = examSchema.parse(req.body);
+  const name = rawName.trim();
+
+  // "All school" fans out to one row per class, so each class owns its copy
+  // and can delete or grade it independently.
+  const targets = allSchool
+    ? (await prisma.klass.findMany({ where: { schoolId }, select: { id: true } })).map((k) => k.id)
+    : [klassId];
+
+  await prisma.term.createMany({
+    data: targets.map((kId) => ({ schoolId, klassId: kId, name })),
+    skipDuplicates: true,
+  });
+  const created = await prisma.term.findFirst({ where: { schoolId, klassId, name } });
+  res.status(201).json({ id: created?.id ?? null, name, count: targets.length });
+}));
+
+adminRouter.delete('/exams/:id', ah(async (req, res) => {
+  const schoolId = requireSchoolId(req);
+  const id = Number(req.params.id);
+  const term = await prisma.term.findFirst({ where: { id, schoolId } });
+  if (!term) throw new HttpError(404, 'Exam not found');
+  await prisma.term.delete({ where: { id } });
+  res.status(204).end();
+}));
+
 // --- Subjects (school-level catalogue) ---
 adminRouter.get('/subjects', ah(async (req, res) => {
   const schoolId = requireSchoolId(req);
