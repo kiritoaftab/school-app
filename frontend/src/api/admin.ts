@@ -163,6 +163,92 @@ export async function deleteExam(examId: number): Promise<void> {
   await api.delete(`/admin/exams/${examId}`);
 }
 
+// --- Notices ---
+export interface AdminNotice {
+  id: number;
+  title: string;
+  body: string;
+  category: string;
+  pinned: boolean;
+  createdAt: string;
+  from: string;
+  audienceClassId: number | null;
+  audienceLabel: string | null;
+  ackCount: number;
+  totalParents: number;
+}
+
+export interface NoticeInput {
+  title: string;
+  body: string;
+  category: string;
+  pinned: boolean;
+  audienceClassId: number | null;
+}
+
+export async function listNotices(): Promise<AdminNotice[]> {
+  const { data } = await api.get<AdminNotice[]>('/admin/notices');
+  return data;
+}
+
+export async function getNotice(id: number): Promise<AdminNotice> {
+  const { data } = await api.get<AdminNotice>(`/admin/notices/${id}`);
+  return data;
+}
+
+export async function createNotice(input: NoticeInput): Promise<AdminNotice> {
+  const { data } = await api.post<AdminNotice>('/admin/notices', input);
+  return data;
+}
+
+export async function updateNotice(
+  id: number,
+  input: Partial<NoticeInput>,
+): Promise<AdminNotice> {
+  const { data } = await api.put<AdminNotice>(`/admin/notices/${id}`, input);
+  return data;
+}
+
+export async function deleteNotice(id: number): Promise<void> {
+  await api.delete(`/admin/notices/${id}`);
+}
+
+// --- Events ---
+export interface AdminEvent {
+  id: number;
+  title: string;
+  description: string | null;
+  date: string; // YYYY-MM-DD
+}
+
+export interface EventInput {
+  title: string;
+  description?: string;
+  date: string;
+}
+
+export async function listEvents(): Promise<AdminEvent[]> {
+  const { data } = await api.get<AdminEvent[]>('/admin/events');
+  return data;
+}
+
+export async function createEvent(input: EventInput): Promise<AdminEvent> {
+  const { data } = await api.post<AdminEvent>('/admin/events', input);
+  return data;
+}
+
+export async function updateEvent(
+  id: number,
+  input: Partial<EventInput>,
+): Promise<AdminEvent> {
+  const { data } = await api.put<AdminEvent>(`/admin/events/${id}`, input);
+  return data;
+}
+
+export async function deleteEvent(id: number): Promise<void> {
+  await api.delete(`/admin/events/${id}`);
+}
+
 // --- Subjects (school-level catalogue) ---
 export interface AdminSubject {
   id: number;

@@ -555,38 +555,234 @@ adminRouter.post('/parent-links', ah(async (req, res) => {
   res.status(201).json(link);
 }));
 
-// --- School-wide notices & events ---
+// --- Notices ---
 const noticeSchema = z.object({
   title: z.string().min(1),
   body: z.string().min(1),
   category: z.string().default('General'),
   pinned: z.boolean().default(false),
+  // null / omitted = every parent in the school; a class id targets one class.
+  audienceClassId: z.number().nullable().optional(),
 });
+
+// Acknowledgement is per parent, so the denominator is how many parents the
+// notice actually reaches — the whole school, or just that class's guardians.
+async function parentReach(schoolId: number, audienceClassId: number | null) {
+  if (audienceClassId === null) {
+    return prisma.user.count({ where: { schoolId, role: 'PARENT' } });
+  }
+  const links = await prisma.parentStudentLink.findMany({
+    where: { student: { schoolId, enrollments: { some: { klassId: audienceClassId } } } },
+    select: { parentUserId: true },
+  });
+  return new Set(links.map((l) => l.parentUserId)).size;
+}
+
+function noticeView(n: {
+  id: number;
+  title: string;
+  body: string;
+  category: string;
+  pinned: boolean;
+  createdAt: Date;
+  audienceClassId: number | null;
+  createdBy: { name: string } | null;
+  audienceClass: { grade: string; section: string } | null;
+  _count: { acks: number };
+}) {
+  return {
+    id: n.id,
+    title: n.title,
+    body: n.body,
+    category: n.category,
+    pinned: n.pinned,
+    createdAt: n.createdAt,
+    from: n.createdBy?.name ?? 'School Office',
+    audienceClassId: n.audienceClassId,
+    audienceLabel: n.audienceClass
+      ? `${n.audienceClass.grade}-${n.audienceClass.section}`
+      : null,
+    ackCount: n._count.acks,
+  };
+}
+
+const noticeInclude = {
+  createdBy: { select: { name: true } },
+  audienceClass: { select: { grade: true, section: true } },
+  _count: { select: { acks: true } },
+} as const;
+
+adminRouter.get('/notices', ah(async (req, res) => {
+  const schoolId = requireSchoolId(req);
+  const [notices, schoolParents] = await Promise.all([
+    prisma.notice.findMany({
+      where: { schoolId },
+      orderBy: [{ pinned: 'desc' }, { createdAt: 'desc' }],
+      include: noticeInclude,
+    }),
+    prisma.user.count({ where: { schoolId, role: 'PARENT' } }),
+  ]);
+
+  // Class-targeted notices reach only that class's guardians, so their
+  // denominator differs from the school-wide one. Resolve each distinct
+  // audience class once rather than per notice.
+  const classIds = [
+    ...new Set(notices.map((n) => n.audienceClassId).filter((id): id is number => id !== null)),
+  ];
+  const reachByClass = new Map<number, number>();
+  await Promise.all(
+    classIds.map(async (id) => reachByClass.set(id, await parentReach(schoolId, id))),
+  );
+
+  res.json(
+    notices.map((n) => ({
+      ...noticeView(n),
+      totalParents:
+        n.audienceClassId === null
+          ? schoolParents
+          : (reachByClass.get(n.audienceClassId) ?? 0),
+    })),
+  );
+}));
+
+adminRouter.get('/notices/:id', ah(async (req, res) => {
+  const schoolId = requireSchoolId(req);
+  const notice = await prisma.notice.findFirst({
+    where: { id: Number(req.params.id), schoolId },
+    include: noticeInclude,
+  });
+  if (!notice) throw new HttpError(404, 'Notice not found');
+  const totalParents = await parentReach(schoolId, notice.audienceClassId);
+  res.json({ ...noticeView(notice), totalParents });
+}));
+
 adminRouter.post('/notices', ah(async (req, res) => {
   const { userId } = req.auth!;
   const schoolId = requireSchoolId(req);
-  const data = noticeSchema.parse(req.body);
+  const { audienceClassId = null, ...data } = noticeSchema.parse(req.body);
+  if (audienceClassId !== null) await requireKlass(schoolId, audienceClassId);
+
   const notice = await prisma.notice.create({
-    data: { schoolId, ...data, audienceType: 'SCHOOL', createdById: userId },
+    data: {
+      schoolId,
+      ...data,
+      audienceType: audienceClassId === null ? 'SCHOOL' : 'CLASS',
+      audienceClassId,
+      createdById: userId,
+    },
+    include: noticeInclude,
   });
-  res.status(201).json(notice);
+  res.status(201).json(noticeView(notice));
 }));
 
+adminRouter.put('/notices/:id', ah(async (req, res) => {
+  const schoolId = requireSchoolId(req);
+  const id = Number(req.params.id);
+  const data = noticeSchema.partial().parse(req.body);
+  const existing = await prisma.notice.findFirst({ where: { id, schoolId } });
+  if (!existing) throw new HttpError(404, 'Notice not found');
+  if (data.audienceClassId != null) await requireKlass(schoolId, data.audienceClassId);
+
+  const notice = await prisma.notice.update({
+    where: { id },
+    data: {
+      ...data,
+      // Only touch audience when the caller actually sent the field.
+      ...('audienceClassId' in data
+        ? {
+            audienceClassId: data.audienceClassId ?? null,
+            audienceType: data.audienceClassId == null ? 'SCHOOL' : 'CLASS',
+          }
+        : {}),
+    },
+    include: noticeInclude,
+  });
+  res.json(noticeView(notice));
+}));
+
+adminRouter.delete('/notices/:id', ah(async (req, res) => {
+  const schoolId = requireSchoolId(req);
+  const id = Number(req.params.id);
+  const notice = await prisma.notice.findFirst({ where: { id, schoolId } });
+  if (!notice) throw new HttpError(404, 'Notice not found');
+  await prisma.notice.delete({ where: { id } });
+  res.status(204).end();
+}));
+
+// --- Events ---
 const eventSchema = z.object({
   title: z.string().min(1),
   description: z.string().optional(),
   date: z.string(),
 });
+
+function eventView(e: { id: number; title: string; description: string | null; date: Date }) {
+  return {
+    id: e.id,
+    title: e.title,
+    description: e.description,
+    date: e.date.toISOString().slice(0, 10),
+  };
+}
+
+// Dates arrive as plain YYYY-MM-DD; parse as UTC midnight so the stored @db.Date
+// can't drift a day either side of the school's timezone.
+function parseDay(value: string) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) throw new HttpError(400, 'Date must be YYYY-MM-DD');
+  const d = new Date(`${value}T00:00:00.000Z`);
+  // V8 rolls impossible dates forward rather than rejecting them (2026-02-31
+  // becomes 2026-03-03), so compare the round-trip instead of just NaN.
+  if (Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== value) {
+    throw new HttpError(400, 'Date is not a real calendar date');
+  }
+  return d;
+}
+
 adminRouter.get('/events', ah(async (req, res) => {
   const schoolId = requireSchoolId(req);
   const events = await prisma.event.findMany({ where: { schoolId }, orderBy: { date: 'asc' } });
-  res.json(events.map((e) => ({ ...e, date: e.date.toISOString().slice(0, 10) })));
+  res.json(events.map(eventView));
 }));
+
 adminRouter.post('/events', ah(async (req, res) => {
   const schoolId = requireSchoolId(req);
   const data = eventSchema.parse(req.body);
   const event = await prisma.event.create({
-    data: { schoolId, title: data.title, description: data.description, date: new Date(data.date) },
+    data: {
+      schoolId,
+      title: data.title.trim(),
+      description: data.description?.trim() || null,
+      date: parseDay(data.date),
+    },
   });
-  res.status(201).json(event);
+  res.status(201).json(eventView(event));
+}));
+
+adminRouter.put('/events/:id', ah(async (req, res) => {
+  const schoolId = requireSchoolId(req);
+  const id = Number(req.params.id);
+  const data = eventSchema.partial().parse(req.body);
+  const existing = await prisma.event.findFirst({ where: { id, schoolId } });
+  if (!existing) throw new HttpError(404, 'Event not found');
+
+  const event = await prisma.event.update({
+    where: { id },
+    data: {
+      ...(data.title !== undefined ? { title: data.title.trim() } : {}),
+      ...(data.description !== undefined
+        ? { description: data.description.trim() || null }
+        : {}),
+      ...(data.date !== undefined ? { date: parseDay(data.date) } : {}),
+    },
+  });
+  res.json(eventView(event));
+}));
+
+adminRouter.delete('/events/:id', ah(async (req, res) => {
+  const schoolId = requireSchoolId(req);
+  const id = Number(req.params.id);
+  const event = await prisma.event.findFirst({ where: { id, schoolId } });
+  if (!event) throw new HttpError(404, 'Event not found');
+  await prisma.event.delete({ where: { id } });
+  res.status(204).end();
 }));

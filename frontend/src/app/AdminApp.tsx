@@ -15,6 +15,17 @@ import {
   listClassExams,
   addClassExam,
   deleteExam,
+  listNotices,
+  getNotice,
+  createNotice,
+  updateNotice,
+  deleteNotice,
+  listEvents,
+  createEvent,
+  updateEvent,
+  deleteEvent,
+  type AdminNotice,
+  type AdminEvent,
   type ClassStudent,
   type ClassTeacher,
   type ClassExam,
@@ -45,17 +56,11 @@ import {
   cx,
   type TabDef,
 } from "./kit";
-import {
-  CalendarScreen,
-  NoticeBoardScreen,
-  NoticeDetailScreen,
-  NotificationsScreen,
-} from "./SharedScreens";
+import { NotificationsScreen } from "./SharedScreens";
 import { AccountSheet } from "./AccountSheet";
 import {
   SCHOOL,
   GLYPH,
-  NOTICES,
   ADMIN_ACTIVITY,
   NOTICE_CATEGORIES,
   TEACHERS,
@@ -65,7 +70,6 @@ import {
   classAttendanceOf,
   type Teacher,
   type AdminClass,
-  type Notice,
 } from "./data";
 
 type Screen =
@@ -96,11 +100,21 @@ export function AdminApp() {
   const [classes] = useState<AdminClass[]>(() =>
     JSON.parse(JSON.stringify(ADMIN_CLASSES)),
   );
-  const [notices, setNotices] = useState<Notice[]>(NOTICES);
   const [activeTeacherId, setActiveTeacherId] = useState<number | null>(null);
   const [activeKlassId, setActiveKlassId] = useState<number | null>(null);
-  const [activeNoticeId, setActiveNoticeId] = useState("ptm");
   const [attClassId, setAttClassId] = useState("5-B");
+
+  // Live notices & events.
+  const [apiNotices, setApiNotices] = useState<AdminNotice[] | null>(null);
+  const [noticesLoading, setNoticesLoading] = useState(false);
+  const [noticesError, setNoticesError] = useState<string | null>(null);
+  const [activeNoticeId, setActiveNoticeId] = useState<number | null>(null);
+  const [noticeDetail, setNoticeDetail] = useState<AdminNotice | null>(null);
+  // Set when opening compose in edit mode; null means a fresh notice.
+  const [editingNotice, setEditingNotice] = useState<AdminNotice | null>(null);
+  const [apiEvents, setApiEvents] = useState<AdminEvent[] | null>(null);
+  const [eventsLoading, setEventsLoading] = useState(false);
+  const [eventsError, setEventsError] = useState<string | null>(null);
 
   // Live classes & teachers from the backend.
   const [apiClasses, setApiClasses] = useState<AdminKlass[] | null>(null);
@@ -143,6 +157,30 @@ export function AdminApp() {
     }
   }, []);
 
+  const loadNotices = useCallback(async () => {
+    setNoticesLoading(true);
+    setNoticesError(null);
+    try {
+      setApiNotices(await listNotices());
+    } catch {
+      setNoticesError("Couldn't load notices. Pull to retry.");
+    } finally {
+      setNoticesLoading(false);
+    }
+  }, []);
+
+  const loadEvents = useCallback(async () => {
+    setEventsLoading(true);
+    setEventsError(null);
+    try {
+      setApiEvents(await listEvents());
+    } catch {
+      setEventsError("Couldn't load events. Pull to retry.");
+    } finally {
+      setEventsLoading(false);
+    }
+  }, []);
+
   const loadSubjects = useCallback(async () => {
     try {
       setApiSubjects(await listSubjects());
@@ -177,6 +215,23 @@ export function AdminApp() {
     setTeacherDetail(d);
   }, [activeTeacherId, loadClasses]);
 
+  // The detail view refetches so ack counts are current, not list-stale.
+  useEffect(() => {
+    if (screen !== "notice" || activeNoticeId === null) return;
+    let stale = false;
+    setNoticeDetail(null);
+    getNotice(activeNoticeId)
+      .then((n) => {
+        if (!stale) setNoticeDetail(n);
+      })
+      .catch(() => {
+        /* the board still shows the list copy */
+      });
+    return () => {
+      stale = true;
+    };
+  }, [screen, activeNoticeId]);
+
   // Load live data whenever the admin lands on a screen that needs it.
   useEffect(() => {
     // Add-Teacher needs live classes + subjects to build its assignment picker.
@@ -200,6 +255,10 @@ export function AdminApp() {
     if (needsClasses.includes(screen) && apiClasses === null) loadClasses();
     if (needsSubjects.includes(screen) && apiSubjects === null) loadSubjects();
     if (needsTeachers.includes(screen) && apiTeachers === null) loadTeachers();
+    if (screen === "noticeBoard" && apiNotices === null) loadNotices();
+    // Compose needs classes for its audience picker.
+    if (screen === "noticeCompose" && apiClasses === null) loadClasses();
+    if (screen === "calendar" && apiEvents === null) loadEvents();
   }, [
     screen,
     apiClasses,
@@ -208,6 +267,10 @@ export function AdminApp() {
     loadSubjects,
     apiTeachers,
     loadTeachers,
+    apiNotices,
+    loadNotices,
+    apiEvents,
+    loadEvents,
   ]);
 
   const name = user?.name ?? "Sridevi Menon";
@@ -243,7 +306,9 @@ export function AdminApp() {
     classAdd: ["Add", "CLASS OR SUBJECT"],
     adminAtt: ["Attendance", "TODAY · ALL CLASSES"],
     noticeBoard: ["Notice Board", SCHOOL.toUpperCase()],
-    noticeCompose: ["New Notice", "TO ALL PARENTS"],
+    noticeCompose: editingNotice
+      ? ["Edit Notice", "UPDATE AND REPUBLISH"]
+      : ["New Notice", "TO PARENTS"],
     calendar: ["Calendar", SCHOOL.toUpperCase()],
     notifs: ["Notifications", SCHOOL.toUpperCase()],
   };
@@ -264,7 +329,9 @@ export function AdminApp() {
   } else if (screen === "notice") {
     title = "Notice";
     sub = (
-      notices.find((n) => n.id === activeNoticeId)?.from ?? ""
+      noticeDetail?.from ??
+      apiNotices?.find((n) => n.id === activeNoticeId)?.from ??
+      ""
     ).toUpperCase();
   }
 
@@ -436,32 +503,62 @@ export function AdminApp() {
         />
       )}
       {screen === "noticeBoard" && (
-        <NoticeBoardScreen
-          role="admin"
-          notices={notices}
-          acked={{}}
+        <AdminNoticeBoard
+          notices={apiNotices}
+          loading={noticesLoading}
+          error={noticesError}
+          onRetry={loadNotices}
           onOpen={(id) => {
             setActiveNoticeId(id);
             go("notice");
           }}
-          onCompose={() => go("noticeCompose")}
+          onCompose={() => {
+            setEditingNotice(null);
+            go("noticeCompose");
+          }}
         />
       )}
       {screen === "notice" && (
-        <NoticeDetailScreen
-          notice={notices.find((n) => n.id === activeNoticeId)!}
-          acked={false}
-          showAck={false}
-          onAcknowledge={() => {}}
+        <AdminNoticeDetail
+          notice={
+            noticeDetail ??
+            apiNotices?.find((n) => n.id === activeNoticeId) ??
+            null
+          }
+          onEdit={() => {
+            setEditingNotice(
+              noticeDetail ??
+                apiNotices?.find((n) => n.id === activeNoticeId) ??
+                null,
+            );
+            go("noticeCompose");
+          }}
+          onDeleted={async () => {
+            await loadNotices();
+            go("noticeBoard");
+          }}
         />
       )}
       {screen === "noticeCompose" && (
         <NoticeCompose
-          onPublish={(n) => setNotices((ns) => [n, ...ns])}
-          onDone={() => go("noticeBoard")}
+          editing={editingNotice}
+          classes={apiClasses}
+          onDone={async () => {
+            setEditingNotice(null);
+            await loadNotices();
+            go("noticeBoard");
+          }}
         />
       )}
-      {screen === "calendar" && <CalendarScreen admin />}
+      {screen === "calendar" && (
+        <AdminCalendar
+          events={apiEvents}
+          loading={eventsLoading}
+          error={eventsError}
+          onRetry={loadEvents}
+          onChanged={loadEvents}
+        />
+      )}
       {screen === "notifs" && <NotificationsScreen />}
     </Shell>
   );
@@ -2479,43 +2576,288 @@ function SubjectManager({
 }
 
 // ---------- NOTICE COMPOSE ----------
+// ---------- NOTICES (live) ----------
+const MONTH_ABBR = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+];
+
+function shortDay(iso: string) {
+  const d = new Date(iso);
+  if (Number.isNaN(d.getTime())) return "";
+  return `${d.getDate()} ${MONTH_ABBR[d.getMonth()]}`;
+}
+
+function AdminNoticeBoard({
+  notices,
+  loading,
+  error,
+  onRetry,
+  onOpen,
+  onCompose,
+}: {
+  notices: AdminNotice[] | null;
+  loading: boolean;
+  error: string | null;
+  onRetry: () => void;
+  onOpen: (id: number) => void;
+  onCompose: () => void;
+}) {
+  return (
+    <div className="px-[15px] py-4 pb-6">
+      <button
+        onClick={onCompose}
+        className="w-full mb-3.5 py-3 rounded-[14px] bg-green text-white font-semibold text-[13px] flex items-center justify-center gap-[7px]"
+      >
+        <Glyph d={GLYPH.plus} size={17} stroke={2} />
+        Post a new notice
+      </button>
+
+      {loading && notices === null && (
+        <div className="py-10">
+          <Spinner />
+        </div>
+      )}
+
+      {error && notices === null && !loading && (
+        <Card className="p-5 text-center">
+          <div className="text-[12.5px] text-danger mb-3">{error}</div>
+          <button
+            onClick={onRetry}
+            className="px-4 py-2 rounded-[11px] bg-green text-white font-semibold text-[12.5px]"
+          >
+            Retry
+          </button>
+        </Card>
+      )}
+
+      {notices !== null &&
+        (notices.length === 0 ? (
+          <EmptyState icon={GLYPH.notices} title="No notices yet">
+            Post your first notice — it lands on every parent's board straight
+            away.
+          </EmptyState>
+        ) : (
+          notices.map((n) => (
+            <Card
+              key={n.id}
+              onClick={() => onOpen(n.id)}
+              className="p-3.5 mb-2.5 flex gap-3 items-start"
+            >
+              <div className="w-[38px] h-[38px] rounded-xl bg-gold-soft grid place-items-center flex-none text-[#8a6d1f]">
+                <Glyph d={GLYPH.notices} size={19} stroke={1.8} />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-[7px] mb-1 flex-wrap">
+                  <span className="text-[9.5px] font-bold tracking-[0.05em] uppercase text-green bg-mist px-[7px] py-[3px] rounded-md">
+                    {n.category}
+                  </span>
+                  <span className="text-[9.5px] font-bold tracking-[0.05em] uppercase text-muted">
+                    {n.audienceLabel ?? "All parents"}
+                  </span>
+                  {n.pinned && (
+                    <span className="text-[9.5px] font-bold tracking-[0.05em] text-[#8a6d1f]">
+                      PINNED
+                    </span>
+                  )}
+                  <span className="ml-auto text-[10px] text-muted font-semibold">
+                    {shortDay(n.createdAt)}
+                  </span>
+                </div>
+                <h4 className="font-serif text-[17px] leading-[1.15] mb-[3px]">
+                  {n.title}
+                </h4>
+                <p className="text-[12px] text-muted leading-[1.45] line-clamp-1">
+                  {n.body}
+                </p>
+                <div className="text-[10.5px] text-muted font-semibold mt-1.5">
+                  {n.ackCount} of {n.totalParents} acknowledged
+                </div>
+              </div>
+              <span className="text-[#c3ccc5] flex-none mt-1">
+                <Glyph d={GLYPH.chevronRight} size={17} stroke={2.2} />
+              </span>
+            </Card>
+          ))
+        ))}
+    </div>
+  );
+}
+
+function AdminNoticeDetail({
+  notice,
+  onEdit,
+  onDeleted,
+}: {
+  notice: AdminNotice | null;
+  onEdit: () => void;
+  onDeleted: () => void | Promise<void>;
+}) {
+  const [confirming, setConfirming] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (!notice)
+    return (
+      <div className="px-[15px] py-10">
+        <Spinner />
+      </div>
+    );
+
+  async function remove() {
+    setBusy(true);
+    setError(null);
+    try {
+      await deleteNotice(notice!.id);
+      await onDeleted();
+    } catch {
+      setError("Couldn't delete this notice. Please try again.");
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="px-[15px] py-4 pb-6">
+      <Card className="p-3.5 mb-3">
+        <div className="flex items-center gap-2 mb-[11px] flex-wrap">
+          <span className="text-[9.5px] font-bold tracking-[0.05em] uppercase text-green bg-mist px-2 py-[3px] rounded-md">
+            {notice.category}
+          </span>
+          <span className="text-[9.5px] font-bold tracking-[0.05em] uppercase text-muted">
+            {notice.audienceLabel ?? "All parents"}
+          </span>
+          {notice.pinned && (
+            <span className="text-[9.5px] font-bold tracking-[0.05em] text-[#8a6d1f]">
+              PINNED
+            </span>
+          )}
+          <span className="ml-auto text-[10.5px] text-muted font-semibold">
+            {shortDay(notice.createdAt)}
+          </span>
+        </div>
+        <h3 className="font-serif text-[24px] leading-[1.1] mb-1">
+          {notice.title}
+        </h3>
+        <div className="text-[11px] text-muted font-semibold mb-3">
+          {notice.from}
+        </div>
+        <p className="text-[13.5px] leading-[1.6] whitespace-pre-line">
+          {notice.body}
+        </p>
+      </Card>
+
+      <div className="text-center text-[11.5px] text-muted font-semibold mb-3">
+        {notice.ackCount} of {notice.totalParents}{" "}
+        {notice.totalParents === 1 ? "parent has" : "parents have"} acknowledged
+      </div>
+
+      {error && (
+        <Card className="p-3.5 mb-3 text-[12.5px] text-danger">{error}</Card>
+      )}
+
+      <div className="flex gap-2">
+        <button
+          onClick={onEdit}
+          className="flex-1 py-3 rounded-[14px] bg-white border-[1.5px] border-line text-green font-semibold text-[13px]"
+        >
+          Edit notice
+        </button>
+        {confirming ? (
+          <button
+            disabled={busy}
+            onClick={remove}
+            className="flex-1 py-3 rounded-[14px] bg-danger text-white font-semibold text-[13px] disabled:opacity-60"
+          >
+            {busy ? "Deleting…" : "Tap again to delete"}
+          </button>
+        ) : (
+          <button
+            onClick={() => setConfirming(true)}
+            className="flex-1 py-3 rounded-[14px] bg-[#f6ecec] text-danger font-semibold text-[13px]"
+          >
+            Delete
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// Compose doubles as the edit form — `editing` pre-fills it and switches to PUT.
 function NoticeCompose({
-  onPublish,
+  editing,
+  classes,
   onDone,
 }: {
-  onPublish: (n: Notice) => void;
-  onDone: () => void;
+  editing: AdminNotice | null;
+  classes: AdminKlass[] | null;
+  onDone: () => void | Promise<void>;
 }) {
   const [sent, setSent] = useState(false);
-  const [cat, setCat] = useState("Admin");
-  const [ncTitle, setNcTitle] = useState("");
-  const [ncBody, setNcBody] = useState("");
-  function publish() {
-    const title = ncTitle.trim() || "School notice";
-    const body = ncBody.trim() || "Details to follow.";
-    onPublish({
-      id: "nc" + Date.now(),
+  const [cat, setCat] = useState(editing?.category ?? "Admin");
+  const [ncTitle, setNcTitle] = useState(editing?.title ?? "");
+  const [ncBody, setNcBody] = useState(editing?.body ?? "");
+  const [pinned, setPinned] = useState(editing?.pinned ?? false);
+  const [audience, setAudience] = useState<number | null>(
+    editing?.audienceClassId ?? null,
+  );
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const ready = ncTitle.trim().length > 0 && ncBody.trim().length > 0 && !busy;
+  const audienceLabel =
+    audience === null
+      ? "all parents"
+      : (classes?.find((c) => c.id === audience)?.label ?? "the class");
+
+  async function publish() {
+    if (!ready) return;
+    setBusy(true);
+    setError(null);
+    const payload = {
+      title: ncTitle.trim(),
+      body: ncBody.trim(),
       category: cat,
-      from: "School Office",
-      pinned: false,
-      date: "25 Jun",
-      icon: "M4 8h16M7 3v3M17 3v3M5 6h14v14H5z",
-      title,
-      preview: body.slice(0, 90),
-      body,
-      ackStat: "0 of 180 parents have acknowledged",
-    });
-    setSent(true);
+      pinned,
+      audienceClassId: audience,
+    };
+    try {
+      if (editing) await updateNotice(editing.id, payload);
+      else await createNotice(payload);
+      setSent(true);
+    } catch (e) {
+      setError(
+        (e as { response?: { data?: { error?: string } } }).response?.data
+          ?.error ?? "Couldn't save the notice. Please try again.",
+      );
+      setBusy(false);
+    }
   }
+
   if (sent)
     return (
       <SuccessScreen
-        title="Notice published"
-        body="It's now on every parent's notice board and a push notification has been sent."
+        title={editing ? "Notice updated" : "Notice published"}
+        body={
+          editing
+            ? "The updated notice is live on the board."
+            : `It's now on the notice board for ${audienceLabel}.`
+        }
         buttonLabel="View notice board"
         onButton={onDone}
       />
     );
+
   return (
     <div className="px-[15px] py-4 pb-6">
       <Field label="Category">
@@ -2527,6 +2869,24 @@ function NoticeCompose({
           ))}
         </div>
       </Field>
+
+      <Field label="Audience · who sees this">
+        <div className="flex gap-1.5 flex-wrap">
+          <Chip active={audience === null} onClick={() => setAudience(null)}>
+            All parents
+          </Chip>
+          {(classes ?? []).map((c) => (
+            <Chip
+              key={c.id}
+              active={audience === c.id}
+              onClick={() => setAudience(c.id)}
+            >
+              {c.label}
+            </Chip>
+          ))}
+        </div>
+      </Field>
+
       <Field label="Title">
         <input
           value={ncTitle}
@@ -2535,6 +2895,7 @@ function NoticeCompose({
           className={inputCls}
         />
       </Field>
+
       <Field label="Message to parents">
         <textarea
           value={ncBody}
@@ -2543,7 +2904,238 @@ function NoticeCompose({
           className={cx(inputCls, "resize-none h-[120px]")}
         />
       </Field>
-      <PrimaryButton onClick={publish}>Publish to all parents</PrimaryButton>
+
+      <Field label="Pin to the top">
+        <div className="flex gap-1.5">
+          <Chip
+            active={!pinned}
+            onClick={() => setPinned(false)}
+            className="flex-1 text-center py-2"
+          >
+            Normal
+          </Chip>
+          <Chip
+            active={pinned}
+            onClick={() => setPinned(true)}
+            className="flex-1 text-center py-2"
+          >
+            Pinned
+          </Chip>
+        </div>
+      </Field>
+
+      {error && (
+        <div className="text-[12px] text-danger bg-[#f6ecec] border border-[#eccfcf] rounded-[11px] px-3 py-2.5 mb-3">
+          {error}
+        </div>
+      )}
+
+      <PrimaryButton disabled={!ready} onClick={publish}>
+        {busy
+          ? "Saving…"
+          : editing
+            ? "Save changes"
+            : `Publish to ${audienceLabel}`}
+      </PrimaryButton>
+    </div>
+  );
+}
+
+// ---------- CALENDAR / EVENTS (live) ----------
+function AdminCalendar({
+  events,
+  loading,
+  error,
+  onRetry,
+  onChanged,
+}: {
+  events: AdminEvent[] | null;
+  loading: boolean;
+  error: string | null;
+  onRetry: () => void;
+  onChanged: () => void | Promise<void>;
+}) {
+  const [adding, setAdding] = useState(false);
+  const [editId, setEditId] = useState<number | null>(null);
+  const [form, setForm] = useState({ date: "", title: "", description: "" });
+  const [busy, setBusy] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const ready = form.title.trim().length > 0 && form.date.length === 10 && !busy;
+
+  function openAdd() {
+    setForm({ date: "", title: "", description: "" });
+    setEditId(null);
+    setAdding(true);
+  }
+  function openEdit(e: AdminEvent) {
+    setForm({
+      date: e.date,
+      title: e.title,
+      description: e.description ?? "",
+    });
+    setEditId(e.id);
+    setAdding(true);
+  }
+
+  async function run(fn: () => Promise<void>) {
+    setBusy(true);
+    setActionError(null);
+    try {
+      await fn();
+      await onChanged();
+      setAdding(false);
+      setEditId(null);
+    } catch (e) {
+      setActionError(
+        (e as { response?: { data?: { error?: string } } }).response?.data
+          ?.error ?? "That didn't save. Please try again.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function save() {
+    if (!ready) return;
+    const payload = {
+      title: form.title.trim(),
+      description: form.description.trim(),
+      date: form.date,
+    };
+    run(() =>
+      editId === null
+        ? createEvent(payload).then(() => undefined)
+        : updateEvent(editId, payload).then(() => undefined),
+    );
+  }
+
+  return (
+    <div className="px-[15px] py-4 pb-6">
+      {!adding && (
+        <button
+          onClick={openAdd}
+          className="w-full mb-3.5 py-3 rounded-[14px] bg-green text-white font-semibold text-[13px] flex items-center justify-center gap-[7px]"
+        >
+          <Glyph d={GLYPH.plus} size={17} stroke={2} />
+          Add an event
+        </button>
+      )}
+
+      {adding && (
+        <Card className="p-3.5 mb-4">
+          <div className="flex items-center mb-2.5">
+            <div className="flex-1 text-[10px] tracking-[0.13em] uppercase font-semibold text-muted">
+              {editId === null ? "New event" : "Edit event"}
+            </div>
+            <button
+              onClick={() => {
+                setAdding(false);
+                setEditId(null);
+              }}
+              className="w-[26px] h-[26px] rounded-lg border border-line bg-white text-muted text-[15px] font-bold flex-none"
+            >
+              ×
+            </button>
+          </div>
+          <input
+            type="date"
+            value={form.date}
+            onChange={(e) => setForm({ ...form, date: e.target.value })}
+            className={cx(inputCls, "mb-2.25")}
+          />
+          <input
+            value={form.title}
+            onChange={(e) => setForm({ ...form, title: e.target.value })}
+            placeholder="Event title"
+            className={cx(inputCls, "mb-2.25")}
+          />
+          <input
+            value={form.description}
+            onChange={(e) => setForm({ ...form, description: e.target.value })}
+            placeholder="Details — time, venue (optional)"
+            className={cx(inputCls, "mb-3")}
+          />
+          <button
+            onClick={save}
+            disabled={!ready}
+            className={cx(
+              "w-full py-3 rounded-xl font-bold text-[13.5px]",
+              ready ? "bg-green text-white" : "bg-[#dfe5df] text-[#9aa39b]",
+            )}
+          >
+            {busy ? "Saving…" : editId === null ? "Add event" : "Save changes"}
+          </button>
+        </Card>
+      )}
+
+      {actionError && (
+        <Card className="p-3.5 mb-3 text-[12.5px] text-danger">
+          {actionError}
+        </Card>
+      )}
+
+      {loading && events === null && (
+        <div className="py-10">
+          <Spinner />
+        </div>
+      )}
+
+      {error && events === null && !loading && (
+        <Card className="p-5 text-center">
+          <div className="text-[12.5px] text-danger mb-3">{error}</div>
+          <button
+            onClick={onRetry}
+            className="px-4 py-2 rounded-[11px] bg-green text-white font-semibold text-[12.5px]"
+          >
+            Retry
+          </button>
+        </Card>
+      )}
+
+      {events !== null &&
+        (events.length === 0 ? (
+          <EmptyState icon={GLYPH.calendar} title="No events yet">
+            Add the school's first event — parents see it on their calendar.
+          </EmptyState>
+        ) : (
+          events.map((e) => {
+            const d = new Date(`${e.date}T00:00:00.000Z`);
+            return (
+              <Card key={e.id} className="p-3 mb-2.25 flex gap-3 items-center">
+                <div className="w-[46px] flex-none text-center">
+                  <div className="text-[9.5px] tracking-[0.08em] font-bold text-muted uppercase">
+                    {MONTH_ABBR[d.getUTCMonth()]}
+                  </div>
+                  <div className="text-[19px] font-bold leading-[1.1] text-green">
+                    {String(d.getUTCDate()).padStart(2, "0")}
+                  </div>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <b className="text-[13.5px] font-semibold block">{e.title}</b>
+                  <small className="text-[11px] text-muted">
+                    {e.description || "School event"}
+                  </small>
+                </div>
+                <button
+                  onClick={() => openEdit(e)}
+                  aria-label={`Edit ${e.title}`}
+                  className="w-7 h-7 rounded-[9px] border border-[#dbe5db] bg-white text-green grid place-items-center flex-none"
+                >
+                  <Glyph d={GLYPH.edit} size={14} stroke={2} />
+                </button>
+                <button
+                  disabled={busy}
+                  onClick={() => run(() => deleteEvent(e.id))}
+                  aria-label={`Remove ${e.title}`}
+                  className="w-7 h-7 rounded-[9px] bg-[#f6ecec] text-danger text-[16px] font-bold flex-none"
+                >
+                  ×
+                </button>
+              </Card>
+            );
+          })
+        ))}
     </div>
   );
 }
