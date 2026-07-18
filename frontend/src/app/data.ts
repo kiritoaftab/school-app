@@ -13,6 +13,7 @@ export const GLYPH = {
   check: 'M5 12l5 5L20 6',
   classes: 'M4 4h7v7H4zM13 4h7v7h-7zM4 13h7v7H4zM13 13h7v7h-7z',
   plus: 'M12 5v14M5 12h14',
+  close: 'M6 6l12 12M18 6L6 18',
   chevronRight: 'M9 6l6 6-6 6',
   chevronLeft: 'M15 18l-6-6 6-6',
   bell: 'M6 8a6 6 0 1112 0c0 7 3 8 3 8H3s3-1 3-8M10 21a2 2 0 004 0',

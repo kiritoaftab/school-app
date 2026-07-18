@@ -44,6 +44,26 @@ export async function getTeacher(id: number): Promise<AdminTeacherDetail> {
   return data;
 }
 
+export async function assignClass(
+  teacherId: number,
+  klassId: number,
+  subjectIds: number[],
+): Promise<void> {
+  await api.post(`/admin/teachers/${teacherId}/assignments`, { klassId, subjectIds });
+}
+
+export async function unassignClass(teacherId: number, klassId: number): Promise<void> {
+  await api.delete(`/admin/teachers/${teacherId}/assignments/${klassId}`);
+}
+
+export async function setClassTeacher(
+  teacherId: number,
+  klassId: number,
+  isClassTeacher: boolean,
+): Promise<void> {
+  await api.put(`/admin/teachers/${teacherId}/class-teacher`, { klassId, isClassTeacher });
+}
+
 export interface CreateTeacherInput {
   name: string;
   phone: string;

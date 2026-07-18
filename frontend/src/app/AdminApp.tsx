@@ -5,6 +5,9 @@ import {
   listClasses,
   listTeachers,
   getTeacher,
+  assignClass,
+  unassignClass,
+  setClassTeacher,
   createClass,
   createTeacher,
   listSubjects,
@@ -164,13 +167,22 @@ export function AdminApp() {
     };
   }, [screen, activeTeacherId]);
 
+  // After a mutation: assignments changed, and so may a class's class teacher.
+  const refreshTeacherDetail = useCallback(async () => {
+    if (activeTeacherId === null) return;
+    const [d] = await Promise.all([getTeacher(activeTeacherId), loadClasses()]);
+    setTeacherDetail(d);
+  }, [activeTeacherId, loadClasses]);
+
   // Load live data whenever the admin lands on a screen that needs it.
   useEffect(() => {
     // Add-Teacher needs live classes + subjects to build its assignment picker.
+    // Staff Detail needs classes too, for its "assign a class" picker.
     if (
       (screen === "classes" ||
         screen === "classAdd" ||
-        screen === "staffAdd") &&
+        screen === "staffAdd" ||
+        screen === "staffDetail") &&
       apiClasses === null
     )
       loadClasses();
@@ -240,8 +252,9 @@ export function AdminApp() {
   if (M[screen]) {
     [title, sub] = M[screen];
   } else if (screen === "staffDetail") {
-    title = activeApiTeacher?.name ?? "Teacher";
-    sub = "TEACHER";
+    title = "Teacher";
+    sub = (primarySubjectOf(teacherDetail) ?? activeApiTeacher?.name ?? "")
+      .toUpperCase();
   } else if (screen === "classDetail") {
     title = activeClass.label;
     sub = activeClass.ctId
@@ -363,6 +376,8 @@ export function AdminApp() {
           teacher={activeApiTeacher}
           detail={teacherDetail}
           detailError={teacherDetailError}
+          classes={apiClasses}
+          onRefresh={refreshTeacherDetail}
         />
       )}
       {screen === "staffAdd" && (
@@ -668,27 +683,58 @@ function StaffList({
   );
 }
 
-// ---------- STAFF DETAIL (live, read-only) ----------
+// ---------- STAFF DETAIL (live) ----------
 function StaffDetail({
   teacher,
   detail,
   detailError,
+  classes,
+  onRefresh,
 }: {
   teacher: AdminTeacher | null;
   detail: AdminTeacherDetail | null;
   detailError: string | null;
+  classes: AdminKlass[] | null;
+  onRefresh: () => void | Promise<void>;
 }) {
+  // Keyed by the class row being mutated, so only that row shows as busy.
+  const [busyKlassId, setBusyKlassId] = useState<number | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+
   if (!teacher)
     return (
       <div className="px-[15px] py-10">
         <Spinner />
       </div>
     );
-  const ctClasses = detail?.classTeacherOf ?? [];
+
   const assignments = detail?.assignments ?? [];
-  const subjectCount = new Set(
-    assignments.flatMap((a) => a.subjects.map((s) => s.id)),
-  ).size;
+  const ctIds = new Set((detail?.classTeacherOf ?? []).map((c) => c.id));
+  const assignedIds = new Set(assignments.map((a) => a.klassId));
+  const unassigned = (classes ?? []).filter((c) => !assignedIds.has(c.id));
+  // "+ Grade 6-B" reuses the subjects this teacher already teaches elsewhere.
+  const ownSubjectIds = [
+    ...new Set(assignments.flatMap((a) => a.subjects.map((s) => s.id))),
+  ];
+
+  async function run(klassId: number, fn: () => Promise<void>) {
+    setBusyKlassId(klassId);
+    setActionError(null);
+    try {
+      await fn();
+      await onRefresh();
+    } catch (e) {
+      setActionError(
+        (e as { response?: { data?: { error?: string } } }).response?.data
+          ?.error ?? "That didn't save. Please try again.",
+      );
+    } finally {
+      setBusyKlassId(null);
+    }
+  }
+
+  const teacherId = teacher.id;
+
   return (
     <div className="px-[15px] py-4 pb-6">
       <Card className="p-[18px] mb-3 text-center">
@@ -699,14 +745,17 @@ function StaffDetail({
           {initialsOf(teacher.name)}
         </div>
         <h3 className="font-serif text-[23px] mb-[3px]">{teacher.name}</h3>
-        <div className="text-[12px] text-muted font-semibold">Teacher</div>
+        <div className="text-[12px] text-muted font-semibold">
+          {primarySubjectOf(detail) ?? "Teacher"} · Active
+        </div>
         <div className="text-[11.5px] text-muted mt-1.5">
           {maskPhone(teacher.phone)} · login mobile
         </div>
       </Card>
-      {detailError && (
+
+      {(detailError || actionError) && (
         <Card className="p-[15px] mb-3 text-[12.5px] text-danger">
-          {detailError}
+          {detailError ?? actionError}
         </Card>
       )}
 
@@ -715,76 +764,107 @@ function StaffDetail({
           <Spinner />
         </div>
       ) : (
-        <>
-          <Card className="p-[15px] mb-3">
-            <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-2.75">
-              Class teacher of
-            </div>
-            {ctClasses.length > 0 ? (
-              <div className="flex gap-1.5 flex-wrap">
-                {ctClasses.map((c) => (
-                  <span
-                    key={c.id}
-                    className="text-[12px] font-semibold text-green bg-mist rounded-[10px] px-3 py-1.5 flex items-center gap-1.5"
-                  >
-                    <Glyph d={GLYPH.classes} size={14} stroke={1.9} />
-                    {c.label}
-                  </span>
-                ))}
-              </div>
-            ) : (
-              <div className="text-[12.5px] text-muted">
-                Not a class teacher yet. Assign this teacher when creating a
-                class.
-              </div>
-            )}
-          </Card>
+        <Card className="p-[15px] mb-3">
+          <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-2.75">
+            Assigned classes
+          </div>
 
-          <Card className="p-[15px]">
-            <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-2.75">
-              Teaches
-              {assignments.length > 0 && (
-                <span className="text-muted font-medium normal-case tracking-normal text-[10.5px]">
-                  {" "}
-                  · {subjectCount}{" "}
-                  {subjectCount === 1 ? "subject" : "subjects"} across{" "}
-                  {assignments.length}{" "}
-                  {assignments.length === 1 ? "class" : "classes"}
-                </span>
-              )}
+          {assignments.length === 0 ? (
+            <div className="text-[12.5px] text-muted mb-3">
+              No classes assigned yet.
             </div>
-            {assignments.length > 0 ? (
-              <div className="flex flex-col gap-2.5">
-                {assignments.map((a) => (
+          ) : (
+            <div className="flex flex-col gap-2 mb-1">
+              {assignments.map((a) => {
+                const isCT = ctIds.has(a.klassId);
+                const busy = busyKlassId === a.klassId;
+                return (
                   <div
                     key={a.klassId}
-                    className="flex gap-2.5 items-start pb-2.5 border-b border-line last:border-0 last:pb-0"
+                    className={cx(
+                      "border-[1.5px] border-line rounded-[13px] p-3 flex items-center gap-2.5",
+                      busy && "opacity-60",
+                    )}
                   >
-                    <span className="text-[12px] font-semibold text-green bg-mist rounded-[10px] px-2.5 py-1 flex items-center gap-1.5 flex-none">
-                      <Glyph d={GLYPH.classes} size={13} stroke={1.9} />
-                      {a.label}
-                    </span>
-                    <div className="flex gap-1.5 flex-wrap pt-0.5">
-                      {a.subjects.map((s) => (
-                        <span
-                          key={s.id}
-                          className="text-[11.5px] font-medium text-ink bg-mist rounded-lg px-2 py-1"
-                        >
-                          {s.name}
-                        </span>
-                      ))}
+                    <div className="flex-1 min-w-0">
+                      <b className="text-[13.5px] font-bold block">{a.label}</b>
+                      <small className="text-[11.5px] text-muted">
+                        {a.subjects.map((s) => s.name).join(", ")}
+                      </small>
                     </div>
+                    <button
+                      disabled={busy}
+                      onClick={() =>
+                        run(a.klassId, () =>
+                          setClassTeacher(teacherId, a.klassId, !isCT),
+                        )
+                      }
+                      className={cx(
+                        "px-3 py-2 rounded-[11px] text-[12px] font-semibold border-[1.5px] flex-none transition",
+                        isCT
+                          ? "bg-green border-green text-white"
+                          : "bg-white border-line text-green",
+                      )}
+                    >
+                      {isCT ? "Class teacher ✓" : "Make CT"}
+                    </button>
+                    <button
+                      disabled={busy}
+                      aria-label={`Remove ${a.label}`}
+                      onClick={() =>
+                        run(a.klassId, () => unassignClass(teacherId, a.klassId))
+                      }
+                      className="w-9 h-9 rounded-[11px] grid place-items-center bg-[#f6ecec] text-danger flex-none"
+                    >
+                      <Glyph d={GLYPH.close} size={15} stroke={2.4} />
+                    </button>
                   </div>
-                ))}
+                );
+              })}
+            </div>
+          )}
+
+          {unassigned.length > 0 && (
+            <>
+              <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mt-3.5 mb-2.5">
+                Assign a class
               </div>
-            ) : (
-              <div className="text-[12.5px] text-muted">
-                No subjects assigned yet.
-              </div>
-            )}
-          </Card>
-        </>
+              {ownSubjectIds.length === 0 ? (
+                <div className="text-[12px] text-[#8a6d1f] bg-[#fbf3e2] border border-[#ecd8ab] rounded-[11px] px-3 py-2.5">
+                  Give this teacher a subject first — new classes reuse the
+                  subjects they already teach.
+                </div>
+              ) : (
+                <div className="flex gap-1.5 flex-wrap">
+                  {unassigned.map((c) => (
+                    <button
+                      key={c.id}
+                      disabled={busyKlassId === c.id}
+                      onClick={() =>
+                        run(c.id, () =>
+                          assignClass(teacherId, c.id, ownSubjectIds),
+                        )
+                      }
+                      className="px-3 py-2 rounded-[10px] text-[12px] font-semibold border-[1.5px] border-line bg-mist text-green disabled:opacity-60"
+                    >
+                      + {c.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </Card>
       )}
+
+      <Card className="p-[15px] text-center">
+        <button
+          disabled
+          className="text-[13px] font-semibold text-danger disabled:opacity-45"
+        >
+          Deactivate account
+        </button>
+      </Card>
 
       <div className="text-center text-[11px] text-muted leading-[1.5] mt-3">
         They sign in with their mobile and a one-time code — no password to set
@@ -792,6 +872,18 @@ function StaffDetail({
       </div>
     </div>
   );
+}
+
+// The subject a teacher covers in the most classes — used as their headline role.
+function primarySubjectOf(detail: AdminTeacherDetail | null): string | null {
+  if (!detail) return null;
+  const tally = new Map<string, number>();
+  for (const a of detail.assignments)
+    for (const s of a.subjects) tally.set(s.name, (tally.get(s.name) ?? 0) + 1);
+  let best: string | null = null;
+  let bestN = 0;
+  for (const [nm, n] of tally) if (n > bestN) [best, bestN] = [nm, n];
+  return best;
 }
 
 // ---------- STAFF ADD (live) ----------

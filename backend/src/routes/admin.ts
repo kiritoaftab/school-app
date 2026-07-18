@@ -130,6 +130,70 @@ adminRouter.get('/teachers/:id', ah(async (req, res) => {
   });
 }));
 
+// Assign a class to a teacher (adds one row per subject).
+const assignSchema = z.object({
+  klassId: z.number(),
+  subjectIds: z.array(z.number()).min(1),
+});
+adminRouter.post('/teachers/:id/assignments', ah(async (req, res) => {
+  const schoolId = requireSchoolId(req);
+  const teacherId = Number(req.params.id);
+  const { klassId, subjectIds } = assignSchema.parse(req.body);
+
+  const [teacher, klass, subjects] = await Promise.all([
+    prisma.user.findFirst({ where: { id: teacherId, schoolId, role: 'TEACHER' } }),
+    prisma.klass.findFirst({ where: { id: klassId, schoolId } }),
+    prisma.subject.findMany({ where: { id: { in: subjectIds }, schoolId }, select: { id: true } }),
+  ]);
+  if (!teacher) throw new HttpError(404, 'Teacher not found');
+  if (!klass) throw new HttpError(404, 'Class not found in this school');
+  if (subjects.length !== new Set(subjectIds).size) {
+    throw new HttpError(404, 'A selected subject was not found in this school');
+  }
+
+  // skipDuplicates keeps re-assigning an existing pairing idempotent.
+  await prisma.teachingAssignment.createMany({
+    data: subjects.map((s) => ({ schoolId, teacherId, klassId, subjectId: s.id })),
+    skipDuplicates: true,
+  });
+  res.status(201).json({ ok: true });
+}));
+
+// Remove a whole class from a teacher (every subject they teach in it).
+adminRouter.delete('/teachers/:id/assignments/:klassId', ah(async (req, res) => {
+  const schoolId = requireSchoolId(req);
+  const teacherId = Number(req.params.id);
+  const klassId = Number(req.params.klassId);
+  const teacher = await prisma.user.findFirst({ where: { id: teacherId, schoolId, role: 'TEACHER' } });
+  if (!teacher) throw new HttpError(404, 'Teacher not found');
+
+  await prisma.teachingAssignment.deleteMany({ where: { schoolId, teacherId, klassId } });
+  // Leading a class you no longer teach in is allowed, so classTeacherId is left alone.
+  res.status(204).end();
+}));
+
+// Make this teacher the class teacher of a class, or step them down from it.
+const ctSchema = z.object({ klassId: z.number(), isClassTeacher: z.boolean() });
+adminRouter.put('/teachers/:id/class-teacher', ah(async (req, res) => {
+  const schoolId = requireSchoolId(req);
+  const teacherId = Number(req.params.id);
+  const { klassId, isClassTeacher } = ctSchema.parse(req.body);
+
+  const [teacher, klass] = await Promise.all([
+    prisma.user.findFirst({ where: { id: teacherId, schoolId, role: 'TEACHER' } }),
+    prisma.klass.findFirst({ where: { id: klassId, schoolId } }),
+  ]);
+  if (!teacher) throw new HttpError(404, 'Teacher not found');
+  if (!klass) throw new HttpError(404, 'Class not found in this school');
+
+  if (isClassTeacher) {
+    await prisma.klass.update({ where: { id: klassId }, data: { classTeacherId: teacherId } });
+  } else if (klass.classTeacherId === teacherId) {
+    await prisma.klass.update({ where: { id: klassId }, data: { classTeacherId: null } });
+  }
+  res.json({ ok: true });
+}));
+
 // --- Students ---
 adminRouter.get('/students', ah(async (req, res) => {
   const schoolId = requireSchoolId(req);
