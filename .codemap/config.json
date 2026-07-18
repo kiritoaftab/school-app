@@ -1,0 +1,14 @@
+{
+  "only": [
+    "ts",
+    "tsx",
+    "html",
+    "sql",
+    "gitignore"
+  ],
+  "budgets": {},
+  "routing": {
+    "retrieval": {}
+  },
+  "drift": {}
+}

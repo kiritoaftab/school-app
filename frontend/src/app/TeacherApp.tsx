@@ -1,15 +1,19 @@
-import { useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import {
-  AppHeader, BottomSheet, Card, Chip, DateStrip, Glyph, InfoNote, PrimaryButton,
+  AppHeader, BottomSheet, Card, Chip, Glyph, InfoNote, PrimaryButton,
   OutlineButton, Shell, StatCard, cx, type TabDef,
 } from './kit';
+import {
+  listMyClasses, listDiary, createDiaryEntry, deleteDiaryEntry,
+  type TeacherKlass, type DiaryEntry,
+} from '../api/teacher';
 import { CalendarScreen, NotificationsScreen } from './SharedScreens';
 import { AccountSheet } from './AccountSheet';
 import {
   SCHOOL, GLYPH, TEACHER_CLASSES, SUBJ_META, ROSTERS, CT_NAME_OF, SEEDED_ABS,
-  CLASS_DIARY, PUB_AVG_MAP, MAX_MARKS, DATE_ORDER, WD, WD_FULL, TODAY_DATE,
+  CLASS_DIARY, PUB_AVG_MAP, MAX_MARKS, TODAY_DATE,
   DEFAULT_CLASS_EXAMS, initialsOf, maskPhone,
   type ClassDiary, type RosterStudent, type ClassExam,
 } from './data';
@@ -32,17 +36,35 @@ export function TeacherApp() {
   const navigate = useNavigate();
 
   const [screen, setScreen] = useState<Screen>('home');
-  const [selClass, setSelClass] = useState('5B');
   const [pickerOpen, setPickerOpen] = useState(false);
   const [acctOpen, setAcctOpen] = useState(false);
+
+  // Live classes drive the switcher; the diary reads from them directly.
+  const [classes, setClasses] = useState<TeacherKlass[]>([]);
+  const [classesErr, setClassesErr] = useState('');
+  const [loadingClasses, setLoadingClasses] = useState(true);
+  const [selClassId, setSelClassId] = useState<number | null>(null);
+
+  useEffect(() => {
+    let alive = true;
+    listMyClasses()
+      .then((cs) => {
+        if (!alive) return;
+        setClasses(cs);
+        setSelClassId((cur) => (cur != null && cs.some((c) => c.id === cur) ? cur : cs[0]?.id ?? null));
+      })
+      .catch(() => alive && setClassesErr('Could not load your classes.'))
+      .finally(() => alive && setLoadingClasses(false));
+    return () => { alive = false; };
+  }, []);
+
+  const liveClass = classes.find((c) => c.id === selClassId) ?? null;
 
   const [attAbs, setAttAbs] = useState<Record<string, Record<string, boolean>>>({ '5B': {}, '5A': {}, '6A': {} });
   const [regSaved, setRegSaved] = useState(false);
 
   const [classDiary, setClassDiary] = useState<ClassDiary>(() => JSON.parse(JSON.stringify(CLASS_DIARY)));
   const [teDate, setTeDate] = useState(TODAY_DATE);
-  const [hwNote, setHwNote] = useState('');
-  const [hwSubject, setHwSubject] = useState('Mathematics');
 
   const [teExam, setTeExam] = useState('ut3');
   const [teSubject, setTeSubject] = useState('math');
@@ -56,7 +78,20 @@ export function TeacherApp() {
   // Per-class examination catalogue (class teacher can add/remove).
   const [teExamsByClass, setTeExamsByClass] = useState<Record<string, ClassExam[]>>({});
 
-  const curClass = TEACHER_CLASSES.find((c) => c.id === selClass) || TEACHER_CLASSES[0];
+  // Bridge to the screens that are still on mock data: they look classes up by
+  // the "5B" style key, so derive it from the real grade/section.
+  const selClass = liveClass ? `${liveClass.grade.replace(/\D/g, '')}${liveClass.section.toUpperCase()}` : '5B';
+  const mockClass = TEACHER_CLASSES.find((c) => c.id === selClass) ?? TEACHER_CLASSES[0];
+  const curClass = liveClass
+    ? {
+        ...mockClass,
+        id: selClass,
+        label: liveClass.label,
+        roleLabel: liveClass.roleLabel,
+        count: liveClass.students,
+        ct: liveClass.isClassTeacher,
+      }
+    : mockClass;
   const name = user?.name ?? 'Ms. Anjali Rao';
 
   const roster: Rostered[] = (teRosters[selClass] || []).map((s, i) => ({
@@ -146,7 +181,7 @@ export function TeacherApp() {
               <span className="text-[10px] font-semibold text-muted">{curClass.roleLabel}</span>
               <span className="text-muted"><Glyph d="M6 9l6 6 6-6" size={13} stroke={2.2} /></span>
             </button>
-            <span className="ml-auto text-[11px] text-muted font-semibold">{count} students</span>
+            <span className="ml-auto text-[11px] text-muted font-semibold">{liveClass?.students ?? count} students</span>
           </div>
         ) : undefined
       }
@@ -155,14 +190,19 @@ export function TeacherApp() {
         <>
           <BottomSheet open={pickerOpen} onClose={() => setPickerOpen(false)}>
             <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-2.5">Your classes</div>
-            {TEACHER_CLASSES.map((c) => {
-              const on = c.id === selClass;
+            {classes.length === 0 && (
+              <div className="py-4 text-center text-muted text-[12.5px]">
+                {loadingClasses ? 'Loading your classes…' : classesErr || 'No classes assigned to you yet.'}
+              </div>
+            )}
+            {classes.map((c) => {
+              const on = c.id === selClassId;
               return (
-                <div key={c.id} onClick={() => { setSelClass(c.id); setPickerOpen(false); setTeSubject('math'); setTeDate('25'); setRegSaved(false); }}
+                <div key={c.id} onClick={() => { setSelClassId(c.id); setPickerOpen(false); setTeSubject('math'); setTeDate(TODAY_DATE); setRegSaved(false); }}
                   className={cx('flex items-center gap-2.5 px-3.5 py-[13px] rounded-[15px] cursor-pointer mb-2 border-[1.5px]', on ? 'border-green bg-[#f3f8f4]' : 'border-line bg-white')}>
                   <div className="flex-1">
                     <b className={cx('text-[14px] font-bold block', on ? 'text-green' : 'text-ink')}>{c.label}</b>
-                    <small className="text-[11px] text-muted">{c.roleLabel} · {c.count} students</small>
+                    <small className="text-[11px] text-muted">{c.roleLabel} · {c.students} students</small>
                   </div>
                   {on && <span className="text-green"><Glyph d={GLYPH.check} size={18} stroke={2.4} /></span>}
                 </div>
@@ -190,8 +230,7 @@ export function TeacherApp() {
         />
       )}
       {screen === 'diary' && (
-        <TeacherDiary curClass={curClass} selClass={selClass} classDiary={classDiary} setClassDiary={setClassDiary}
-          teDate={teDate} setTeDate={setTeDate} hwNote={hwNote} setHwNote={setHwNote} hwSubject={hwSubject} setHwSubject={setHwSubject} />
+        <TeacherDiary klass={liveClass} loading={loadingClasses} error={classesErr} />
       )}
       {screen === 'results' && (
         <TeacherMarks
@@ -370,72 +409,225 @@ function TeacherAttendance({
 }
 
 // ---------- DIARY (post homework) ----------
-function TeacherDiary({
-  curClass, selClass, classDiary, setClassDiary, teDate, setTeDate, hwNote, setHwNote, hwSubject, setHwSubject,
-}: {
-  curClass: typeof TEACHER_CLASSES[number];
-  selClass: string;
-  classDiary: ClassDiary;
-  setClassDiary: React.Dispatch<React.SetStateAction<ClassDiary>>;
-  teDate: string;
-  setTeDate: (d: string) => void;
-  hwNote: string;
-  setHwNote: (v: string) => void;
-  hwSubject: string;
-  setHwSubject: (v: string) => void;
-}) {
-  const days = classDiary[selClass] || {};
-  const list = days[teDate] || [];
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const DAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const DAY_FULL = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
-  function addHw() {
-    if (!hwNote.trim()) return;
-    setClassDiary((cd) => {
-      const c = { ...(cd[selClass] || {}) };
-      c[teDate] = [...(c[teDate] || []), { subj: hwSubject, note: hwNote.trim() }];
-      return { ...cd, [selClass]: c };
-    });
-    setHwNote('');
+/** Local-time YYYY-MM-DD — never use toISOString here, it shifts across timezones. */
+function ymd(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+function addDays(d: Date, n: number): Date {
+  const x = new Date(d);
+  x.setDate(x.getDate() + n);
+  return x;
+}
+/** Monday of the week containing `d`. */
+function startOfWeek(d: Date): Date {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return addDays(x, -((x.getDay() + 6) % 7));
+}
+
+function TeacherDiary({ klass, loading, error }: { klass: TeacherKlass | null; loading: boolean; error: string }) {
+  const today = useMemo(() => { const d = new Date(); d.setHours(0, 0, 0, 0); return d; }, []);
+  const todayKey = ymd(today);
+
+  const [weekStart, setWeekStart] = useState(() => startOfWeek(new Date()));
+  const [selDate, setSelDate] = useState(todayKey);
+  const [entries, setEntries] = useState<DiaryEntry[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [loadErr, setLoadErr] = useState('');
+
+  const [task, setTask] = useState('');
+  const [subject, setSubject] = useState('');
+  const [posting, setPosting] = useState(false);
+
+  // Mon–Sat; schools here don't run a Sunday diary.
+  const week = useMemo(() => Array.from({ length: 6 }, (_, i) => addDays(weekStart, i)), [weekStart]);
+  const from = ymd(week[0]);
+  const to = ymd(week[week.length - 1]);
+
+  const subjects = klass?.subjects ?? [];
+  // Keep the chosen subject valid when the class (and so the allowed list) changes.
+  useEffect(() => {
+    setSubject((s) => (subjects.some((x) => x.name === s) ? s : subjects[0]?.name ?? ''));
+  }, [klass?.id, subjects]);
+
+  const load = useCallback(async () => {
+    if (!klass) return;
+    setBusy(true);
+    setLoadErr('');
+    try {
+      const data = await listDiary(klass.id, from, to);
+      setEntries(data.entries);
+    } catch {
+      setLoadErr('Could not load the diary for this week.');
+      setEntries([]);
+    } finally {
+      setBusy(false);
+    }
+  }, [klass?.id, from, to]);
+
+  useEffect(() => { void load(); }, [load]);
+
+  const dayEntries = entries.filter((e) => e.date === selDate);
+  const countFor = (key: string) => entries.filter((e) => e.date === key).length;
+
+  const selDay = useMemo(() => new Date(`${selDate}T00:00:00`), [selDate]);
+  const inThisWeek = selDate >= from && selDate <= to;
+  const onCurrentWeek = ymd(startOfWeek(today)) === from;
+
+  function shiftWeek(delta: number) {
+    const next = addDays(weekStart, delta * 7);
+    setWeekStart(next);
+    // Follow the user into the new week rather than leaving a stale selection.
+    setSelDate(ymd(next));
   }
-  function delHw(i: number) {
-    setClassDiary((cd) => {
-      const c = { ...(cd[selClass] || {}) };
-      c[teDate] = (c[teDate] || []).filter((_, j) => j !== i);
-      return { ...cd, [selClass]: c };
-    });
+  function goToday() {
+    setWeekStart(startOfWeek(today));
+    setSelDate(todayKey);
+  }
+
+  async function post() {
+    if (!klass || !task.trim() || !subject) return;
+    setPosting(true);
+    try {
+      await createDiaryEntry({ klassId: klass.id, subject, date: selDate, task: task.trim() });
+      setTask('');
+      await load();
+    } catch {
+      setLoadErr('Could not post that entry.');
+    } finally {
+      setPosting(false);
+    }
+  }
+  async function remove(id: number) {
+    try {
+      await deleteDiaryEntry(id);
+      setEntries((es) => es.filter((e) => e.id !== id));
+    } catch {
+      setLoadErr('Could not remove that entry.');
+    }
+  }
+
+  if (loading) return <div className="px-[15px] py-8 text-center text-muted text-[12.5px]">Loading…</div>;
+  if (!klass) {
+    return (
+      <div className="px-[15px] py-4">
+        <InfoNote tone="amber" icon="M12 9v4M12 17h.01M10.3 3.9L2 18a2 2 0 001.7 3h16.6a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z">
+          {error || 'You have no classes assigned yet. Ask your school admin to make you a class teacher or assign you a subject.'}
+        </InfoNote>
+      </div>
+    );
   }
 
   return (
     <div className="px-[15px] py-4 pb-6">
-      <DateStrip dates={DATE_ORDER} selDate={teDate} today={TODAY_DATE} weekdayOf={(k) => WD[k]} onPick={setTeDate} hasDot={(k) => (days[k] || []).length > 0} />
-      <div className="flex items-center gap-2.5 mb-[11px]">
-        <div className="font-serif text-[19px] leading-none">{WD_FULL[WD[teDate]]}, {teDate} June</div>
-        {teDate === TODAY_DATE && <span className="text-[10px] font-bold text-green bg-gold-soft px-2 py-[3px] rounded-[7px]">TODAY</span>}
+      {/* ---- week calendar ---- */}
+      <div className="flex items-center gap-2 mb-2.5">
+        <div className="flex-1 font-serif text-[16px] leading-none text-green">
+          {MONTHS[week[0].getMonth()]}
+          {week[5].getMonth() !== week[0].getMonth() && ` – ${MONTHS[week[5].getMonth()]}`}
+          <span className="text-muted text-[13px] font-sans font-semibold ml-1.5">{week[0].getFullYear()}</span>
+        </div>
+        {!onCurrentWeek && (
+          <button onClick={goToday} className="text-[11px] font-bold text-green bg-mist px-2.5 py-1.5 rounded-[9px]">Today</button>
+        )}
+        <button onClick={() => shiftWeek(-1)} aria-label="Previous week" className="w-7 h-7 rounded-[9px] border border-line bg-white text-muted grid place-items-center">
+          <Glyph d="M15 18l-6-6 6-6" size={15} stroke={2.2} />
+        </button>
+        <button onClick={() => shiftWeek(1)} aria-label="Next week" className="w-7 h-7 rounded-[9px] border border-line bg-white text-muted grid place-items-center">
+          <Glyph d="M9 18l6-6-6-6" size={15} stroke={2.2} />
+        </button>
       </div>
+      <div className="flex gap-1.5 mb-3.5">
+        {week.map((d) => {
+          const key = ymd(d);
+          const active = key === selDate;
+          const isToday = key === todayKey;
+          const n = countFor(key);
+          return (
+            <button
+              key={key}
+              onClick={() => setSelDate(key)}
+              className={cx(
+                'flex-1 text-center pt-2 pb-[13px] rounded-[13px] text-[11px] font-semibold relative border',
+                active ? 'bg-green border-green text-[#bcd2c5]'
+                  : isToday ? 'bg-white border-[1.5px] border-green text-muted'
+                    : 'bg-white border-line text-muted',
+              )}
+            >
+              {DAY_SHORT[d.getDay()]}
+              <b className={cx('block text-[15px] mt-0.5', active ? 'text-white' : 'text-ink')}>{d.getDate()}</b>
+              {n > 0 && !active && <span className="absolute bottom-[5px] left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-gold" />}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="flex items-center gap-2.5 mb-[11px]">
+        <div className="font-serif text-[19px] leading-none">
+          {DAY_FULL[selDay.getDay()]}, {selDay.getDate()} {MONTHS[selDay.getMonth()]}
+        </div>
+        {selDate === todayKey && <span className="text-[10px] font-bold text-green bg-gold-soft px-2 py-[3px] rounded-[7px]">TODAY</span>}
+        {selDate > todayKey && <span className="text-[10px] font-bold text-muted bg-cloud px-2 py-[3px] rounded-[7px]">UPCOMING</span>}
+      </div>
+
+      {loadErr && <div className="mb-3"><InfoNote tone="amber">{loadErr}</InfoNote></div>}
+
       <Card className="px-3.5 py-1.5 mb-3">
-        {list.length === 0 ? (
-          <div className="py-4 text-center text-muted text-[12.5px]">No homework posted for {curClass.label} yet.</div>
+        {busy && dayEntries.length === 0 ? (
+          <div className="py-4 text-center text-muted text-[12.5px]">Loading diary…</div>
+        ) : dayEntries.length === 0 ? (
+          <div className="py-4 text-center text-muted text-[12.5px]">No homework posted for {klass.label} yet.</div>
         ) : (
-          list.map((h, i) => (
-            <div key={i} className="flex items-start gap-[11px] py-[11px] border-t border-[#f0f2ee] first:border-t-0">
-              <span className="text-[9.5px] font-bold uppercase text-green bg-mist px-2 py-1 rounded-[7px] mt-px flex-none">{h.subj}</span>
-              <div className="flex-1 text-[12.5px] leading-[1.45]">{h.note}</div>
-              <button onClick={() => delHw(i)} className="w-6 h-6 rounded-lg bg-[#f6ecec] grid place-items-center flex-none text-danger" aria-label="Delete">
-                <Glyph d="M6 6l12 12M18 6L6 18" size={13} stroke={2} />
-              </button>
+          dayEntries.map((e) => (
+            <div key={e.id} className="flex items-start gap-[11px] py-[11px] border-t border-[#f0f2ee] first:border-t-0">
+              <span className="text-[9.5px] font-bold uppercase text-green bg-mist px-2 py-1 rounded-[7px] mt-px flex-none">{e.subject}</span>
+              <div className="flex-1 min-w-0">
+                <div className="text-[12.5px] leading-[1.45]">{e.task}</div>
+                {!klass.isClassTeacher || !e.createdBy ? null : (
+                  <small className="text-[10.5px] text-muted">{e.createdBy}</small>
+                )}
+              </div>
+              {e.canDelete && (
+                <button onClick={() => remove(e.id)} className="w-6 h-6 rounded-lg bg-[#f6ecec] grid place-items-center flex-none text-danger" aria-label="Delete">
+                  <Glyph d="M6 6l12 12M18 6L6 18" size={13} stroke={2} />
+                </button>
+              )}
             </div>
           ))
         )}
       </Card>
-      <Card className="p-[15px]">
-        <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-2.5">Add homework</div>
-        <div className="flex gap-1.5 flex-wrap mb-2.5">
-          {curClass.subjects.map((code) => (
-            <Chip key={code} active={hwSubject === SUBJ_META[code]} onClick={() => setHwSubject(SUBJ_META[code])}>{SUBJ_META[code]}</Chip>
-          ))}
-        </div>
-        <textarea value={hwNote} onChange={(e) => setHwNote(e.target.value)} placeholder="Homework details for parents…" className="w-full box-border px-3 py-[11px] border-[1.5px] border-line rounded-xl text-[13px] bg-white resize-none h-16 mb-2.5" />
-        <button onClick={addHw} className="w-full py-3 rounded-xl bg-green text-white font-semibold text-[13px]">Post to {curClass.label}</button>
-      </Card>
+
+      {subjects.length === 0 ? (
+        <InfoNote tone="amber" icon="M12 9v4M12 17h.01M10.3 3.9L2 18a2 2 0 001.7 3h16.6a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z">
+          You have no subjects assigned in {klass.label}, so you can't post homework here. Ask your admin to assign you a subject.
+        </InfoNote>
+      ) : (
+        <Card className="p-[15px]">
+          <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-2.5">Add homework</div>
+          {!klass.isClassTeacher && (
+            <div className="text-[11px] text-muted leading-[1.5] mb-2.5">
+              You teach {subjects.map((s) => s.name).join(', ')} in {klass.label}, so you can post for {subjects.length === 1 ? 'that subject' : 'those subjects'} only.
+            </div>
+          )}
+          <div className="flex gap-1.5 flex-wrap mb-2.5">
+            {subjects.map((s) => (
+              <Chip key={s.id} active={subject === s.name} onClick={() => setSubject(s.name)}>{s.name}</Chip>
+            ))}
+          </div>
+          <textarea value={task} onChange={(e) => setTask(e.target.value)} placeholder="Homework details for parents…" className="w-full box-border px-3 py-[11px] border-[1.5px] border-line rounded-xl text-[13px] bg-white resize-none h-16 mb-2.5" />
+          <button
+            onClick={post}
+            disabled={!task.trim() || !subject || posting || !inThisWeek}
+            className={cx('w-full py-3 rounded-xl font-semibold text-[13px]', task.trim() && subject && !posting ? 'bg-green text-white' : 'bg-[#dfe5df] text-[#9aa39b]')}
+          >
+            {posting ? 'Posting…' : `Post to ${klass.label}`}
+          </button>
+        </Card>
+      )}
     </div>
   );
 }

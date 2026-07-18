@@ -13,15 +13,98 @@ teacherRouter.get('/terms', ah(async (req, res) => {
   res.json(await prisma.term.findMany({ where: { schoolId }, orderBy: { id: 'asc' } }));
 }));
 
-/** Classes this teacher is class-teacher of. */
+/** Parse a 'YYYY-MM-DD' string into the UTC midnight used by @db.Date columns. */
+function dateOnly(s: string): Date {
+  const d = new Date(`${s}T00:00:00.000Z`);
+  if (Number.isNaN(d.getTime())) throw new HttpError(400, `Invalid date: ${s}`);
+  return d;
+}
+
+/**
+ * Which subjects this teacher may write diary entries for in a class.
+ *
+ * A class teacher owns the whole class diary, so they get every subject the
+ * school offers. Everyone else only gets the subjects they actually teach
+ * there. Returns null when the teacher has no business with the class at all.
+ */
+async function allowedSubjects(
+  userId: number,
+  schoolId: number,
+  klassId: number,
+): Promise<{ klass: { id: number; grade: string; section: string; classTeacherId: number | null }; isClassTeacher: boolean; subjects: { id: number; name: string }[] } | null> {
+  const klass = await prisma.klass.findFirst({ where: { id: klassId, schoolId } });
+  if (!klass) return null;
+
+  if (klass.classTeacherId === userId) {
+    const subjects = await prisma.subject.findMany({ where: { schoolId }, orderBy: { name: 'asc' } });
+    return { klass, isClassTeacher: true, subjects: subjects.map((s) => ({ id: s.id, name: s.name })) };
+  }
+
+  const assignments = await prisma.teachingAssignment.findMany({
+    where: { schoolId, teacherId: userId, klassId },
+    include: { subject: true },
+    orderBy: { subject: { name: 'asc' } },
+  });
+  if (assignments.length === 0) return null;
+  return {
+    klass,
+    isClassTeacher: false,
+    subjects: assignments.map((a) => ({ id: a.subject.id, name: a.subject.name })),
+  };
+}
+
+/**
+ * Every class this teacher works with: the ones they are class teacher of,
+ * plus the ones they teach a subject in, each with the subjects they may post
+ * diary entries for.
+ */
 teacherRouter.get('/classes', ah(async (req, res) => {
   const { userId } = req.auth!;
   const schoolId = requireSchoolId(req);
-  const classes = await prisma.klass.findMany({
-    where: { schoolId, classTeacherId: userId },
-    orderBy: [{ grade: 'asc' }, { section: 'asc' }],
-  });
-  res.json(classes.map((c) => ({ id: c.id, label: `${c.grade}-${c.section}` })));
+
+  const [owned, assignments] = await Promise.all([
+    prisma.klass.findMany({ where: { schoolId, classTeacherId: userId } }),
+    prisma.teachingAssignment.findMany({
+      where: { schoolId, teacherId: userId },
+      include: { klass: true, subject: true },
+    }),
+  ]);
+
+  const klassIds = [...new Set([...owned.map((k) => k.id), ...assignments.map((a) => a.klassId)])];
+  if (klassIds.length === 0) return res.json([]);
+
+  const [classes, counts, allSubjects] = await Promise.all([
+    prisma.klass.findMany({
+      where: { id: { in: klassIds } },
+      orderBy: [{ grade: 'asc' }, { section: 'asc' }],
+    }),
+    prisma.enrollment.groupBy({ by: ['klassId'], where: { klassId: { in: klassIds } }, _count: true }),
+    prisma.subject.findMany({ where: { schoolId }, orderBy: { name: 'asc' } }),
+  ]);
+  const countOf = new Map(counts.map((c) => [c.klassId, c._count]));
+
+  res.json(
+    classes.map((c) => {
+      const isClassTeacher = c.classTeacherId === userId;
+      const taught = assignments
+        .filter((a) => a.klassId === c.id)
+        .map((a) => ({ id: a.subject.id, name: a.subject.name }));
+      const subjects = isClassTeacher ? allSubjects.map((s) => ({ id: s.id, name: s.name })) : taught;
+      return {
+        id: c.id,
+        grade: c.grade,
+        section: c.section,
+        label: `${c.grade}-${c.section}`,
+        isClassTeacher,
+        // What the switcher shows under the class name.
+        roleLabel: isClassTeacher
+          ? 'Class teacher'
+          : taught.map((s) => s.name).join(', ') || 'Subject teacher',
+        students: countOf.get(c.id) ?? 0,
+        subjects,
+      };
+    }),
+  );
 }));
 
 /** Roster for a class, with today's attendance status prefilled. */
@@ -104,10 +187,50 @@ teacherRouter.post('/notices', ah(async (req, res) => {
   res.status(201).json(notice);
 }));
 
+const ymd = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Expected YYYY-MM-DD');
+
+const diaryQuerySchema = z.object({ klassId: z.coerce.number(), from: ymd, to: ymd });
+
+/**
+ * Diary entries for a class over a date range — the range covers the week the
+ * calendar is showing, so the strip can dot the days that have homework.
+ */
+teacherRouter.get('/diary', ah(async (req, res) => {
+  const { userId } = req.auth!;
+  const schoolId = requireSchoolId(req);
+  const { klassId, from, to } = diaryQuerySchema.parse(req.query);
+
+  const access = await allowedSubjects(userId, schoolId, klassId);
+  if (!access) throw new HttpError(403, 'You do not teach this class');
+
+  const entries = await prisma.diaryEntry.findMany({
+    where: { schoolId, klassId, date: { gte: dateOnly(from), lte: dateOnly(to) } },
+    include: { createdBy: { select: { id: true, name: true } } },
+    orderBy: [{ date: 'asc' }, { id: 'asc' }],
+  });
+
+  res.json({
+    klassId,
+    isClassTeacher: access.isClassTeacher,
+    subjects: access.subjects,
+    entries: entries.map((e) => ({
+      id: e.id,
+      date: e.date.toISOString().slice(0, 10),
+      subject: e.subject,
+      task: e.task,
+      note: e.note,
+      createdById: e.createdById,
+      createdBy: e.createdBy?.name ?? null,
+      // A subject teacher may only remove what they posted themselves.
+      canDelete: access.isClassTeacher || e.createdById === userId,
+    })),
+  });
+}));
+
 const diarySchema = z.object({
   klassId: z.number(),
   subject: z.string().min(1),
-  date: z.string(),
+  date: ymd,
   task: z.string().min(1),
   note: z.string().optional(),
 });
@@ -115,18 +238,52 @@ teacherRouter.post('/diary', ah(async (req, res) => {
   const { userId } = req.auth!;
   const schoolId = requireSchoolId(req);
   const data = diarySchema.parse(req.body);
+
+  const access = await allowedSubjects(userId, schoolId, data.klassId);
+  if (!access) throw new HttpError(403, 'You do not teach this class');
+  if (!access.subjects.some((s) => s.name === data.subject)) {
+    throw new HttpError(403, `You do not teach ${data.subject} in this class`);
+  }
+
   const entry = await prisma.diaryEntry.create({
     data: {
       schoolId,
       klassId: data.klassId,
       subject: data.subject,
-      date: new Date(data.date),
+      date: dateOnly(data.date),
       task: data.task,
       note: data.note,
       createdById: userId,
     },
   });
-  res.status(201).json(entry);
+  res.status(201).json({
+    id: entry.id,
+    date: entry.date.toISOString().slice(0, 10),
+    subject: entry.subject,
+    task: entry.task,
+    note: entry.note,
+    createdById: entry.createdById,
+    canDelete: true,
+  });
+}));
+
+/** Remove a diary entry — the class teacher, or whoever posted it. */
+teacherRouter.delete('/diary/:id', ah(async (req, res) => {
+  const { userId } = req.auth!;
+  const schoolId = requireSchoolId(req);
+  const entry = await prisma.diaryEntry.findFirst({
+    where: { id: Number(req.params.id), schoolId },
+  });
+  if (!entry) throw new HttpError(404, 'Diary entry not found');
+
+  const access = await allowedSubjects(userId, schoolId, entry.klassId);
+  if (!access) throw new HttpError(403, 'You do not teach this class');
+  if (!access.isClassTeacher && entry.createdById !== userId) {
+    throw new HttpError(403, 'You can only remove entries you posted');
+  }
+
+  await prisma.diaryEntry.delete({ where: { id: entry.id } });
+  res.json({ ok: true });
 }));
 
 const resultSchema = z.object({
