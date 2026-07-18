@@ -1,4 +1,19 @@
 -- CreateTable
+CREATE TABLE IF NOT EXISTS `Subject` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `schoolId` INTEGER NOT NULL,
+    `name` VARCHAR(191) NOT NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+
+    INDEX `Subject_schoolId_idx`(`schoolId`),
+    UNIQUE INDEX `Subject_schoolId_name_key`(`schoolId`, `name`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- AddForeignKey
+ALTER TABLE `Subject` ADD CONSTRAINT `Subject_schoolId_fkey` FOREIGN KEY (`schoolId`) REFERENCES `School`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- CreateTable
 CREATE TABLE `TeachingAssignment` (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `schoolId` INTEGER NOT NULL,
