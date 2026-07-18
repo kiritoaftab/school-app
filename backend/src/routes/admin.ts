@@ -709,6 +709,151 @@ adminRouter.delete('/notices/:id', ah(async (req, res) => {
   res.status(204).end();
 }));
 
+// --- Dashboard (admin home: stat cards + infographics) ---
+
+// Attendance dates are stored as @db.Date, i.e. UTC midnight — the same
+// normalisation the teacher marking route uses, so keys line up across routes.
+function utcDay(d: Date) {
+  return new Date(d.toISOString().slice(0, 10));
+}
+
+// A day counts as "attending" for both PRESENT and LATE — a late child was
+// still in school. HOLIDAY rows are excluded from the denominator entirely.
+function rateOf(present: number, late: number, absent: number) {
+  const marked = present + late + absent;
+  return marked ? Math.round(((present + late) / marked) * 100) : 0;
+}
+
+const TREND_DAYS = 14;
+
+adminRouter.get('/dashboard', ah(async (req, res) => {
+  const schoolId = requireSchoolId(req);
+  const today = utcDay(new Date());
+  const windowStart = new Date(today);
+  windowStart.setUTCDate(windowStart.getUTCDate() - (TREND_DAYS - 1));
+
+  const [
+    students,
+    teachers,
+    parents,
+    subjects,
+    classes,
+    pendingLeaves,
+    todayMarks,
+    trendGroups,
+    upcomingEvents,
+    recentNotices,
+    schoolParents,
+  ] = await Promise.all([
+    prisma.student.count({ where: { schoolId } }),
+    prisma.user.count({ where: { schoolId, role: 'TEACHER' } }),
+    prisma.user.count({ where: { schoolId, role: 'PARENT' } }),
+    prisma.subject.count({ where: { schoolId } }),
+    prisma.klass.findMany({
+      where: { schoolId },
+      orderBy: [{ grade: 'asc' }, { section: 'asc' }],
+      include: { _count: { select: { enrollments: true } } },
+    }),
+    prisma.leaveRequest.count({ where: { schoolId, status: 'SUBMITTED' } }),
+    prisma.attendance.findMany({
+      where: { schoolId, date: today },
+      select: {
+        status: true,
+        student: { select: { enrollments: { select: { klassId: true } } } },
+      },
+    }),
+    prisma.attendance.groupBy({
+      by: ['date', 'status'],
+      where: { schoolId, date: { gte: windowStart, lte: today } },
+      _count: { _all: true },
+    }),
+    prisma.event.findMany({
+      where: { schoolId, date: { gte: today } },
+      orderBy: { date: 'asc' },
+      take: 3,
+    }),
+    prisma.notice.findMany({
+      where: { schoolId },
+      orderBy: [{ pinned: 'desc' }, { createdAt: 'desc' }],
+      take: 3,
+      include: noticeInclude,
+    }),
+    prisma.user.count({ where: { schoolId, role: 'PARENT' } }),
+  ]);
+
+  // --- Today, school-wide and per class ---
+  const blank = () => ({ present: 0, late: 0, absent: 0, holiday: 0 });
+  const schoolToday = blank();
+  const byKlass = new Map<number, ReturnType<typeof blank>>();
+  for (const m of todayMarks) {
+    const key = m.status.toLowerCase() as keyof ReturnType<typeof blank>;
+    schoolToday[key] += 1;
+    // A student's current class is their latest enrollment, matching /students.
+    const klassId = m.student.enrollments.at(-1)?.klassId;
+    if (klassId === undefined) continue;
+    let k = byKlass.get(klassId);
+    if (!k) { k = blank(); byKlass.set(klassId, k); }
+    k[key] += 1;
+  }
+
+  const classRows = classes.map((c) => {
+    const a = byKlass.get(c.id) ?? blank();
+    const marked = a.present + a.late + a.absent;
+    return {
+      id: c.id,
+      label: `${c.grade}-${c.section}`,
+      students: c._count.enrollments,
+      present: a.present,
+      late: a.late,
+      absent: a.absent,
+      marked,
+      pct: rateOf(a.present, a.late, a.absent),
+    };
+  });
+
+  // --- 14-day trend, school days only (a day with no marks isn't plotted) ---
+  const byDate = new Map<string, ReturnType<typeof blank>>();
+  for (const g of trendGroups) {
+    const key = g.date.toISOString().slice(0, 10);
+    let d = byDate.get(key);
+    if (!d) { d = blank(); byDate.set(key, d); }
+    d[g.status.toLowerCase() as keyof ReturnType<typeof blank>] += g._count._all;
+  }
+  const trend = [...byDate.entries()]
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([date, a]) => ({
+      date,
+      present: a.present,
+      late: a.late,
+      absent: a.absent,
+      pct: rateOf(a.present, a.late, a.absent),
+    }))
+    // Holiday-only days carry no signal, so they'd flatline the chart at 0.
+    .filter((d) => d.present + d.late + d.absent > 0);
+
+  res.json({
+    counts: { students, teachers, parents, classes: classes.length, subjects },
+    attendance: {
+      date: today.toISOString().slice(0, 10),
+      present: schoolToday.present,
+      late: schoolToday.late,
+      absent: schoolToday.absent,
+      marked: schoolToday.present + schoolToday.late + schoolToday.absent,
+      pct: rateOf(schoolToday.present, schoolToday.late, schoolToday.absent),
+      // Classes with a roster but nothing marked today — the admin's nudge list.
+      classesPending: classRows.filter((c) => c.students > 0 && c.marked === 0).length,
+      byClass: classRows,
+      trend,
+    },
+    pendingLeaves,
+    upcomingEvents: upcomingEvents.map(eventView),
+    recentNotices: recentNotices.map((n) => ({
+      ...noticeView(n),
+      totalParents: schoolParents,
+    })),
+  });
+}));
+
 // --- Events ---
 const eventSchema = z.object({
   title: z.string().min(1),

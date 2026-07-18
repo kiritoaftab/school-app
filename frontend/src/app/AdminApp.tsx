@@ -21,6 +21,10 @@ import {
   updateNotice,
   deleteNotice,
   listEvents,
+  getDashboard,
+  type AdminDashboard,
+  type DashboardTrendDay,
+  type DashboardClassAttendance,
   createEvent,
   updateEvent,
   deleteEvent,
@@ -50,6 +54,7 @@ import {
   EmptyState,
   Glyph,
   PrimaryButton,
+  SectionLabel,
   Shell,
   Spinner,
   SuccessScreen,
@@ -61,14 +66,11 @@ import { AccountSheet } from "./AccountSheet";
 import {
   SCHOOL,
   GLYPH,
-  ADMIN_ACTIVITY,
   NOTICE_CATEGORIES,
-  TEACHERS,
   ADMIN_CLASSES,
   initialsOf,
   maskPhone,
   classAttendanceOf,
-  type Teacher,
   type AdminClass,
 } from "./data";
 
@@ -94,9 +96,6 @@ export function AdminApp() {
 
   const [screen, setScreen] = useState<Screen>("home");
   const [acctOpen, setAcctOpen] = useState(false);
-  const [teachers] = useState<Teacher[]>(() =>
-    JSON.parse(JSON.stringify(TEACHERS)),
-  );
   const [classes] = useState<AdminClass[]>(() =>
     JSON.parse(JSON.stringify(ADMIN_CLASSES)),
   );
@@ -115,6 +114,11 @@ export function AdminApp() {
   const [apiEvents, setApiEvents] = useState<AdminEvent[] | null>(null);
   const [eventsLoading, setEventsLoading] = useState(false);
   const [eventsError, setEventsError] = useState<string | null>(null);
+
+  // Live home dashboard (stat cards + attendance infographics).
+  const [dashboard, setDashboard] = useState<AdminDashboard | null>(null);
+  const [dashLoading, setDashLoading] = useState(false);
+  const [dashError, setDashError] = useState<string | null>(null);
 
   // Live classes & teachers from the backend.
   const [apiClasses, setApiClasses] = useState<AdminKlass[] | null>(null);
@@ -178,6 +182,18 @@ export function AdminApp() {
       setEventsError("Couldn't load events. Pull to retry.");
     } finally {
       setEventsLoading(false);
+    }
+  }, []);
+
+  const loadDashboard = useCallback(async () => {
+    setDashLoading(true);
+    setDashError(null);
+    try {
+      setDashboard(await getDashboard());
+    } catch {
+      setDashError("Couldn't load the dashboard.");
+    } finally {
+      setDashLoading(false);
     }
   }, []);
 
@@ -259,8 +275,11 @@ export function AdminApp() {
     // Compose needs classes for its audience picker.
     if (screen === "noticeCompose" && apiClasses === null) loadClasses();
     if (screen === "calendar" && apiEvents === null) loadEvents();
+    if (screen === "home" && dashboard === null) loadDashboard();
   }, [
     screen,
+    dashboard,
+    loadDashboard,
     apiClasses,
     loadClasses,
     apiSubjects,
@@ -415,10 +434,10 @@ export function AdminApp() {
       {screen === "home" && (
         <AdminHome
           name={name}
-          teachers={teachers}
-          classes={classes}
-          schoolStudents={schoolTotal}
-          schoolPct={schoolPct}
+          data={dashboard}
+          loading={dashLoading}
+          error={dashError}
+          onRetry={loadDashboard}
           go={go}
           openAcct={() => setAcctOpen(true)}
         />
@@ -564,30 +583,179 @@ export function AdminApp() {
   );
 }
 
-// ---------- HOME ----------
+// ---------- HOME (live dashboard) ----------
+
+// Attendance series colours. Present/late/absent is a *status* palette, so the
+// hues are fixed and never reused for anything else on this screen.
+const ATT_COLORS = {
+  present: "var(--color-success)",
+  late: "var(--color-gold)",
+  absent: "var(--color-danger)",
+} as const;
+
+function greetingFor(d: Date) {
+  const h = d.getHours();
+  if (h < 12) return "Good morning";
+  if (h < 17) return "Good afternoon";
+  return "Good evening";
+}
+
+/** "2026-07-18" → "Fri 18". Dates are plain day keys, so parse them as UTC. */
+function weekdayLabel(key: string) {
+  const d = new Date(`${key}T00:00:00.000Z`);
+  const wd = d.toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" });
+  return `${wd} ${d.getUTCDate()}`;
+}
+
+/**
+ * Today's present/late/absent split as one stacked bar. Segments are separated
+ * by a 2px surface gap and every segment is directly labelled below, so the
+ * split is never carried by colour alone.
+ */
+function AttendanceSplit({
+  present,
+  late,
+  absent,
+}: {
+  present: number;
+  late: number;
+  absent: number;
+}) {
+  const total = present + late + absent;
+  const segments = [
+    { key: "present", label: "Present", n: present },
+    { key: "late", label: "Late", n: late },
+    { key: "absent", label: "Absent", n: absent },
+  ] as const;
+  return (
+    <div>
+      <div className="flex gap-[2px] h-2.5 mb-3">
+        {segments
+          .filter((s) => s.n > 0)
+          .map((s) => (
+            <div
+              key={s.key}
+              className="first:rounded-l-[4px] last:rounded-r-[4px] h-full"
+              style={{
+                width: `${(s.n / total) * 100}%`,
+                background: ATT_COLORS[s.key],
+              }}
+            />
+          ))}
+      </div>
+      <div className="flex gap-4">
+        {segments.map((s) => (
+          <div key={s.key} className="flex items-center gap-[6px]">
+            <span
+              className="w-2 h-2 rounded-full flex-none"
+              style={{ background: ATT_COLORS[s.key] }}
+            />
+            <span className="text-[11px] text-muted font-semibold">
+              {s.label}
+            </span>
+            <b className="text-[11.5px] text-ink">{s.n}</b>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Attendance rate across the last school days. One series, so no legend — only
+ * the most recent bar is labelled, keeping the row readable at phone width.
+ */
+function AttendanceTrend({ trend }: { trend: DashboardTrendDay[] }) {
+  const last = trend[trend.length - 1];
+  return (
+    <div>
+      <div className="relative h-[74px] flex items-end gap-[2px]">
+        {/* 100% reference — recessive, so the bars stay the figure. */}
+        <div className="absolute inset-x-0 top-0 border-t border-dashed border-line" />
+        {trend.map((d) => (
+          <div
+            key={d.date}
+            className="flex-1 rounded-t-[4px] min-h-[2px]"
+            style={{
+              height: `${d.pct}%`,
+              background:
+                d === last ? "var(--color-green)" : "var(--color-mist)",
+            }}
+            title={`${weekdayLabel(d.date)} · ${d.pct}%`}
+          />
+        ))}
+      </div>
+      <div className="flex justify-between mt-1.5 text-[10px] text-muted font-semibold">
+        <span>{weekdayLabel(trend[0].date)}</span>
+        <span className="text-green">
+          {weekdayLabel(last.date)} · {last.pct}%
+        </span>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Per-class attendance today. Classes nobody has marked yet read as "Not
+ * marked" rather than a 0% bar — 0% would wrongly mean everyone was absent.
+ */
+function ClassAttendanceBars({ rows }: { rows: DashboardClassAttendance[] }) {
+  return (
+    <div className="flex flex-col gap-2.5">
+      {rows.map((c) => (
+        <div key={c.id} className="flex items-center gap-2.5">
+          <span className="w-[64px] text-[11.5px] font-bold text-green flex-none truncate">
+            {c.label}
+          </span>
+          <div className="flex-1 h-2 rounded-[4px] bg-mist overflow-hidden">
+            {c.marked > 0 && (
+              <div
+                className="h-full rounded-[4px] bg-green"
+                style={{ width: `${c.pct}%` }}
+              />
+            )}
+          </div>
+          <span
+            className={cx(
+              "w-[66px] text-right text-[11px] font-semibold flex-none",
+              c.marked > 0 ? "text-ink" : "text-muted",
+            )}
+          >
+            {c.marked > 0 ? `${c.pct}%` : "Not marked"}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function AdminHome({
   name,
-  teachers,
-  classes,
-  schoolStudents,
-  schoolPct,
+  data,
+  loading,
+  error,
+  onRetry,
   go,
   openAcct,
 }: {
   name: string;
-  teachers: Teacher[];
-  classes: AdminClass[];
-  schoolStudents: number;
-  schoolPct: number;
+  data: AdminDashboard | null;
+  loading: boolean;
+  error: string | null;
+  onRetry: () => void;
   go: (s: Screen) => void;
   openAcct: () => void;
 }) {
-  const pending = teachers.filter((t) => t.status === "invited").length;
+  const att = data?.attendance;
   const stats: { n: string; label: string; to: Screen }[] = [
-    { n: String(schoolStudents), label: "Students", to: "classes" },
-    { n: String(teachers.length), label: "Teachers", to: "staff" },
-    { n: String(classes.length), label: "Classes", to: "classes" },
-    { n: `${schoolPct}%`, label: "Present today", to: "adminAtt" },
+    { n: String(data?.counts.students ?? "—"), label: "Students", to: "classes" },
+    { n: String(data?.counts.teachers ?? "—"), label: "Teachers", to: "staff" },
+    { n: String(data?.counts.classes ?? "—"), label: "Classes", to: "classes" },
+    {
+      n: att && att.marked > 0 ? `${att.pct}%` : "—",
+      label: "Present today",
+      to: "adminAtt",
+    },
   ];
   return (
     <div className="px-[15px] pt-4 pb-6">
@@ -613,9 +781,28 @@ function AdminHome({
           </span>
         </div>
         <div className="ml-auto font-serif text-[16px] text-green">
-          Good morning
+          {greetingFor(new Date())}
         </div>
       </div>
+
+      {loading && data === null && (
+        <div className="py-10">
+          <Spinner />
+        </div>
+      )}
+
+      {error && data === null && !loading && (
+        <Card className="p-5 text-center mb-3">
+          <div className="text-[12.5px] text-danger mb-3">{error}</div>
+          <button
+            onClick={onRetry}
+            className="px-4 py-2 rounded-[11px] bg-green text-white font-semibold text-[12.5px]"
+          >
+            Retry
+          </button>
+        </Card>
+      )}
+
       <div className="grid grid-cols-2 gap-2.5 mb-3">
         {stats.map((s) => (
           <Card key={s.label} onClick={() => go(s.to)} className="p-[15px]">
@@ -628,6 +815,72 @@ function AdminHome({
           </Card>
         ))}
       </div>
+
+      {att && (
+        <Card className="p-[15px] mb-3">
+          <SectionLabel right={weekdayLabel(att.date)}>
+            Attendance today
+          </SectionLabel>
+          {att.marked > 0 ? (
+            <>
+              <div className="flex items-baseline gap-2 mb-3">
+                <span className="font-serif text-[32px] leading-none text-green">
+                  {att.pct}%
+                </span>
+                <span className="text-[11.5px] text-muted font-semibold">
+                  {att.present + att.late} of {att.marked} in school
+                </span>
+              </div>
+              <AttendanceSplit
+                present={att.present}
+                late={att.late}
+                absent={att.absent}
+              />
+            </>
+          ) : (
+            <div className="text-[12px] text-muted leading-[1.5] py-1">
+              No attendance marked yet today.
+            </div>
+          )}
+          {att.classesPending > 0 && (
+            <div className="mt-3 pt-3 border-t border-line text-[11.5px] text-muted">
+              <b className="text-ink">{att.classesPending}</b>{" "}
+              {att.classesPending === 1 ? "class hasn't" : "classes haven't"}{" "}
+              marked attendance yet.
+            </div>
+          )}
+        </Card>
+      )}
+
+      {att && att.trend.length > 1 && (
+        <Card className="p-[15px] mb-3">
+          <SectionLabel>Attendance · last school days</SectionLabel>
+          <AttendanceTrend trend={att.trend} />
+        </Card>
+      )}
+
+      {att && att.byClass.length > 0 && (
+        <Card className="p-[15px] mb-3">
+          <SectionLabel>Today by class</SectionLabel>
+          <ClassAttendanceBars rows={att.byClass} />
+        </Card>
+      )}
+
+      {data && data.pendingLeaves > 0 && (
+        <Card className="p-[15px] mb-3 flex items-center gap-[13px]">
+          <div className="w-11 h-11 rounded-[14px] bg-[#fbf3e2] grid place-items-center flex-none text-[#a9761b]">
+            <Glyph d={GLYPH.diary} size={21} stroke={1.9} />
+          </div>
+          <div className="flex-1">
+            <b className="font-serif text-[19px] font-normal block leading-[1.1]">
+              {data.pendingLeaves} leave{" "}
+              {data.pendingLeaves === 1 ? "request" : "requests"}
+            </b>
+            <small className="text-muted text-[11.5px]">Awaiting review</small>
+          </div>
+        </Card>
+      )}
+
       <div
         onClick={() => go("staff")}
         className="bg-green text-white rounded-[20px] p-[15px] mb-3 flex items-center gap-[13px] cursor-pointer"
@@ -640,7 +893,8 @@ function AdminHome({
             Manage staff
           </b>
           <small className="text-[#cfe0d6] text-[11.5px]">
-            {teachers.length} teachers · {pending} invite pending
+            {data?.counts.teachers ?? 0} teachers ·{" "}
+            {data?.counts.subjects ?? 0} subjects
           </small>
         </div>
         <span className="text-[#9fc0ad]">
@@ -659,34 +913,76 @@ function AdminHome({
             Classes &amp; students
           </b>
           <small className="text-muted text-[11.5px]">
-            {classes.length} classes · add, view &amp; assign
+            {data?.counts.classes ?? 0} classes · {data?.counts.students ?? 0}{" "}
+            students
           </small>
         </div>
         <span className="text-[#c3ccc5]">
           <Glyph d={GLYPH.chevronRight} size={18} stroke={2} />
         </span>
       </Card>
-      <Card className="p-[15px]">
-        <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-1">
-          Recent activity
-        </div>
-        {ADMIN_ACTIVITY.map((a, i) => (
-          <div
-            key={i}
-            className="flex gap-[11px] items-center py-2.5 border-t border-line"
-          >
-            <span
-              className="w-2 h-2 rounded-full flex-none"
-              style={{ background: a.dot }}
-            />
-            <div className="flex-1">
-              <b className="text-[12.5px] font-semibold block">{a.title}</b>
-              <small className="text-[11px] text-muted">{a.sub}</small>
+      {data && data.upcomingEvents.length > 0 && (
+        <Card onClick={() => go("calendar")} className="p-[15px] mb-3">
+          <SectionLabel>Coming up</SectionLabel>
+          {data.upcomingEvents.map((e) => (
+            <div
+              key={e.id}
+              className="flex gap-[11px] items-center py-2.5 border-t border-line"
+            >
+              <span className="w-2 h-2 rounded-full flex-none bg-gold" />
+              <div className="flex-1 min-w-0">
+                <b className="text-[12.5px] font-semibold block truncate">
+                  {e.title}
+                </b>
+                {e.description && (
+                  <small className="text-[11px] text-muted block truncate">
+                    {e.description}
+                  </small>
+                )}
+              </div>
+              <span className="text-[10px] text-muted font-semibold flex-none">
+                {shortDay(e.date)}
+              </span>
             </div>
-            <span className="text-[10px] text-muted font-semibold">{a.tm}</span>
-          </div>
-        ))}
-      </Card>
+          ))}
+        </Card>
+      )}
+
+      {data && data.recentNotices.length > 0 && (
+        <Card onClick={() => go("noticeBoard")} className="p-[15px]">
+          <SectionLabel>Latest notices</SectionLabel>
+          {data.recentNotices.map((n) => {
+            const pct = n.totalParents
+              ? Math.round((n.ackCount / n.totalParents) * 100)
+              : 0;
+            return (
+              <div key={n.id} className="py-2.5 border-t border-line">
+                <div className="flex gap-[11px] items-center mb-1.5">
+                  <span
+                    className={cx(
+                      "w-2 h-2 rounded-full flex-none",
+                      n.pinned ? "bg-gold" : "bg-mist",
+                    )}
+                  />
+                  <b className="text-[12.5px] font-semibold flex-1 min-w-0 truncate">
+                    {n.title}
+                  </b>
+                  <span className="text-[10px] text-muted font-semibold flex-none">
+                    {n.ackCount}/{n.totalParents} read
+                  </span>
+                </div>
+                {/* Read-receipt meter: a share of a known whole, so one hue. */}
+                <div className="h-1.5 rounded-[4px] bg-mist overflow-hidden ml-[19px]">
+                  <div
+                    className="h-full rounded-[4px] bg-green"
+                    style={{ width: `${pct}%` }}
+                  />
+                </div>
+              </div>
+            );
+          })}
+        </Card>
+      )}
     </div>
   );
 }

@@ -249,6 +249,57 @@ export async function deleteEvent(id: number): Promise<void> {
   await api.delete(`/admin/events/${id}`);
 }
 
+// --- Dashboard (admin home) ---
+export interface DashboardClassAttendance {
+  id: number;
+  label: string;
+  students: number;
+  present: number;
+  late: number;
+  absent: number;
+  /** present + late + absent — 0 means nobody has marked this class today. */
+  marked: number;
+  pct: number;
+}
+
+export interface DashboardTrendDay {
+  date: string; // YYYY-MM-DD
+  present: number;
+  late: number;
+  absent: number;
+  pct: number;
+}
+
+export interface AdminDashboard {
+  counts: {
+    students: number;
+    teachers: number;
+    parents: number;
+    classes: number;
+    subjects: number;
+  };
+  attendance: {
+    date: string;
+    present: number;
+    late: number;
+    absent: number;
+    marked: number;
+    pct: number;
+    classesPending: number;
+    byClass: DashboardClassAttendance[];
+    /** School days only, oldest first — days with no marks aren't plotted. */
+    trend: DashboardTrendDay[];
+  };
+  pendingLeaves: number;
+  upcomingEvents: AdminEvent[];
+  recentNotices: AdminNotice[];
+}
+
+export async function getDashboard(): Promise<AdminDashboard> {
+  const { data } = await api.get<AdminDashboard>('/admin/dashboard');
+  return data;
+}
+
 // --- Subjects (school-level catalogue) ---
 export interface AdminSubject {
   id: number;
