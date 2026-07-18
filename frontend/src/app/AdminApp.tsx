@@ -840,7 +840,6 @@ function StaffAdd({
       if (klassId in t) {
         const n = { ...t };
         delete n[klassId];
-        if (ctId === klassId) setCtId("");
         return n;
       }
       return { ...t, [klassId]: [...selSubjects] };
@@ -868,7 +867,8 @@ function StaffAdd({
         ),
       }))
       .filter((a) => a.subjectIds.length > 0);
-    const classTeacherOf = ctId !== "" && ctId in teach ? ctId : null;
+    // Being a class teacher is independent of teaching a subject in that class.
+    const classTeacherOf = ctId === "" ? null : ctId;
     try {
       await createTeacher({
         name: name.trim(),
@@ -1015,21 +1015,25 @@ function StaffAdd({
         )}
       </Field>
 
-      {teachKlassIds.length > 0 && (
-        <Field label="Class teacher of">
+      {classes !== null && classes.length > 0 && (
+        <Field label="Class teacher of · optional">
           <div className="flex gap-1.5 flex-wrap">
             <Chip active={ctId === ""} onClick={() => setCtId("")}>
               Not a class teacher
             </Chip>
-            {teachKlassIds.map((id) => (
-              <Chip key={id} active={ctId === id} onClick={() => setCtId(id)}>
-                {classes?.find((c) => c.id === id)?.label ?? id}
+            {classes.map((c) => (
+              <Chip
+                key={c.id}
+                active={ctId === c.id}
+                onClick={() => setCtId(c.id)}
+              >
+                {c.label}
               </Chip>
             ))}
           </div>
           <div className="text-[11px] text-muted leading-[1.5] mt-2">
-            A teacher can lead one class as its class teacher — or none, and
-            still teach several classes.
+            Most teachers are not class teachers — leave this as is. A class
+            teacher leads one class, whether or not they teach a subject in it.
           </div>
         </Field>
       )}
