@@ -61,6 +61,7 @@ model School {
   events       Event[]
   terms        Term[]
   albums       PhotoAlbum[]
+  teachingAssignments TeachingAssignment[]
 }
 
 model User {
@@ -85,6 +86,7 @@ model User {
   leavesCreated   LeaveRequest[]      @relation("LeaveCreatedBy")
   leavesReviewed  LeaveRequest[]      @relation("LeaveReviewedBy")
   notifications   Notification[]
+  teachingAssignments TeachingAssignment[] @relation("TeacherAssignments")
 
   @@unique([schoolId, phone, role])
   @@index([phone])
@@ -136,6 +138,7 @@ model Klass {
   diaryEntries DiaryEntry[]
   notices      Notice[]
   albums       PhotoAlbum[]
+  teachingAssignments TeachingAssignment[]
 
   @@unique([schoolId, grade, section])
 }
@@ -147,9 +150,28 @@ model Subject {
   createdAt DateTime @default(now())
 
   school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  teachingAssignments TeachingAssignment[]
 
   @@unique([schoolId, name])
   @@index([schoolId])
+}
+
+model TeachingAssignment {
+  id        Int @id @default(autoincrement())
+  schoolId  Int
+  teacherId Int
+  klassId   Int
+  subjectId Int
+
+  school  School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
+  teacher User    @relation("TeacherAssignments", fields: [teacherId], references: [id], onDelete: Cascade)
+  klass   Klass   @relation(fields: [klassId], references: [id], onDelete: Cascade)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+
+  @@unique([teacherId, klassId, subjectId])
+  @@index([schoolId])
+  @@index([klassId])
+  @@index([teacherId])
 }
 
 model Enrollment {

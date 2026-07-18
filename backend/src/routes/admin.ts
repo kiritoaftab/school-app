@@ -32,6 +32,64 @@ adminRouter.post('/users', ah(async (req, res) => {
   res.status(201).json({ id: user.id, name: user.name, phone: user.phone, role: user.role });
 }));
 
+// --- Teachers (user + class/subject assignments + class-teacher, in one shot) ---
+const teacherCreateSchema = z.object({
+  name: z.string().min(1),
+  phone: z.string().min(6),
+  assignments: z
+    .array(z.object({ klassId: z.number(), subjectIds: z.array(z.number()) }))
+    .default([]),
+  classTeacherOf: z.number().nullable().optional(),
+});
+adminRouter.post('/teachers', ah(async (req, res) => {
+  const schoolId = requireSchoolId(req);
+  const data = teacherCreateSchema.parse(req.body);
+  const phone = data.phone.trim();
+
+  const exists = await prisma.user.findFirst({ where: { schoolId, phone, role: 'TEACHER' } });
+  if (exists) throw new HttpError(409, 'A teacher with this phone already exists');
+
+  // Every referenced class & subject must belong to this school.
+  const klassIds = [...new Set([
+    ...data.assignments.map((a) => a.klassId),
+    ...(data.classTeacherOf != null ? [data.classTeacherOf] : []),
+  ])];
+  const subjectIds = [...new Set(data.assignments.flatMap((a) => a.subjectIds))];
+  const [klasses, subjects] = await Promise.all([
+    klassIds.length ? prisma.klass.findMany({ where: { id: { in: klassIds }, schoolId }, select: { id: true } }) : Promise.resolve([]),
+    subjectIds.length ? prisma.subject.findMany({ where: { id: { in: subjectIds }, schoolId }, select: { id: true } }) : Promise.resolve([]),
+  ]);
+  const validKlass = new Set(klasses.map((k) => k.id));
+  const validSubject = new Set(subjects.map((s) => s.id));
+  if (klassIds.some((id) => !validKlass.has(id))) throw new HttpError(404, 'A selected class was not found in this school');
+  if (subjectIds.some((id) => !validSubject.has(id))) throw new HttpError(404, 'A selected subject was not found in this school');
+
+  // Flatten to unique (klassId, subjectId) rows.
+  const seen = new Set<string>();
+  const rows: { klassId: number; subjectId: number }[] = [];
+  for (const a of data.assignments) {
+    for (const subjectId of a.subjectIds) {
+      const key = `${a.klassId}:${subjectId}`;
+      if (!seen.has(key)) { seen.add(key); rows.push({ klassId: a.klassId, subjectId }); }
+    }
+  }
+
+  const teacher = await prisma.$transaction(async (tx) => {
+    const user = await tx.user.create({ data: { schoolId, name: data.name.trim(), phone, role: 'TEACHER' } });
+    if (rows.length) {
+      await tx.teachingAssignment.createMany({
+        data: rows.map((r) => ({ schoolId, teacherId: user.id, klassId: r.klassId, subjectId: r.subjectId })),
+      });
+    }
+    if (data.classTeacherOf != null) {
+      await tx.klass.update({ where: { id: data.classTeacherOf }, data: { classTeacherId: user.id } });
+    }
+    return user;
+  });
+
+  res.status(201).json({ id: teacher.id, name: teacher.name, phone: teacher.phone, role: teacher.role });
+}));
+
 // --- Students ---
 adminRouter.get('/students', ah(async (req, res) => {
   const schoolId = requireSchoolId(req);
