@@ -1,5 +1,5 @@
 -- CreateTable
-CREATE TABLE `Subject` (
+CREATE TABLE `Subject` IF NOT EXISTS (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `schoolId` INTEGER NOT NULL,
     `name` VARCHAR(191) NOT NULL,
@@ -11,7 +11,7 @@ CREATE TABLE `Subject` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
-CREATE TABLE `TeachingAssignment` (
+CREATE TABLE `TeachingAssignment` IF NOT EXISTS (
     `id` INTEGER NOT NULL AUTO_INCREMENT,
     `schoolId` INTEGER NOT NULL,
     `teacherId` INTEGER NOT NULL,
