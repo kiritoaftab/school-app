@@ -63,7 +63,8 @@ export function TeacherApp() {
   const [attAbs, setAttAbs] = useState<Record<string, Record<string, boolean>>>({ '5B': {}, '5A': {}, '6A': {} });
   const [regSaved, setRegSaved] = useState(false);
 
-  const [classDiary, setClassDiary] = useState<ClassDiary>(() => JSON.parse(JSON.stringify(CLASS_DIARY)));
+  // Read-only now that the diary screen is live — TeacherHome still reads it for its mock counts.
+  const [classDiary] = useState<ClassDiary>(() => JSON.parse(JSON.stringify(CLASS_DIARY)));
   const [teDate, setTeDate] = useState(TODAY_DATE);
 
   const [teExam, setTeExam] = useState('ut3');

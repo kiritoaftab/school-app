@@ -26,3 +26,5 @@
 2026-07-18 18:01:22 | WRITE  | backend/probe.ts                         |   18 |    +11 | 
 2026-07-18 18:02:12 | WRITE  | backend/probe.ts                         |   16 |     -2 | 
 2026-07-18 18:02:13 | REMOVE | backend/probe.ts                         |    0 |    -16 | 
+2026-07-18 18:05:54 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |   -966 | 
+2026-07-18 18:05:54 | CREATE | frontend/src/app/TeacherApp.tsx          |  967 |   +967 | dirty
