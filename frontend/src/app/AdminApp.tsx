@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import {
-  listClasses, listTeachers, createClass,
+  listClasses, listTeachers, createClass, createTeacher,
   listSubjects, createSubject, updateSubject, deleteSubject,
   type AdminKlass, type AdminTeacher, type AdminSubject,
 } from '../api/admin';
@@ -15,7 +15,7 @@ import {
 } from './SharedScreens';
 import { AccountSheet } from './AccountSheet';
 import {
-  SCHOOL, GLYPH, NOTICES, ADMIN_ACTIVITY, ALL_SUBJECTS, NOTICE_CATEGORIES,
+  SCHOOL, GLYPH, NOTICES, ADMIN_ACTIVITY, NOTICE_CATEGORIES,
   TEACHERS, ADMIN_CLASSES, DEFAULT_CLASS_SUBJECTS, DEFAULT_CLASS_EXAMS,
   subjectsOf, teachOf, initialsOf, maskPhone, classAttendanceOf,
   type Teacher, type AdminClass, type Notice, type ClassExam,
@@ -34,7 +34,7 @@ export function AdminApp() {
   const [teachers, setTeachers] = useState<Teacher[]>(() => JSON.parse(JSON.stringify(TEACHERS)));
   const [classes, setClasses] = useState<AdminClass[]>(() => JSON.parse(JSON.stringify(ADMIN_CLASSES)));
   const [notices, setNotices] = useState<Notice[]>(NOTICES);
-  const [activeTeacherId, setActiveTeacherId] = useState('rao');
+  const [activeTeacherId, setActiveTeacherId] = useState<number | null>(null);
   const [activeClassId] = useState('5-B');
   const [activeNoticeId, setActiveNoticeId] = useState('ptm');
   const [attClassId, setAttClassId] = useState('5-B');
@@ -42,11 +42,13 @@ export function AdminApp() {
   const [classSubjects, setClassSubjects] = useState<Record<string, string[]>>({});
   const [classExams, setClassExams] = useState<Record<string, ClassExam[]>>({});
 
-  // Live classes & teachers from the backend (Classes list + Add Class flow).
+  // Live classes & teachers from the backend.
   const [apiClasses, setApiClasses] = useState<AdminKlass[] | null>(null);
-  const [apiTeachers, setApiTeachers] = useState<AdminTeacher[]>([]);
+  const [apiTeachers, setApiTeachers] = useState<AdminTeacher[] | null>(null);
   const [classesLoading, setClassesLoading] = useState(false);
   const [classesError, setClassesError] = useState<string | null>(null);
+  const [staffLoading, setStaffLoading] = useState(false);
+  const [staffError, setStaffError] = useState<string | null>(null);
   // Live school-level subject catalogue.
   const [apiSubjects, setApiSubjects] = useState<AdminSubject[] | null>(null);
 
@@ -54,13 +56,23 @@ export function AdminApp() {
     setClassesLoading(true);
     setClassesError(null);
     try {
-      const [cls, tch] = await Promise.all([listClasses(), listTeachers()]);
-      setApiClasses(cls);
-      setApiTeachers(tch);
+      setApiClasses(await listClasses());
     } catch {
       setClassesError("Couldn't load classes. Pull to retry.");
     } finally {
       setClassesLoading(false);
+    }
+  }, []);
+
+  const loadTeachers = useCallback(async () => {
+    setStaffLoading(true);
+    setStaffError(null);
+    try {
+      setApiTeachers(await listTeachers());
+    } catch {
+      setStaffError("Couldn't load staff. Pull to retry.");
+    } finally {
+      setStaffLoading(false);
     }
   }, []);
 
@@ -72,18 +84,19 @@ export function AdminApp() {
     }
   }, []);
 
-  // Load whenever the admin lands on the Classes or Add-Class screens.
+  // Load live data whenever the admin lands on a screen that needs it.
   useEffect(() => {
-    if (screen === 'classes' || screen === 'classAdd') {
-      if (apiClasses === null) loadClasses();
-    }
-    if ((screen === 'classes' || screen === 'classAdd') && apiSubjects === null) loadSubjects();
-  }, [screen, apiClasses, loadClasses, apiSubjects, loadSubjects]);
+    // Add-Teacher needs live classes + subjects to build its assignment picker.
+    if ((screen === 'classes' || screen === 'classAdd' || screen === 'staffAdd') && apiClasses === null) loadClasses();
+    if ((screen === 'classes' || screen === 'classAdd' || screen === 'staffAdd') && apiSubjects === null) loadSubjects();
+    // Staff screens need teachers; Add-Class needs them for the class-teacher picker.
+    if ((screen === 'staff' || screen === 'staffDetail' || screen === 'classAdd') && apiTeachers === null) loadTeachers();
+  }, [screen, apiClasses, loadClasses, apiSubjects, loadSubjects, apiTeachers, loadTeachers]);
 
   const name = user?.name ?? 'Sridevi Menon';
   const teacherName = (id: string) => teachers.find((t) => t.id === id)?.name ?? '';
   const activeClass = classes.find((c) => c.id === activeClassId) || classes[0];
-  const activeTeacher = teachers.find((t) => t.id === activeTeacherId) || teachers[0];
+  const activeApiTeacher = apiTeachers?.find((t) => t.id === activeTeacherId) ?? null;
 
   // Attendance aggregates (simulated) for the admin overview.
   const classAtt = classes.map((c) => ({ id: c.id, label: c.label, ...classAttendanceOf(c.students) }));
@@ -101,7 +114,7 @@ export function AdminApp() {
   let sub: string | undefined = `${name.toUpperCase()} · ADMIN`;
   const M: Record<string, [string, string]> = {
     staff: ['Staff', 'MANAGE TEACHERS'],
-    staffAdd: ['Add Teacher', 'SEND AN INVITE'],
+    staffAdd: ['Add Teacher', 'ADD TO STAFF'],
     classes: ['Classes', 'ALL CLASSES'],
     classAdd: ['Add', 'CLASS OR SUBJECT'],
     adminAtt: ['Attendance', 'TODAY · ALL CLASSES'],
@@ -111,7 +124,7 @@ export function AdminApp() {
     notifs: ['Notifications', SCHOOL.toUpperCase()],
   };
   if (M[screen]) { [title, sub] = M[screen]; }
-  else if (screen === 'staffDetail') { title = 'Teacher'; sub = (subjectsOf(activeTeacher)[0] || 'STAFF').toUpperCase(); }
+  else if (screen === 'staffDetail') { title = activeApiTeacher?.name ?? 'Teacher'; sub = 'TEACHER'; }
   else if (screen === 'classDetail') { title = activeClass.label; sub = activeClass.ctId ? `CLASS TEACHER · ${teacherName(activeClass.ctId).toUpperCase()}` : 'NO CLASS TEACHER'; }
   else if (screen === 'adminAttClass') { title = attClass.label; sub = `${attClass.present} / ${attClass.total} PRESENT`; }
   else if (screen === 'notice') { title = 'Notice'; sub = (notices.find((n) => n.id === activeNoticeId)?.from ?? '').toUpperCase(); }
@@ -138,29 +151,6 @@ export function AdminApp() {
     { key: 'calendar', label: 'Calendar', glyph: GLYPH.calendar, to: 'calendar' },
   ].map((t) => ({ key: t.key, label: t.label, glyph: t.glyph, active: activeKey === t.key, onClick: () => go(t.to as Screen) }));
 
-  // ---- teacher/class mutations ----
-  function makeCt(cid: string) {
-    const tid = activeTeacherId;
-    const isCt = activeTeacher.ct === cid;
-    setTeachers((ts) => ts.map((t) => {
-      if (t.id === tid) return { ...t, classes: t.classes.includes(cid) ? t.classes : [...t.classes, cid], ct: isCt ? '' : cid };
-      return !isCt && t.ct === cid ? { ...t, ct: '' } : t;
-    }));
-    setClasses((cs) => cs.map((c) => (c.id === cid ? { ...c, ctId: isCt ? '' : tid } : c)));
-  }
-  function unassign(cid: string) {
-    const tid = activeTeacherId;
-    setTeachers((ts) => ts.map((t) => (t.id === tid ? { ...t, classes: t.classes.filter((c) => c !== cid), ct: t.ct === cid ? '' : t.ct } : t)));
-    setClasses((cs) => cs.map((c) => (c.id === cid && c.ctId === tid ? { ...c, ctId: '' } : c)));
-  }
-  function assign(cid: string) {
-    const tid = activeTeacherId;
-    setTeachers((ts) => ts.map((t) => (t.id === tid && !t.classes.includes(cid) ? { ...t, classes: [...t.classes, cid] } : t)));
-  }
-  function toggleStatus() {
-    setTeachers((ts) => ts.map((t) => (t.id === activeTeacherId ? { ...t, status: t.status === 'active' ? 'inactive' : 'active' } : t)));
-  }
-
   return (
     <Shell
       header={<AppHeader title={title} sub={sub} onBack={onBack} onAccount={() => setAcctOpen(true)} onBell={() => go('notifs')} brand={user?.school?.name} logo={user?.school?.logo} />}
@@ -168,9 +158,9 @@ export function AdminApp() {
       overlays={<AccountSheet open={acctOpen} onClose={() => setAcctOpen(false)} name={name} phone={user?.phone ?? '9800011122'} roleLabel="Admin" onSignOut={() => { logout(); navigate('/login'); }} />}
     >
       {screen === 'home' && <AdminHome name={name} teachers={teachers} classes={classes} schoolStudents={schoolTotal} schoolPct={schoolPct} go={go} openAcct={() => setAcctOpen(true)} />}
-      {screen === 'staff' && <StaffList teachers={teachers} onAdd={() => go('staffAdd')} onOpen={(id) => { setActiveTeacherId(id); go('staffDetail'); }} />}
-      {screen === 'staffDetail' && <StaffDetail teacher={activeTeacher} classes={classes} teacherName={teacherName} onMakeCt={makeCt} onUnassign={unassign} onAssign={assign} onToggleStatus={toggleStatus} />}
-      {screen === 'staffAdd' && <StaffAdd classes={classes} onSent={(t) => { setTeachers((ts) => [...ts, t]); }} onDone={() => go('staff')} />}
+      {screen === 'staff' && <StaffList teachers={apiTeachers} loading={staffLoading} error={staffError} onRetry={loadTeachers} onAdd={() => go('staffAdd')} onOpen={(id) => { setActiveTeacherId(id); go('staffDetail'); }} />}
+      {screen === 'staffDetail' && <StaffDetail teacher={activeApiTeacher} classes={apiClasses} />}
+      {screen === 'staffAdd' && <StaffAdd subjects={apiSubjects} classes={apiClasses} onCreated={async () => { setApiClasses(null); await loadTeachers(); go('staff'); }} />}
       {screen === 'classes' && <ClassesList classes={apiClasses} subjects={apiSubjects} loading={classesLoading} error={classesError} onRetry={loadClasses} onAdd={() => go('classAdd')} />}
       {screen === 'classDetail' && (
         <ClassDetail
@@ -184,7 +174,7 @@ export function AdminApp() {
       {screen === 'adminAttClass' && <AdminAttendanceClass att={attClass} />}
       {screen === 'classAdd' && (
         <ClassOrSubjectAdd
-          teachers={apiTeachers}
+          teachers={apiTeachers ?? []}
           onClassCreated={async () => { await loadClasses(); go('classes'); }}
           subjects={apiSubjects}
           onSubjectsChanged={loadSubjects}
@@ -247,147 +237,172 @@ function AdminHome({ name, teachers, classes, schoolStudents, schoolPct, go, ope
   );
 }
 
-// ---------- STAFF LIST ----------
-function StaffList({ teachers, onAdd, onOpen }: { teachers: Teacher[]; onAdd: () => void; onOpen: (id: string) => void }) {
+// ---------- STAFF LIST (live) ----------
+function StaffList({ teachers, loading, error, onRetry, onAdd, onOpen }: {
+  teachers: AdminTeacher[] | null; loading: boolean; error: string | null;
+  onRetry: () => void; onAdd: () => void; onOpen: (id: number) => void;
+}) {
   return (
     <div className="px-[15px] py-4 pb-6">
       <button onClick={onAdd} className="w-full mb-3.5 py-3 rounded-[14px] bg-green text-white font-semibold text-[13px] flex items-center justify-center gap-[7px]"><Glyph d={GLYPH.plus} size={17} stroke={2} />Add a teacher</button>
-      <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-2.5">{teachers.length} teachers</div>
-      {teachers.map((t) => {
-        const line = `${subjectsOf(t).join(', ')} · ${t.classes.length ? t.classes.length + (t.classes.length > 1 ? ' classes' : ' class') : 'No class yet'}${t.ct ? ' · CT ' + t.ct : ''}`;
-        return (
-          <Card key={t.id} onClick={() => onOpen(t.id)} className="p-[13px] mb-2.25 flex gap-3 items-center">
-            <div className="w-10 h-10 rounded-xl grid place-items-center text-green font-bold text-[13px] flex-none" style={{ background: 'linear-gradient(140deg,#d7e4da,#a7c4b4)' }}>{t.initials}</div>
-            <div className="flex-1 min-w-0"><b className="text-[13.5px] font-semibold block">{t.name}</b><small className="text-[11px] text-muted">{line}</small></div>
-            {t.status === 'invited' && <span className="text-[9.5px] font-bold text-[#8a6d1f] bg-gold-soft px-2 py-1 rounded-[7px] flex-none">INVITED</span>}
-            <span className="text-[#c3ccc5] flex-none"><Glyph d={GLYPH.chevronRight} size={17} stroke={2.2} /></span>
-          </Card>
-        );
-      })}
+
+      {loading && teachers === null && <div className="py-10"><Spinner /></div>}
+
+      {error && teachers === null && !loading && (
+        <Card className="p-5 text-center">
+          <div className="text-[12.5px] text-danger mb-3">{error}</div>
+          <button onClick={onRetry} className="px-4 py-2 rounded-[11px] bg-green text-white font-semibold text-[12.5px]">Retry</button>
+        </Card>
+      )}
+
+      {teachers !== null && (
+        <>
+          <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-2.5">{teachers.length} {teachers.length === 1 ? 'teacher' : 'teachers'}</div>
+          {teachers.length === 0 ? (
+            <EmptyState icon={GLYPH.staff} title="No teachers yet">Add your first teacher — they'll sign in with their mobile and a one-time code.</EmptyState>
+          ) : (
+            teachers.map((t) => (
+              <Card key={t.id} onClick={() => onOpen(t.id)} className="p-[13px] mb-2.25 flex gap-3 items-center">
+                <div className="w-10 h-10 rounded-xl grid place-items-center text-green font-bold text-[13px] flex-none" style={{ background: 'linear-gradient(140deg,#d7e4da,#a7c4b4)' }}>{initialsOf(t.name)}</div>
+                <div className="flex-1 min-w-0"><b className="text-[13.5px] font-semibold block">{t.name}</b><small className="text-[11px] text-muted">{maskPhone(t.phone)} · login mobile</small></div>
+                <span className="text-[#c3ccc5] flex-none"><Glyph d={GLYPH.chevronRight} size={17} stroke={2.2} /></span>
+              </Card>
+            ))
+          )}
+        </>
+      )}
     </div>
   );
 }
 
-// ---------- STAFF DETAIL ----------
-function StaffDetail({
-  teacher, classes, teacherName, onMakeCt, onUnassign, onAssign, onToggleStatus,
-}: {
-  teacher: Teacher; classes: AdminClass[]; teacherName: (id: string) => string;
-  onMakeCt: (cid: string) => void; onUnassign: (cid: string) => void; onAssign: (cid: string) => void; onToggleStatus: () => void;
-}) {
-  void teacherName;
-  const statusLabel = teacher.status === 'active' ? 'Active' : teacher.status === 'invited' ? 'Invite pending' : 'Inactive';
-  const available = classes.filter((c) => !teacher.classes.includes(c.id));
-  const teach = teachOf(teacher);
+// ---------- STAFF DETAIL (live, read-only) ----------
+function StaffDetail({ teacher, classes }: { teacher: AdminTeacher | null; classes: AdminKlass[] | null }) {
+  if (!teacher) return <div className="px-[15px] py-10"><Spinner /></div>;
+  const ctClasses = (classes ?? []).filter((c) => c.classTeacherId === teacher.id);
   return (
     <div className="px-[15px] py-4 pb-6">
       <Card className="p-[18px] mb-3 text-center">
-        <div className="w-[60px] h-[60px] rounded-[18px] grid place-items-center text-green font-bold text-[19px] mx-auto mb-3" style={{ background: 'linear-gradient(140deg,#d7e4da,#a7c4b4)' }}>{teacher.initials}</div>
+        <div className="w-[60px] h-[60px] rounded-[18px] grid place-items-center text-green font-bold text-[19px] mx-auto mb-3" style={{ background: 'linear-gradient(140deg,#d7e4da,#a7c4b4)' }}>{initialsOf(teacher.name)}</div>
         <h3 className="font-serif text-[23px] mb-[3px]">{teacher.name}</h3>
-        <div className="text-[12px] text-muted font-semibold">{subjectsOf(teacher).join(', ')} · {statusLabel}</div>
-        {teacher.phone && <div className="text-[11.5px] text-muted mt-1.5">{maskPhone(teacher.phone)} · login mobile</div>}
+        <div className="text-[12px] text-muted font-semibold">Teacher</div>
+        <div className="text-[11.5px] text-muted mt-1.5">{maskPhone(teacher.phone)} · login mobile</div>
       </Card>
-      <Card className="p-[15px] mb-3">
-        <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-2.75">Assigned classes</div>
-        {teacher.classes.length > 0 ? (
-          <div className="flex flex-col gap-2 mb-3">
-            {teacher.classes.map((cid) => {
-              const ac = classes.find((c) => c.id === cid);
-              const isCt = teacher.ct === cid;
-              const subs = teach[cid] || [];
-              return (
-                <div key={cid} className="flex items-center gap-2.5 px-3 py-2.25 border-[1.5px] border-line rounded-[13px]">
-                  <div className="flex-1 min-w-0"><b className="text-[13px] font-bold block">{ac?.label ?? cid}</b><small className="text-[10.5px] text-muted">{subs.length ? subs.join(', ') : 'No subject set'}</small></div>
-                  <button onClick={() => onMakeCt(cid)} className={cx('px-2.5 py-1.5 rounded-[9px] text-[10.5px] font-bold border-[1.5px] flex-none', isCt ? 'border-green bg-green text-white' : 'border-[#dbe5db] bg-white text-green')}>{isCt ? 'Class teacher ✓' : 'Make CT'}</button>
-                  <button onClick={() => onUnassign(cid)} className="w-7 h-7 rounded-[9px] bg-[#f6ecec] text-danger text-[16px] font-bold flex-none">×</button>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="text-[12.5px] text-muted pt-0.5 pb-3">No classes assigned yet.</div>
-        )}
-        <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-2">Assign a class</div>
-        {available.length > 0 ? (
+      <Card className="p-[15px]">
+        <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-2.75">Class teacher of</div>
+        {ctClasses.length > 0 ? (
           <div className="flex gap-1.5 flex-wrap">
-            {available.map((c) => (
-              <button key={c.id} onClick={() => onAssign(c.id)} className="inline-flex items-center gap-1.5 text-[12px] font-semibold text-green bg-mist border-[1.5px] border-[#dbe5db] px-3 py-2 rounded-[11px]">+ {c.label}</button>
+            {ctClasses.map((c) => (
+              <span key={c.id} className="text-[12px] font-semibold text-green bg-mist rounded-[10px] px-3 py-1.5 flex items-center gap-1.5"><Glyph d={GLYPH.classes} size={14} stroke={1.9} />{c.label}</span>
             ))}
           </div>
         ) : (
-          <div className="text-[12.5px] text-muted">This teacher is in every class.</div>
+          <div className="text-[12.5px] text-muted">Not a class teacher yet. Assign this teacher when creating a class.</div>
         )}
       </Card>
-      <button onClick={onToggleStatus} className={cx('w-full py-3 rounded-[14px] font-semibold text-[13.5px] mb-2.25', teacher.status === 'active' ? 'bg-[#f6ecec] text-danger' : 'bg-green text-white')}>{teacher.status === 'active' ? 'Deactivate account' : 'Activate account'}</button>
-      <div className="text-center text-[11px] text-muted leading-[1.4]">Class &amp; subject assignments sync to the teacher's app instantly.</div>
+      <div className="text-center text-[11px] text-muted leading-[1.5] mt-3">They sign in with their mobile and a one-time code — no password to set up.</div>
     </div>
   );
 }
 
-// ---------- STAFF ADD ----------
-function StaffAdd({ classes, onSent, onDone }: { classes: AdminClass[]; onSent: (t: Teacher) => void; onDone: () => void }) {
+// ---------- STAFF ADD (live) ----------
+function StaffAdd({ subjects, classes, onCreated }: {
+  subjects: AdminSubject[] | null; classes: AdminKlass[] | null; onCreated: () => void | Promise<void>;
+}) {
   const [sent, setSent] = useState(false);
-  const [invitedName, setInvitedName] = useState('');
-  const [ntName, setNtName] = useState('');
-  const [ntPhone, setNtPhone] = useState('');
-  const [ntSubjects, setNtSubjects] = useState<string[]>([]);
-  const [ntTeach, setNtTeach] = useState<Record<string, string[]>>({});
-  const [ntCt, setNtCt] = useState('');
+  const [addedName, setAddedName] = useState('');
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  // Subjects the teacher teaches (subject ids), then which of those in which class.
+  const [selSubjects, setSelSubjects] = useState<number[]>([]);
+  const [teach, setTeach] = useState<Record<number, number[]>>({});
+  const [ctId, setCtId] = useState<number | ''>('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const phoneDigits = ntPhone.replace(/\D/g, '');
-  const ready = ntName.trim().length > 0 && phoneDigits.length === 10 && ntSubjects.length > 0;
+  const phoneDigits = phone.replace(/\D/g, '');
+  const ready = name.trim().length > 0 && phoneDigits.length === 10 && !submitting;
+  const subjName = (id: number) => subjects?.find((s) => s.id === id)?.name ?? '';
+  const teachKlassIds = Object.keys(teach).map(Number);
 
-  function toggleSubject(s: string) {
-    setNtSubjects((v) => (v.includes(s) ? v.filter((x) => x !== s) : [...v, s]));
+  function toggleSubject(id: number) {
+    const removing = selSubjects.includes(id);
+    setSelSubjects((v) => (removing ? v.filter((x) => x !== id) : [...v, id]));
+    if (removing) {
+      // Drop the de-selected subject from every per-class selection too.
+      setTeach((t) => {
+        const n: Record<number, number[]> = {};
+        for (const k of Object.keys(t).map(Number)) n[k] = (t[k] || []).filter((s) => s !== id);
+        return n;
+      });
+    }
   }
-  function toggleClassTeach(cid: string) {
-    setNtTeach((t) => {
-      if (cid in t) { const n = { ...t }; delete n[cid]; if (ntCt === cid) setNtCt(''); return n; }
-      return { ...t, [cid]: [...ntSubjects] };
+  function toggleClassTeach(klassId: number) {
+    setTeach((t) => {
+      if (klassId in t) { const n = { ...t }; delete n[klassId]; if (ctId === klassId) setCtId(''); return n; }
+      return { ...t, [klassId]: [...selSubjects] };
     });
   }
-  function toggleClassSubj(cid: string, su: string) {
-    setNtTeach((t) => {
-      const cur = (t[cid] || []).slice();
-      const i = cur.indexOf(su);
-      if (i >= 0) cur.splice(i, 1); else cur.push(su);
-      return { ...t, [cid]: cur };
+  function toggleClassSubj(klassId: number, subjectId: number) {
+    setTeach((t) => {
+      const cur = (t[klassId] || []).slice();
+      const i = cur.indexOf(subjectId);
+      if (i >= 0) cur.splice(i, 1); else cur.push(subjectId);
+      return { ...t, [klassId]: cur };
     });
   }
-  function send() {
+
+  async function send() {
     if (!ready) return;
-    const name = ntName.trim();
-    const teach: Record<string, string[]> = {};
-    Object.keys(ntTeach).forEach((c) => { const subs = (ntTeach[c] || []).filter((s) => ntSubjects.includes(s)); if (subs.length) teach[c] = subs; });
-    const clsList = Object.keys(teach);
-    const ct = ntCt && clsList.includes(ntCt) ? ntCt : '';
-    onSent({ id: 'nt' + Date.now(), name, initials: initialsOf(name), subject: ntSubjects.join(', '), subjects: ntSubjects, phone: phoneDigits, classes: clsList, teach, ct, status: 'invited' });
-    setInvitedName(name);
-    setSent(true);
+    setSubmitting(true);
+    setError(null);
+    const assignments = teachKlassIds
+      .map((klassId) => ({ klassId, subjectIds: (teach[klassId] || []).filter((s) => selSubjects.includes(s)) }))
+      .filter((a) => a.subjectIds.length > 0);
+    const classTeacherOf = ctId !== '' && ctId in teach ? ctId : null;
+    try {
+      await createTeacher({ name: name.trim(), phone: phoneDigits, assignments, classTeacherOf });
+      setAddedName(name.trim());
+      setSent(true);
+    } catch (e) {
+      setError((e as { response?: { data?: { error?: string } } }).response?.data?.error ?? "Couldn't add the teacher. Please try again.");
+      setSubmitting(false);
+    }
   }
 
-  if (sent) return <SuccessScreen title="Teacher added" body={`${invitedName} can now sign in with their mobile and a one-time code. They're in your staff list — edit classes or subjects anytime.`} buttonLabel="Back to staff" onButton={onDone} />;
+  if (sent) return <SuccessScreen title="Teacher added" body={`${addedName} can now sign in with their mobile and a one-time code. Their classes and subjects are saved to their profile.`} buttonLabel="Back to staff" onButton={onCreated} />;
 
   return (
     <div className="px-[15px] py-4 pb-6">
-      <Field label="Full name"><input value={ntName} onChange={(e) => setNtName(e.target.value)} placeholder="e.g. Priya Sharma" className={inputCls} /></Field>
+      <Field label="Full name"><input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Priya Sharma" className={inputCls} /></Field>
       <Field label="Mobile number · their login">
         <div className="flex items-center bg-white border-[1.5px] border-line rounded-xl overflow-hidden">
           <span className="px-3 text-[13px] font-semibold border-r border-line h-11 flex items-center">+91</span>
-          <input value={ntPhone} onChange={(e) => setNtPhone(e.target.value)} inputMode="numeric" placeholder="Teacher's mobile" className="flex-1 min-w-0 border-none px-3 h-11 text-[13px] bg-transparent" />
+          <input value={phone} onChange={(e) => setPhone(e.target.value)} inputMode="numeric" placeholder="Teacher's mobile" className="flex-1 min-w-0 border-none px-3 h-11 text-[13px] bg-transparent" />
         </div>
       </Field>
+
       <Field label="Subjects · pick all they teach">
-        <div className="flex gap-1.5 flex-wrap">
-          {ALL_SUBJECTS.map((s) => <Chip key={s} active={ntSubjects.includes(s)} onClick={() => toggleSubject(s)}>{s}</Chip>)}
-        </div>
+        {subjects === null ? (
+          <div className="py-3"><Spinner /></div>
+        ) : subjects.length === 0 ? (
+          <div className="text-[12px] text-[#8a6d1f] bg-[#fbf3e2] border border-[#ecd8ab] rounded-[11px] px-3 py-2.5">No subjects yet — add your school's subjects from Classes → Add first.</div>
+        ) : (
+          <div className="flex gap-1.5 flex-wrap">
+            {subjects.map((s) => <Chip key={s.id} active={selSubjects.includes(s.id)} onClick={() => toggleSubject(s.id)}>{s.name}</Chip>)}
+          </div>
+        )}
       </Field>
+
       <Field label="Classes & subjects · which subjects in which class">
-        {ntSubjects.length === 0 ? (
+        {classes === null ? (
+          <div className="py-3"><Spinner /></div>
+        ) : selSubjects.length === 0 ? (
           <div className="text-[12px] text-[#8a6d1f] bg-[#fbf3e2] border border-[#ecd8ab] rounded-[11px] px-3 py-2.5">Pick the subjects above first, then choose which classes they teach them in.</div>
+        ) : classes.length === 0 ? (
+          <div className="text-[12px] text-[#8a6d1f] bg-[#fbf3e2] border border-[#ecd8ab] rounded-[11px] px-3 py-2.5">No classes yet — create a class from Classes → Add first.</div>
         ) : (
           classes.map((c) => {
-            const sel = c.id in ntTeach;
+            const sel = c.id in teach;
             return (
               <div key={c.id} className={cx('border-[1.5px] rounded-[13px] p-3 mb-2', sel ? 'border-green bg-[#f3f8f4]' : 'border-line bg-white')}>
                 <div onClick={() => toggleClassTeach(c.id)} className="flex items-center gap-2.5 cursor-pointer">
@@ -396,9 +411,9 @@ function StaffAdd({ classes, onSent, onDone }: { classes: AdminClass[]; onSent: 
                 </div>
                 {sel && (
                   <div className="flex gap-1.5 flex-wrap mt-2.5 pl-7">
-                    {ntSubjects.map((su) => {
-                      const on = (ntTeach[c.id] || []).includes(su);
-                      return <button key={su} onClick={() => toggleClassSubj(c.id, su)} className={cx('px-2.5 py-1 rounded-lg text-[11px] font-semibold border', on ? 'border-green bg-green text-white' : 'border-[#dbe5db] bg-white text-green')}>{su}</button>;
+                    {selSubjects.map((su) => {
+                      const on = (teach[c.id] || []).includes(su);
+                      return <button key={su} onClick={() => toggleClassSubj(c.id, su)} className={cx('px-2.5 py-1 rounded-lg text-[11px] font-semibold border', on ? 'border-green bg-green text-white' : 'border-[#dbe5db] bg-white text-green')}>{subjName(su)}</button>;
                     })}
                   </div>
                 )}
@@ -407,15 +422,19 @@ function StaffAdd({ classes, onSent, onDone }: { classes: AdminClass[]; onSent: 
           })
         )}
       </Field>
-      {Object.keys(ntTeach).length > 0 && (
+
+      {teachKlassIds.length > 0 && (
         <Field label="Class teacher of">
           <div className="flex gap-1.5 flex-wrap">
-            <Chip active={ntCt === ''} onClick={() => setNtCt('')}>Not a class teacher</Chip>
-            {Object.keys(ntTeach).map((id) => <Chip key={id} active={ntCt === id} onClick={() => setNtCt(id)}>{classes.find((c) => c.id === id)?.label ?? id}</Chip>)}
+            <Chip active={ctId === ''} onClick={() => setCtId('')}>Not a class teacher</Chip>
+            {teachKlassIds.map((id) => <Chip key={id} active={ctId === id} onClick={() => setCtId(id)}>{classes?.find((c) => c.id === id)?.label ?? id}</Chip>)}
           </div>
+          <div className="text-[11px] text-muted leading-[1.5] mt-2">A teacher can lead one class as its class teacher — or none, and still teach several classes.</div>
         </Field>
       )}
-      <PrimaryButton disabled={!ready} onClick={send}>Send invite</PrimaryButton>
+
+      {error && <div className="text-[12px] text-danger bg-[#f6ecec] border border-[#eccfcf] rounded-[11px] px-3 py-2.5 mb-3">{error}</div>}
+      <PrimaryButton disabled={!ready} onClick={send}>{submitting ? 'Adding…' : 'Add teacher'}</PrimaryButton>
       <div className="flex gap-2 items-start mt-2.75">
         <span className="flex-none mt-px text-muted"><Glyph d={GLYPH.info} size={14} stroke={1.9} /></span>
         <div className="text-[11px] text-muted leading-[1.5]">They sign in with this mobile and a one-time code — no password, nothing to set up.</div>

@@ -27,6 +27,20 @@ export async function listTeachers(): Promise<AdminTeacher[]> {
   return data;
 }
 
+export interface CreateTeacherInput {
+  name: string;
+  phone: string;
+  // Which subjects the teacher teaches in which class.
+  assignments: { klassId: number; subjectIds: number[] }[];
+  // Class the teacher is class teacher of, if any.
+  classTeacherOf?: number | null;
+}
+
+export async function createTeacher(input: CreateTeacherInput): Promise<AdminTeacher> {
+  const { data } = await api.post<AdminTeacher>('/admin/teachers', input);
+  return data;
+}
+
 export interface CreateClassInput {
   grade: string;
   section: string;
