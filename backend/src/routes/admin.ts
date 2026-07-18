@@ -127,6 +127,49 @@ adminRouter.post('/classes', ah(async (req, res) => {
   });
 }));
 
+// --- Subjects (school-level catalogue) ---
+adminRouter.get('/subjects', ah(async (req, res) => {
+  const schoolId = requireSchoolId(req);
+  const subjects = await prisma.subject.findMany({
+    where: { schoolId },
+    orderBy: { name: 'asc' },
+  });
+  res.json(subjects.map((s) => ({ id: s.id, name: s.name })));
+}));
+
+const subjectSchema = z.object({ name: z.string().min(1) });
+adminRouter.post('/subjects', ah(async (req, res) => {
+  const schoolId = requireSchoolId(req);
+  const { name: rawName } = subjectSchema.parse(req.body);
+  const name = rawName.trim();
+  const exists = await prisma.subject.findFirst({ where: { schoolId, name } });
+  if (exists) throw new HttpError(409, `Subject "${name}" already exists`);
+  const subject = await prisma.subject.create({ data: { schoolId, name } });
+  res.status(201).json({ id: subject.id, name: subject.name });
+}));
+
+adminRouter.put('/subjects/:id', ah(async (req, res) => {
+  const schoolId = requireSchoolId(req);
+  const id = Number(req.params.id);
+  const { name: rawName } = subjectSchema.parse(req.body);
+  const name = rawName.trim();
+  const subject = await prisma.subject.findFirst({ where: { id, schoolId } });
+  if (!subject) throw new HttpError(404, 'Subject not found');
+  const clash = await prisma.subject.findFirst({ where: { schoolId, name, id: { not: id } } });
+  if (clash) throw new HttpError(409, `Subject "${name}" already exists`);
+  const updated = await prisma.subject.update({ where: { id }, data: { name } });
+  res.json({ id: updated.id, name: updated.name });
+}));
+
+adminRouter.delete('/subjects/:id', ah(async (req, res) => {
+  const schoolId = requireSchoolId(req);
+  const id = Number(req.params.id);
+  const subject = await prisma.subject.findFirst({ where: { id, schoolId } });
+  if (!subject) throw new HttpError(404, 'Subject not found');
+  await prisma.subject.delete({ where: { id } });
+  res.status(204).end();
+}));
+
 // --- Parent-student links ---
 const linkSchema = z.object({
   parentUserId: z.number(),

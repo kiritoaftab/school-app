@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import {
   listClasses, listTeachers, createClass,
-  type AdminKlass, type AdminTeacher,
+  listSubjects, createSubject, updateSubject, deleteSubject,
+  type AdminKlass, type AdminTeacher, type AdminSubject,
 } from '../api/admin';
 import {
   AppHeader, Card, Chip, EmptyState, Glyph, PrimaryButton, Shell, Spinner, SuccessScreen, cx,
@@ -46,6 +47,8 @@ export function AdminApp() {
   const [apiTeachers, setApiTeachers] = useState<AdminTeacher[]>([]);
   const [classesLoading, setClassesLoading] = useState(false);
   const [classesError, setClassesError] = useState<string | null>(null);
+  // Live school-level subject catalogue.
+  const [apiSubjects, setApiSubjects] = useState<AdminSubject[] | null>(null);
 
   const loadClasses = useCallback(async () => {
     setClassesLoading(true);
@@ -61,12 +64,21 @@ export function AdminApp() {
     }
   }, []);
 
+  const loadSubjects = useCallback(async () => {
+    try {
+      setApiSubjects(await listSubjects());
+    } catch {
+      /* surfaced inline in the subject manager */
+    }
+  }, []);
+
   // Load whenever the admin lands on the Classes or Add-Class screens.
   useEffect(() => {
     if (screen === 'classes' || screen === 'classAdd') {
       if (apiClasses === null) loadClasses();
     }
-  }, [screen, apiClasses, loadClasses]);
+    if (screen === 'classAdd' && apiSubjects === null) loadSubjects();
+  }, [screen, apiClasses, loadClasses, apiSubjects, loadSubjects]);
 
   const name = user?.name ?? 'Sridevi Menon';
   const teacherName = (id: string) => teachers.find((t) => t.id === id)?.name ?? '';
@@ -91,7 +103,7 @@ export function AdminApp() {
     staff: ['Staff', 'MANAGE TEACHERS'],
     staffAdd: ['Add Teacher', 'SEND AN INVITE'],
     classes: ['Classes', 'ALL CLASSES'],
-    classAdd: ['New Class', 'ADD A CLASS'],
+    classAdd: ['Add', 'CLASS OR SUBJECT'],
     adminAtt: ['Attendance', 'TODAY · ALL CLASSES'],
     noticeBoard: ['Notice Board', SCHOOL.toUpperCase()],
     noticeCompose: ['New Notice', 'TO ALL PARENTS'],
@@ -170,7 +182,14 @@ export function AdminApp() {
       )}
       {screen === 'adminAtt' && <AdminAttendance classAtt={classAtt} schoolPct={schoolPct} schoolPresent={schoolPresent} onOpen={(id) => { setAttClassId(id); go('adminAttClass'); }} />}
       {screen === 'adminAttClass' && <AdminAttendanceClass att={attClass} />}
-      {screen === 'classAdd' && <ClassAdd teachers={apiTeachers} onCreated={async () => { await loadClasses(); go('classes'); }} />}
+      {screen === 'classAdd' && (
+        <ClassOrSubjectAdd
+          teachers={apiTeachers}
+          onClassCreated={async () => { await loadClasses(); go('classes'); }}
+          subjects={apiSubjects}
+          onSubjectsChanged={loadSubjects}
+        />
+      )}
       {screen === 'noticeBoard' && <NoticeBoardScreen role="admin" notices={notices} acked={{}} onOpen={(id) => { setActiveNoticeId(id); go('notice'); }} onCompose={() => go('noticeCompose')} />}
       {screen === 'notice' && <NoticeDetailScreen notice={notices.find((n) => n.id === activeNoticeId)!} acked={false} showAck={false} onAcknowledge={() => {}} />}
       {screen === 'noticeCompose' && <NoticeCompose onPublish={(n) => setNotices((ns) => [n, ...ns])} onDone={() => go('noticeBoard')} />}
@@ -815,7 +834,7 @@ function ClassAdd({ teachers, onCreated }: { teachers: AdminTeacher[]; onCreated
   }
 
   return (
-    <div className="px-[15px] py-4 pb-6">
+    <>
       <div className="flex gap-2.5 mb-3.5">
         <Field label="Grade" className="flex-1"><input value={grade} onChange={(e) => setGrade(e.target.value)} placeholder="e.g. 5" className={inputCls} /></Field>
         <Field label="Section" className="flex-1"><input value={section} onChange={(e) => setSection(e.target.value)} placeholder="e.g. C" className={inputCls} /></Field>
@@ -830,7 +849,119 @@ function ClassAdd({ teachers, onCreated }: { teachers: AdminTeacher[]; onCreated
       {error && <div className="text-[12px] text-danger bg-[#f6ecec] border border-[#eccfcf] rounded-[11px] px-3 py-2.5 mb-3">{error}</div>}
       <PrimaryButton disabled={!ready} onClick={create}>{submitting ? 'Creating…' : 'Create class'}</PrimaryButton>
       <div className="text-center text-[11px] text-muted leading-[1.5] mt-3">The class teacher can also be set or changed later from any teacher's profile.</div>
+    </>
+  );
+}
+
+// ---------- CLASS / SUBJECT ADD (chip-switched) ----------
+function ClassOrSubjectAdd({
+  teachers, onClassCreated, subjects, onSubjectsChanged,
+}: {
+  teachers: AdminTeacher[];
+  onClassCreated: () => void | Promise<void>;
+  subjects: AdminSubject[] | null;
+  onSubjectsChanged: () => void | Promise<void>;
+}) {
+  const [mode, setMode] = useState<'class' | 'subject'>('class');
+  return (
+    <div className="px-[15px] py-4 pb-6">
+      <div className="flex gap-1.5 mb-4">
+        <Chip active={mode === 'class'} onClick={() => setMode('class')}>Class</Chip>
+        <Chip active={mode === 'subject'} onClick={() => setMode('subject')}>Subject</Chip>
+      </div>
+      {mode === 'class'
+        ? <ClassAdd teachers={teachers} onCreated={onClassCreated} />
+        : <SubjectManager subjects={subjects} onChanged={onSubjectsChanged} />}
     </div>
+  );
+}
+
+// ---------- SUBJECT MANAGER (school-level CRUD) ----------
+function SubjectManager({ subjects, onChanged }: { subjects: AdminSubject[] | null; onChanged: () => void | Promise<void> }) {
+  const [name, setName] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [editId, setEditId] = useState<number | null>(null);
+  const [editName, setEditName] = useState('');
+
+  function readErr(e: unknown, fallback: string) {
+    return (e as { response?: { data?: { error?: string } } }).response?.data?.error ?? fallback;
+  }
+
+  async function add() {
+    const n = name.trim();
+    if (!n || busy) return;
+    setBusy(true); setError(null);
+    try {
+      await createSubject(n);
+      setName('');
+      await onChanged();
+    } catch (e) { setError(readErr(e, "Couldn't add the subject. Please try again.")); }
+    finally { setBusy(false); }
+  }
+
+  async function saveEdit(id: number) {
+    const n = editName.trim();
+    if (!n || busy) return;
+    setBusy(true); setError(null);
+    try {
+      await updateSubject(id, n);
+      setEditId(null);
+      await onChanged();
+    } catch (e) { setError(readErr(e, "Couldn't rename the subject. Please try again.")); }
+    finally { setBusy(false); }
+  }
+
+  async function remove(id: number) {
+    if (busy) return;
+    setBusy(true); setError(null);
+    try {
+      await deleteSubject(id);
+      await onChanged();
+    } catch (e) { setError(readErr(e, "Couldn't delete the subject. Please try again.")); }
+    finally { setBusy(false); }
+  }
+
+  return (
+    <>
+      <Field label="Subject name">
+        <div className="flex gap-2">
+          <input value={name} onChange={(e) => setName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') add(); }} placeholder="e.g. Mathematics" className={inputCls} />
+          <button onClick={add} disabled={!name.trim() || busy} className="px-4 rounded-xl bg-green text-white font-semibold text-[13px] flex items-center gap-1.5 disabled:opacity-50 flex-none"><Glyph d={GLYPH.plus} size={16} stroke={2} />Add</button>
+        </div>
+      </Field>
+      {error && <div className="text-[12px] text-danger bg-[#f6ecec] border border-[#eccfcf] rounded-[11px] px-3 py-2.5 mb-3">{error}</div>}
+
+      {subjects === null ? (
+        <div className="py-8"><Spinner /></div>
+      ) : (
+        <>
+          <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-2.5">{subjects.length} {subjects.length === 1 ? 'subject' : 'subjects'}</div>
+          {subjects.length === 0 ? (
+            <EmptyState icon={GLYPH.results} title="No subjects yet">Add your school's subjects here — they'll be available across every class.</EmptyState>
+          ) : (
+            subjects.map((s) => (
+              <Card key={s.id} className="p-[13px] mb-2.25 flex gap-3 items-center">
+                <div className="w-[42px] h-[42px] rounded-[13px] bg-mist grid place-items-center flex-none text-green"><Glyph d={GLYPH.results} size={20} stroke={1.9} /></div>
+                {editId === s.id ? (
+                  <>
+                    <input autoFocus value={editName} onChange={(e) => setEditName(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') saveEdit(s.id); if (e.key === 'Escape') setEditId(null); }} className={cx(inputCls, 'flex-1 min-w-0')} />
+                    <button onClick={() => saveEdit(s.id)} disabled={busy} className="text-green flex-none" aria-label="Save"><Glyph d={GLYPH.check} size={20} stroke={2} /></button>
+                    <button onClick={() => setEditId(null)} className="text-muted flex-none text-[12px] font-semibold">Cancel</button>
+                  </>
+                ) : (
+                  <>
+                    <div className="flex-1 min-w-0"><b className="text-[14px] font-bold block truncate">{s.name}</b></div>
+                    <button onClick={() => { setEditId(s.id); setEditName(s.name); }} className="text-muted flex-none" aria-label="Rename"><Glyph d={GLYPH.edit} size={18} stroke={1.9} /></button>
+                    <button onClick={() => remove(s.id)} disabled={busy} className="text-danger flex-none" aria-label="Delete"><Glyph d={GLYPH.trash} size={18} stroke={1.9} /></button>
+                  </>
+                )}
+              </Card>
+            ))
+          )}
+        </>
+      )}
+    </>
   );
 }
 

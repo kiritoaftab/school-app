@@ -37,3 +37,28 @@ export async function createClass(input: CreateClassInput): Promise<AdminKlass> 
   const { data } = await api.post<AdminKlass>('/admin/classes', input);
   return data;
 }
+
+// --- Subjects (school-level catalogue) ---
+export interface AdminSubject {
+  id: number;
+  name: string;
+}
+
+export async function listSubjects(): Promise<AdminSubject[]> {
+  const { data } = await api.get<AdminSubject[]>('/admin/subjects');
+  return data;
+}
+
+export async function createSubject(name: string): Promise<AdminSubject> {
+  const { data } = await api.post<AdminSubject>('/admin/subjects', { name });
+  return data;
+}
+
+export async function updateSubject(id: number, name: string): Promise<AdminSubject> {
+  const { data } = await api.put<AdminSubject>(`/admin/subjects/${id}`, { name });
+  return data;
+}
+
+export async function deleteSubject(id: number): Promise<void> {
+  await api.delete(`/admin/subjects/${id}`);
+}
