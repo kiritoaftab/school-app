@@ -1,0 +1,11 @@
+{
+  "changed": [],
+  "risk_files": [],
+  "recent_events": [],
+  "next_steps": [],
+  "open_questions": [
+    "No changed files detected vs main. Confirm the base ref and branch state.",
+    "Dependency graph context was unavailable; risk files may be incomplete.",
+    "No recent timeline events matched the lookback window."
+  ]
+}

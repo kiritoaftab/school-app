@@ -444,6 +444,9 @@ function TeacherDiary({ klass, loading, error }: { klass: TeacherKlass | null; l
   const [subject, setSubject] = useState('');
   const [posting, setPosting] = useState(false);
 
+  const [noteText, setNoteText] = useState('');
+  const [postingNote, setPostingNote] = useState(false);
+
   // Mon–Sat; schools here don't run a Sunday diary.
   const week = useMemo(() => Array.from({ length: 6 }, (_, i) => addDays(weekStart, i)), [weekStart]);
   const from = ymd(week[0]);
@@ -476,7 +479,8 @@ function TeacherDiary({ klass, loading, error }: { klass: TeacherKlass | null; l
   const countFor = (key: string) => entries.filter((e) => e.date === key).length;
 
   const selDay = useMemo(() => new Date(`${selDate}T00:00:00`), [selDate]);
-  const inThisWeek = selDate >= from && selDate <= to;
+  // Diary can only be added to / removed from for today — past & future days are read-only.
+  const isToday = selDate === todayKey;
   const onCurrentWeek = ymd(startOfWeek(today)) === from;
 
   function shiftWeek(delta: number) {
@@ -501,6 +505,20 @@ function TeacherDiary({ klass, loading, error }: { klass: TeacherKlass | null; l
       setLoadErr('Could not post that entry.');
     } finally {
       setPosting(false);
+    }
+  }
+  async function postNote() {
+    if (!klass || !noteText.trim()) return;
+    setPostingNote(true);
+    try {
+      // No subject → a general note for the day.
+      await createDiaryEntry({ klassId: klass.id, date: selDate, task: noteText.trim() });
+      setNoteText('');
+      await load();
+    } catch {
+      setLoadErr('Could not post that note.');
+    } finally {
+      setPostingNote(false);
     }
   }
   async function remove(id: number) {
@@ -581,18 +599,22 @@ function TeacherDiary({ klass, loading, error }: { klass: TeacherKlass | null; l
         {busy && dayEntries.length === 0 ? (
           <div className="py-4 text-center text-muted text-[12.5px]">Loading diary…</div>
         ) : dayEntries.length === 0 ? (
-          <div className="py-4 text-center text-muted text-[12.5px]">No homework posted for {klass.label} yet.</div>
+          <div className="py-4 text-center text-muted text-[12.5px]">Nothing posted for {klass.label} yet.</div>
         ) : (
           dayEntries.map((e) => (
             <div key={e.id} className="flex items-start gap-[11px] py-[11px] border-t border-[#f0f2ee] first:border-t-0">
-              <span className="text-[9.5px] font-bold uppercase text-green bg-mist px-2 py-1 rounded-[7px] mt-px flex-none">{e.subject}</span>
+              {e.subject ? (
+                <span className="text-[9.5px] font-bold uppercase text-green bg-mist px-2 py-1 rounded-[7px] mt-px flex-none">{e.subject}</span>
+              ) : (
+                <span className="text-[9.5px] font-bold uppercase text-green bg-gold-soft px-2 py-1 rounded-[7px] mt-px flex-none">Note</span>
+              )}
               <div className="flex-1 min-w-0">
                 <div className="text-[12.5px] leading-[1.45]">{e.task}</div>
                 {!klass.isClassTeacher || !e.createdBy ? null : (
                   <small className="text-[10.5px] text-muted">{e.createdBy}</small>
                 )}
               </div>
-              {e.canDelete && (
+              {e.canDelete && isToday && (
                 <button onClick={() => remove(e.id)} className="w-6 h-6 rounded-lg bg-[#f6ecec] grid place-items-center flex-none text-danger" aria-label="Delete">
                   <Glyph d="M6 6l12 12M18 6L6 18" size={13} stroke={2} />
                 </button>
@@ -622,13 +644,32 @@ function TeacherDiary({ klass, loading, error }: { klass: TeacherKlass | null; l
           <textarea value={task} onChange={(e) => setTask(e.target.value)} placeholder="Homework details for parents…" className="w-full box-border px-3 py-[11px] border-[1.5px] border-line rounded-xl text-[13px] bg-white resize-none h-16 mb-2.5" />
           <button
             onClick={post}
-            disabled={!task.trim() || !subject || posting || !inThisWeek}
-            className={cx('w-full py-3 rounded-xl font-semibold text-[13px]', task.trim() && subject && !posting ? 'bg-green text-white' : 'bg-[#dfe5df] text-[#9aa39b]')}
+            disabled={!task.trim() || !subject || posting || !isToday}
+            className={cx('w-full py-3 rounded-xl font-semibold text-[13px]', task.trim() && subject && !posting && isToday ? 'bg-green text-white' : 'bg-[#dfe5df] text-[#9aa39b]')}
           >
             {posting ? 'Posting…' : `Post to ${klass.label}`}
           </button>
+          {!isToday && (
+            <div className="text-[11px] text-muted leading-[1.5] mt-2.5">You can only add homework for today. This day is read-only.</div>
+          )}
         </Card>
       )}
+
+      {/* ---- general note for the day (any teacher of the class) ---- */}
+      <Card className="p-[15px] mt-3">
+        <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-2.5">General note for the day</div>
+        <textarea value={noteText} onChange={(e) => setNoteText(e.target.value)} placeholder="e.g. Bring your record book tomorrow…" className="w-full box-border px-3 py-[11px] border-[1.5px] border-line rounded-xl text-[13px] bg-white resize-none h-16 mb-2.5" />
+        <button
+          onClick={postNote}
+          disabled={!noteText.trim() || postingNote || !isToday}
+          className={cx('w-full py-3 rounded-xl font-semibold text-[13px]', noteText.trim() && !postingNote && isToday ? 'bg-green text-white' : 'bg-[#dfe5df] text-[#9aa39b]')}
+        >
+          {postingNote ? 'Posting…' : 'Post note'}
+        </button>
+        {!isToday && (
+          <div className="text-[11px] text-muted leading-[1.5] mt-2.5">You can only add a note for today. This day is read-only.</div>
+        )}
+      </Card>
     </div>
   );
 }

@@ -227,9 +227,10 @@ teacherRouter.get('/diary', ah(async (req, res) => {
   });
 }));
 
+// An entry with a subject is homework; one without is a general "note for the day".
 const diarySchema = z.object({
   klassId: z.number(),
-  subject: z.string().min(1),
+  subject: z.string().min(1).optional(),
   date: ymd,
   task: z.string().min(1),
   note: z.string().optional(),
@@ -241,7 +242,9 @@ teacherRouter.post('/diary', ah(async (req, res) => {
 
   const access = await allowedSubjects(userId, schoolId, data.klassId);
   if (!access) throw new HttpError(403, 'You do not teach this class');
-  if (!access.subjects.some((s) => s.name === data.subject)) {
+  // Homework must name a subject the teacher may post; a general note may be
+  // posted by any teacher of the class, so it skips that check.
+  if (data.subject && !access.subjects.some((s) => s.name === data.subject)) {
     throw new HttpError(403, `You do not teach ${data.subject} in this class`);
   }
 
@@ -249,7 +252,7 @@ teacherRouter.post('/diary', ah(async (req, res) => {
     data: {
       schoolId,
       klassId: data.klassId,
-      subject: data.subject,
+      subject: data.subject ?? null,
       date: dateOnly(data.date),
       task: data.task,
       note: data.note,

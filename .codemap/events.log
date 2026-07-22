@@ -28,3 +28,19 @@
 2026-07-18 18:02:13 | REMOVE | backend/probe.ts                         |    0 |    -16 | 
 2026-07-18 18:05:54 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |   -966 | 
 2026-07-18 18:05:54 | CREATE | frontend/src/app/TeacherApp.tsx          |  967 |   +967 | dirty
+2026-07-23 00:01:59 | REMOVE | backend/src/routes/teacher.ts            |    0 |   -371 | 
+2026-07-23 00:01:59 | CREATE | backend/src/routes/teacher.ts            |  374 |   +374 | dirty
+2026-07-23 00:02:13 | REMOVE | frontend/src/api/teacher.ts              |    0 |    -63 | 
+2026-07-23 00:02:13 | CREATE | frontend/src/api/teacher.ts              |   64 |    +64 | dirty
+2026-07-23 00:02:15 | REMOVE | frontend/src/api/teacher.ts              |    0 |    -64 | 
+2026-07-23 00:02:15 | CREATE | frontend/src/api/teacher.ts              |   65 |    +65 | dirty
+2026-07-23 00:02:21 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |   -967 | 
+2026-07-23 00:02:21 | CREATE | frontend/src/app/TeacherApp.tsx          |  970 |   +970 | dirty
+2026-07-23 00:02:27 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |   -970 | 
+2026-07-23 00:02:27 | CREATE | frontend/src/app/TeacherApp.tsx          |  971 |   +971 | dirty
+2026-07-23 00:02:35 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |   -971 | 
+2026-07-23 00:02:35 | CREATE | frontend/src/app/TeacherApp.tsx          |  985 |   +985 | dirty
+2026-07-23 00:02:46 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |   -985 | 
+2026-07-23 00:02:46 | CREATE | frontend/src/app/TeacherApp.tsx          |  989 |   +989 | dirty
+2026-07-23 00:03:09 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |   -989 | 
+2026-07-23 00:03:09 | CREATE | frontend/src/app/TeacherApp.tsx          | 1008 |  +1008 | dirty

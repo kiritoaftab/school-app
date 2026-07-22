@@ -252,7 +252,7 @@ model DiaryEntry {
   id          Int      @id @default(autoincrement())
   schoolId    Int
   klassId     Int
-  subject     String
+  subject     String?  // null = a general "note for the day", not tied to a subject
   date        DateTime @db.Date
   task        String   @db.Text
   note        String?  @db.Text

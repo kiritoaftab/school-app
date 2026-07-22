@@ -22,7 +22,8 @@ export interface DiaryEntry {
   id: number;
   /** YYYY-MM-DD */
   date: string;
-  subject: string;
+  /** null = a general "note for the day", not tied to a subject. */
+  subject: string | null;
   task: string;
   note: string | null;
   createdById: number | null;
@@ -49,7 +50,8 @@ export async function listDiary(klassId: number, from: string, to: string): Prom
 
 export async function createDiaryEntry(input: {
   klassId: number;
-  subject: string;
+  /** Omit for a general "note for the day". */
+  subject?: string;
   date: string;
   task: string;
   note?: string;
