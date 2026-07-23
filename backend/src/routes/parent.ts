@@ -223,6 +223,31 @@ parentRouter.get('/terms', ah(async (req, res) => {
   res.json(await prisma.term.findMany({ where: { schoolId }, orderBy: { id: 'asc' } }));
 }));
 
+// Exams a child actually has published results for (a ResultMeta row exists).
+parentRouter.get(
+  '/students/:id/terms',
+  ah(async (req, res) => {
+    const { userId } = req.auth!;
+    const schoolId = requireSchoolId(req);
+    const studentId = Number(req.params.id);
+    await assertParentOwnsStudent(userId, schoolId, studentId);
+
+    const metas = await prisma.resultMeta.findMany({
+      where: { studentId },
+      orderBy: { termId: 'desc' },
+      include: { term: true },
+    });
+    res.json(
+      metas.map((m) => ({
+        id: m.termId,
+        name: m.term.name,
+        overallPct: Math.round(m.overallPct),
+        rank: m.rank,
+      })),
+    );
+  }),
+);
+
 parentRouter.get(
   '/students/:id/results',
   ah(async (req, res) => {
