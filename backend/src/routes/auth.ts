@@ -63,21 +63,35 @@ authRouter.post(
       throw new HttpError(400, 'Invalid or expired code');
     }
 
-    // Role is resolved from the account, not the request. The client routes
-    // on the returned user.role.
-    const user = await prisma.user.findFirst({ where: { phone } });
-    if (!user) throw new HttpError(404, 'Account not found');
+    // A phone can map to several accounts (e.g. PARENT in one school, ADMIN in
+    // another) — unique key is [schoolId, phone, role]. The OTP proves the phone,
+    // so every account on it belongs to this person. We mint a token per account
+    // and let the client pick which profile to enter.
+    const users = await prisma.user.findMany({
+      where: { phone },
+      include: { school: true },
+      orderBy: { id: 'asc' },
+    });
+    if (users.length === 0) throw new HttpError(404, 'Account not found');
 
     await prisma.otpCode.update({
       where: { id: record.id },
       data: { consumedAt: new Date() },
     });
 
-    const token = signToken({ userId: user.id, role: user.role, schoolId: user.schoolId });
-    res.json({
-      token,
-      user: { id: user.id, name: user.name, phone: user.phone, role: user.role, schoolId: user.schoolId },
-    });
+    const accounts = users.map((user) => ({
+      token: signToken({ userId: user.id, role: user.role, schoolId: user.schoolId }),
+      id: user.id,
+      name: user.name,
+      phone: user.phone,
+      role: user.role,
+      schoolId: user.schoolId,
+      school: user.school
+        ? { id: user.school.id, name: user.school.name, logo: user.school.logo }
+        : null,
+    }));
+
+    res.json({ accounts });
   }),
 );
 

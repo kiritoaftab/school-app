@@ -11,17 +11,44 @@ const homeFor: Record<Role, string> = {
   ADMIN: '/admin',
 };
 
+const roleLabel: Record<Role, string> = {
+  PARENT: 'Parent',
+  TEACHER: 'Teacher',
+  ADMIN: 'Admin',
+};
+
+interface Account {
+  token: string;
+  id: number;
+  name: string;
+  role: Role;
+  school: { id: number; name: string; logo?: string | null } | null;
+}
+
 export function LoginPage() {
   const navigate = useNavigate();
   const { loginWithToken } = useAuth();
-  const [step, setStep] = useState<'phone' | 'otp'>('phone');
+  const [step, setStep] = useState<'phone' | 'otp' | 'pick'>('phone');
   const [phone, setPhone] = useState('');
   const [otp, setOtp] = useState('');
   const [devCode, setDevCode] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [accounts, setAccounts] = useState<Account[]>([]);
 
   const digits = phone.replace(/\D/g, '');
+
+  async function enterAccount(account: Account) {
+    setError(null);
+    setBusy(true);
+    try {
+      const user = await loginWithToken(account.token);
+      navigate(homeFor[user.role]);
+    } catch (e: any) {
+      setError(e.response?.data?.error ?? 'Could not sign in');
+      setBusy(false);
+    }
+  }
 
   async function requestOtp() {
     if (digits.length < 10) {
@@ -51,11 +78,18 @@ export function LoginPage() {
     setBusy(true);
     try {
       const { data } = await api.post('/auth/verify-otp', { phone: digits, otp });
-      const user = await loginWithToken(data.token);
-      navigate(homeFor[user.role]);
+      const list: Account[] = data.accounts ?? [];
+      if (list.length === 1) {
+        const user = await loginWithToken(list[0].token);
+        navigate(homeFor[user.role]);
+        return;
+      }
+      // Multiple profiles on this number — let the user choose which to enter.
+      setAccounts(list);
+      setStep('pick');
+      setBusy(false);
     } catch (e: any) {
       setError(e.response?.data?.error ?? 'Invalid code');
-    } finally {
       setBusy(false);
     }
   }
@@ -170,6 +204,41 @@ export function LoginPage() {
             >
               {busy ? 'Verifying…' : 'Verify & continue'}
             </button>
+          </div>
+        )}
+
+        {step === 'pick' && (
+          <div className="flex-1 flex flex-col pt-[52px] pb-8">
+            <h2 className="font-serif text-[28px] leading-[1.05] mb-2">Choose a profile</h2>
+            <p className="text-[13px] text-muted leading-[1.55]">
+              This number is registered for more than one profile. Pick the one you'd like to open.
+            </p>
+            {error && <div className="text-[11.5px] text-danger font-semibold mt-3">{error}</div>}
+
+            <div className="mt-7 flex flex-col gap-2.5">
+              {accounts.map((account) => (
+                <button
+                  key={account.id}
+                  onClick={() => enterAccount(account)}
+                  disabled={busy}
+                  className="flex items-center gap-3 bg-white border-[1.5px] border-line rounded-[14px] px-4 py-3.5 text-left disabled:opacity-60"
+                >
+                  <span className="flex-none w-11 h-11 rounded-full bg-green grid place-items-center text-white font-serif text-[19px]">
+                    {account.name.charAt(0).toUpperCase()}
+                  </span>
+                  <span className="flex-1 min-w-0">
+                    <span className="block text-[15px] font-bold text-ink truncate">{account.name}</span>
+                    <span className="block text-[12px] text-muted truncate">
+                      {roleLabel[account.role]}
+                      {account.school ? ` · ${account.school.name}` : ''}
+                    </span>
+                  </span>
+                  <span className="flex-none text-muted">
+                    <Glyph d={GLYPH.chevronRight} size={18} stroke={2} />
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
         )}
       </div>

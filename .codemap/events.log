@@ -454,3 +454,19 @@
 2026-07-23 15:40:54 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |   -818 | 
 2026-07-23 15:40:54 | CREATE | frontend/src/app/ParentApp.tsx           |  818 |   +818 | dirty
 2026-07-23 15:40:54 | CREATE | frontend/src/app/ParentApp.tsx           |  818 |   +818 | dirty
+2026-07-23 18:30:05 | REMOVE | backend/src/routes/auth.ts               |    0 |   -114 | 
+2026-07-23 18:30:05 | REMOVE | backend/src/routes/auth.ts               |    0 |   -114 | 
+2026-07-23 18:30:05 | CREATE | backend/src/routes/auth.ts               |  128 |   +128 | dirty
+2026-07-23 18:30:05 | CREATE | backend/src/routes/auth.ts               |  128 |   +128 | dirty
+2026-07-23 18:30:15 | REMOVE | frontend/src/pages/LoginPage.tsx         |    0 |   -178 | 
+2026-07-23 18:30:15 | REMOVE | frontend/src/pages/LoginPage.tsx         |    0 |   -178 | 
+2026-07-23 18:30:16 | CREATE | frontend/src/pages/LoginPage.tsx         |  205 |   +205 | dirty
+2026-07-23 18:30:16 | CREATE | frontend/src/pages/LoginPage.tsx         |  205 |   +205 | dirty
+2026-07-23 18:30:25 | REMOVE | frontend/src/pages/LoginPage.tsx         |    0 |   -205 | 
+2026-07-23 18:30:25 | REMOVE | frontend/src/pages/LoginPage.tsx         |    0 |   -205 | 
+2026-07-23 18:30:25 | CREATE | frontend/src/pages/LoginPage.tsx         |  212 |   +212 | dirty
+2026-07-23 18:30:25 | CREATE | frontend/src/pages/LoginPage.tsx         |  212 |   +212 | dirty
+2026-07-23 18:30:44 | REMOVE | frontend/src/pages/LoginPage.tsx         |    0 |   -212 | 
+2026-07-23 18:30:44 | REMOVE | frontend/src/pages/LoginPage.tsx         |    0 |   -212 | 
+2026-07-23 18:30:44 | CREATE | frontend/src/pages/LoginPage.tsx         |  247 |   +247 | dirty
+2026-07-23 18:30:44 | CREATE | frontend/src/pages/LoginPage.tsx         |  247 |   +247 | dirty
