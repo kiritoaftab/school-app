@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { z } from 'zod';
+import { Prisma } from '@prisma/client';
 import { prisma } from '../db.js';
 import { ah, HttpError } from '../lib/http.js';
 import { requireAuth, requireRole, requireSchoolId } from '../middleware/auth.js';
@@ -23,7 +24,9 @@ function shapeExam(t: { id: number; name: string; klassId: number | null; subjec
   };
 }
 
-/** Exams a teacher can grade in a class (its own + legacy school-wide terms). */
+/** Exams a teacher can grade in a class (its own + legacy school-wide terms).
+ *  A subject teacher only sees all-subjects exams and tests for a subject they
+ *  teach; a class teacher sees every exam. Newest first. */
 teacherRouter.get('/classes/:id/exams', ah(async (req, res) => {
   const { userId } = req.auth!;
   const schoolId = requireSchoolId(req);
@@ -32,10 +35,17 @@ teacherRouter.get('/classes/:id/exams', ah(async (req, res) => {
   const access = await allowedSubjects(userId, schoolId, klassId);
   if (!access) throw new HttpError(403, 'You do not teach this class');
 
+  const where: Prisma.TermWhereInput = { schoolId, OR: [{ klassId }, { klassId: null }] };
+  // Class teachers see everything; others only all-subjects exams (subjectId
+  // null) plus single-subject tests for the subjects they actually teach.
+  if (!access.isClassTeacher) {
+    where.AND = [{ OR: [{ subjectId: null }, { subjectId: { in: access.subjects.map((s) => s.id) } }] }];
+  }
+
   const terms = await prisma.term.findMany({
-    where: { schoolId, OR: [{ klassId }, { klassId: null }] },
+    where,
     include: { subject: true },
-    orderBy: { id: 'asc' },
+    orderBy: { id: 'desc' },
   });
   res.json(terms.map(shapeExam));
 }));
@@ -86,6 +96,129 @@ teacherRouter.delete('/exams/:id', ah(async (req, res) => {
 
   await prisma.term.delete({ where: { id } });
   res.status(204).end();
+}));
+
+/** Coarse letter grade from a percentage, stored alongside each mark. */
+function gradeFor(pct: number): string {
+  if (pct >= 90) return 'A+';
+  if (pct >= 80) return 'A';
+  if (pct >= 70) return 'B';
+  if (pct >= 60) return 'C';
+  if (pct >= 50) return 'D';
+  return 'F';
+}
+
+/** Validate that this teacher may grade `subject` under `termId` for this class. */
+async function loadGradingTerm(
+  schoolId: number,
+  klassId: number,
+  termId: number,
+  subject: string,
+  access: { isClassTeacher: boolean; subjects: { id: number; name: string }[] },
+) {
+  const term = await prisma.term.findFirst({ where: { id: termId, schoolId }, include: { subject: true } });
+  if (!term) throw new HttpError(404, 'Exam not found');
+  if (term.klassId !== null && term.klassId !== klassId) throw new HttpError(400, 'Exam is not for this class');
+  // A single-subject test can only be graded for its own subject.
+  if (term.subject && term.subject.name !== subject) {
+    throw new HttpError(400, `This test only grades ${term.subject.name}`);
+  }
+  if (!access.subjects.some((s) => s.name === subject)) {
+    throw new HttpError(403, `You do not teach ${subject} in this class`);
+  }
+  return term;
+}
+
+/** Roster for a class with each student's saved mark for an exam + subject. */
+teacherRouter.get('/classes/:id/results', ah(async (req, res) => {
+  const { userId } = req.auth!;
+  const schoolId = requireSchoolId(req);
+  const klassId = Number(req.params.id);
+  const termId = Number(req.query.termId);
+  const subject = String(req.query.subject ?? '');
+
+  const access = await allowedSubjects(userId, schoolId, klassId);
+  if (!access) throw new HttpError(403, 'You do not teach this class');
+  if (!termId || !subject) throw new HttpError(400, 'termId and subject are required');
+  await loadGradingTerm(schoolId, klassId, termId, subject, access);
+
+  const enrollments = await prisma.enrollment.findMany({
+    where: { klassId },
+    include: { student: true },
+    orderBy: { student: { name: 'asc' } },
+  });
+  const results = await prisma.result.findMany({
+    where: { termId, subject, studentId: { in: enrollments.map((e) => e.studentId) } },
+  });
+  const byStudent = new Map(results.map((r) => [r.studentId, r]));
+  // The exam+subject shares one max; use the first saved row, else default 100.
+  const maxScore = results[0]?.maxScore ?? 100;
+  res.json({
+    maxScore,
+    students: enrollments.map((e) => ({
+      studentId: e.student.id,
+      name: e.student.name,
+      score: byStudent.get(e.student.id)?.score ?? null,
+    })),
+  });
+}));
+
+const saveResultsSchema = z.object({
+  termId: z.number(),
+  subject: z.string().min(1),
+  maxScore: z.number().positive(),
+  entries: z.array(z.object({ studentId: z.number(), score: z.number().nullable() })),
+});
+/** Save (or clear) the roster's marks for one exam + subject. */
+teacherRouter.post('/classes/:id/results', ah(async (req, res) => {
+  const { userId } = req.auth!;
+  const schoolId = requireSchoolId(req);
+  const klassId = Number(req.params.id);
+  const { termId, subject, maxScore, entries } = saveResultsSchema.parse(req.body);
+
+  const access = await allowedSubjects(userId, schoolId, klassId);
+  if (!access) throw new HttpError(403, 'You do not teach this class');
+  await loadGradingTerm(schoolId, klassId, termId, subject, access);
+
+  // Only students actually enrolled in this class may be graded here.
+  const enrolled = new Set(
+    (await prisma.enrollment.findMany({ where: { klassId }, select: { studentId: true } })).map((e) => e.studentId),
+  );
+  for (const e of entries) {
+    if (!enrolled.has(e.studentId)) throw new HttpError(400, `Student ${e.studentId} is not in this class`);
+    if (e.score != null && (e.score < 0 || e.score > maxScore)) {
+      throw new HttpError(400, `Score for student ${e.studentId} is out of range`);
+    }
+  }
+
+  await prisma.$transaction(
+    entries.map((e) =>
+      e.score == null
+        ? prisma.result.deleteMany({ where: { studentId: e.studentId, termId, subject } })
+        : prisma.result.upsert({
+            where: { studentId_termId_subject: { studentId: e.studentId, termId, subject } },
+            create: { studentId: e.studentId, termId, subject, score: e.score, maxScore, grade: gradeFor((e.score / maxScore) * 100) },
+            update: { score: e.score, maxScore, grade: gradeFor((e.score / maxScore) * 100) },
+          }),
+    ),
+  );
+
+  // Keep each affected student's overall (across every subject in the term) fresh.
+  for (const e of entries) {
+    const rows = await prisma.result.findMany({ where: { studentId: e.studentId, termId } });
+    if (rows.length === 0) {
+      await prisma.resultMeta.deleteMany({ where: { studentId: e.studentId, termId } });
+      continue;
+    }
+    const overallPct = rows.reduce((a, r) => a + (r.score / r.maxScore) * 100, 0) / rows.length;
+    await prisma.resultMeta.upsert({
+      where: { studentId_termId: { studentId: e.studentId, termId } },
+      create: { studentId: e.studentId, termId, overallPct },
+      update: { overallPct },
+    });
+  }
+
+  res.json({ ok: true, count: entries.length });
 }));
 
 /** Parse a 'YYYY-MM-DD' string into the UTC midnight used by @db.Date columns. */

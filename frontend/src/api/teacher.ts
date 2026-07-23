@@ -92,3 +92,38 @@ export async function createClassExam(
 export async function deleteClassExam(id: number): Promise<void> {
   await api.delete(`/teacher/exams/${id}`);
 }
+
+/** A student's row when grading one exam + subject. score null = not entered. */
+export interface ResultRow {
+  studentId: number;
+  name: string;
+  score: number | null;
+}
+
+export interface ClassResults {
+  maxScore: number;
+  students: ResultRow[];
+}
+
+export async function listClassResults(
+  klassId: number,
+  termId: number,
+  subject: string,
+): Promise<ClassResults> {
+  const { data } = await api.get<ClassResults>(`/teacher/classes/${klassId}/results`, {
+    params: { termId, subject },
+  });
+  return data;
+}
+
+export async function saveClassResults(
+  klassId: number,
+  input: {
+    termId: number;
+    subject: string;
+    maxScore: number;
+    entries: { studentId: number; score: number | null }[];
+  },
+): Promise<void> {
+  await api.post(`/teacher/classes/${klassId}/results`, input);
+}

@@ -3,18 +3,19 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import {
   AppHeader, BottomSheet, Card, Chip, Glyph, InfoNote, PrimaryButton,
-  OutlineButton, Shell, StatCard, cx, type TabDef,
+  Shell, StatCard, cx, type TabDef,
 } from './kit';
 import {
   listMyClasses, listDiary, createDiaryEntry, deleteDiaryEntry,
   listClassExams, createClassExam, deleteClassExam,
-  type TeacherKlass, type DiaryEntry, type TeacherExam, type TeacherSubject,
+  listClassResults, saveClassResults,
+  type TeacherKlass, type DiaryEntry, type TeacherExam, type TeacherSubject, type ResultRow,
 } from '../api/teacher';
 import { CalendarScreen, NotificationsScreen } from './SharedScreens';
 import { AccountSheet } from './AccountSheet';
 import {
   SCHOOL, GLYPH, TEACHER_CLASSES, ROSTERS, CT_NAME_OF, SEEDED_ABS,
-  CLASS_DIARY, PUB_AVG_MAP, MAX_MARKS, TODAY_DATE,
+  CLASS_DIARY, TODAY_DATE,
   initialsOf, maskPhone,
   type ClassDiary, type RosterStudent,
 } from './data';
@@ -24,8 +25,6 @@ type ExamStatus = 'draft' | 'provisional' | 'final';
 type Rostered = { id: string; name: string; roll: number; guardian?: RosterStudent['guardian'] };
 const TOP_LEVEL: Screen[] = ['home', 'diary', 'calendar', 'results', 'students'];
 const PUBLISHED_EXAMS = ['ut1', 'hy', 'ut2'];
-
-const mkKey = (cls: string, exam: string, subj: string, sid: string) => `${cls}.${exam}.${subj}.${sid}`;
 const seedRosters = (): Record<string, RosterStudent[]> => {
   const out: Record<string, RosterStudent[]> = {};
   Object.keys(ROSTERS).forEach((k) => { out[k] = ROSTERS[k].map((name) => ({ name })); });
@@ -70,9 +69,7 @@ export function TeacherApp() {
 
   const [teExam, setTeExam] = useState('');
   const [teSubject, setTeSubject] = useState('');
-  const [marks, setMarks] = useState<Record<string, string>>({});
-  const [examStatus, setExamStatus] = useState<Record<string, ExamStatus>>({});
-  const [editingFinal, setEditingFinal] = useState<Record<string, boolean>>({});
+  const [examStatus] = useState<Record<string, ExamStatus>>({});
   const [toast, setToast] = useState('');
 
   // Editable rosters (class teacher can add/edit/remove students).
@@ -254,12 +251,11 @@ export function TeacherApp() {
       )}
       {screen === 'results' && (
         <TeacherMarks
-          curClass={curClass} selClass={selClass} roster={roster} count={count}
+          curClass={curClass} klassId={liveClass?.id ?? null}
           classSubjects={liveClass?.subjects ?? []}
           teExam={teExam} setTeExam={setTeExam} teSubject={teSubject} setTeSubject={setTeSubject}
           teExams={teExams} onAddExam={teAddExam} onRemoveExam={teRemoveExam}
-          marks={marks} setMarks={setMarks} attAbs={attAbs} setAttAbs={setAttAbs} statusOf={statusOf}
-          setExamStatus={setExamStatus} editingFinal={editingFinal} setEditingFinal={setEditingFinal} toast={toast} setToast={setToast}
+          toast={toast} setToast={setToast}
         />
       )}
       {screen === 'calendar' && <CalendarScreen />}
@@ -696,14 +692,11 @@ function TeacherDiary({ klass, loading, error }: { klass: TeacherKlass | null; l
 
 // ---------- MARKS (results teacher) ----------
 function TeacherMarks({
-  curClass, selClass, roster, count, classSubjects, teExam, setTeExam, teSubject, setTeSubject,
-  teExams, onAddExam, onRemoveExam, marks, setMarks,
-  attAbs, setAttAbs, statusOf, setExamStatus, editingFinal, setEditingFinal, toast, setToast,
+  curClass, klassId, classSubjects, teExam, setTeExam, teSubject, setTeSubject,
+  teExams, onAddExam, onRemoveExam, toast, setToast,
 }: {
   curClass: typeof TEACHER_CLASSES[number];
-  selClass: string;
-  roster: Rostered[];
-  count: number;
+  klassId: number | null;
   classSubjects: TeacherSubject[];
   teExam: string;
   setTeExam: (v: string) => void;
@@ -712,14 +705,6 @@ function TeacherMarks({
   teExams: TeacherExam[];
   onAddExam: (name: string, subjectId: number | null) => void;
   onRemoveExam: (id: number) => void;
-  marks: Record<string, string>;
-  setMarks: React.Dispatch<React.SetStateAction<Record<string, string>>>;
-  attAbs: Record<string, Record<string, boolean>>;
-  setAttAbs: React.Dispatch<React.SetStateAction<Record<string, Record<string, boolean>>>>;
-  statusOf: (cls: string, e: string) => ExamStatus;
-  setExamStatus: React.Dispatch<React.SetStateAction<Record<string, ExamStatus>>>;
-  editingFinal: Record<string, boolean>;
-  setEditingFinal: React.Dispatch<React.SetStateAction<Record<string, boolean>>>;
   toast: string;
   setToast: (v: string) => void;
 }) {
@@ -727,13 +712,9 @@ function TeacherMarks({
   const [newExam, setNewExam] = useState('');
   // null = all-subjects exam; a subject id = single-subject test.
   const [newExamSubjectId, setNewExamSubjectId] = useState<number | null>(null);
-  const absMarks = attAbs[selClass] || {};
-  const status = statusOf(selClass, teExam);
-  const editKey = `${selClass}.${teExam}`;
-  const isEditingFinal = status === 'final' && !!editingFinal[editKey];
-  const editable = status === 'draft' || status === 'provisional' || isEditingFinal;
+
   const selectedExam = teExams.find((e) => String(e.id) === teExam) ?? null;
-  const teExamName = selectedExam?.name ?? '';
+  const termId = selectedExam ? selectedExam.id : null;
 
   // A single-subject exam locks grading to its subject; an all-subjects exam
   // opens every subject the teacher may grade in this class.
@@ -746,45 +727,68 @@ function TeacherMarks({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [teExam, choiceKey]);
 
-  const statusTag: Record<ExamStatus, string> = { draft: 'To enter', provisional: 'Provisional', final: 'Published' };
+  // Real roster + saved marks for the selected exam + subject.
+  const [rows, setRows] = useState<ResultRow[]>([]);
+  const [draft, setDraft] = useState<Record<number, string>>({});
+  const [maxScore, setMaxScore] = useState('100');
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  function setMark(sid: string, raw: string) {
+  useEffect(() => {
+    if (klassId == null || termId == null || !teSubject) { setRows([]); setDraft({}); return; }
+    let alive = true;
+    setLoading(true);
+    listClassResults(klassId, termId, teSubject)
+      .then((data) => {
+        if (!alive) return;
+        setRows(data.students);
+        setMaxScore(String(data.maxScore));
+        const d: Record<number, string> = {};
+        data.students.forEach((s) => { d[s.studentId] = s.score == null ? '' : String(s.score); });
+        setDraft(d);
+      })
+      .catch(() => { if (alive) { setRows([]); setDraft({}); } })
+      .finally(() => { if (alive) setLoading(false); });
+    return () => { alive = false; };
+  }, [klassId, termId, teSubject]);
+
+  const maxNum = Math.max(1, parseInt(maxScore) || 100);
+  function setMark(sid: number, raw: string) {
     let v = raw.replace(/[^0-9]/g, '').slice(0, 3);
-    if (v !== '' && parseInt(v) > MAX_MARKS) v = String(MAX_MARKS);
-    setMarks((m) => ({ ...m, [mkKey(selClass, teExam, teSubject, sid)]: v }));
-  }
-  function toggleAbsent(sid: string) {
-    setAttAbs((a) => {
-      const c = { ...(a[selClass] || {}) };
-      if (c[sid]) delete c[sid];
-      else c[sid] = true;
-      return { ...a, [selClass]: c };
-    });
-  }
-  function setStatus(s: ExamStatus, t: string) {
-    setExamStatus((m) => ({ ...m, [`${selClass}.${teExam}`]: s }));
-    setToast(t);
+    if (v !== '' && parseInt(v) > maxNum) v = String(maxNum);
+    setDraft((d) => ({ ...d, [sid]: v }));
   }
 
-  // averages
   let sum = 0, entered = 0;
-  roster.forEach((r) => {
-    if (absMarks[r.id]) return;
-    const v = parseInt(marks[mkKey(selClass, teExam, teSubject, r.id)]);
+  rows.forEach((r) => {
+    const v = parseInt(draft[r.studentId] ?? '');
     if (!isNaN(v)) { sum += v; entered++; }
   });
-  const marksAvg = entered ? `${Math.round((sum / entered / MAX_MARKS) * 100)}%` : '—';
-  let pubAvg = PUB_AVG_MAP[teExam] || 85;
-  if (teExam === 'ut3') {
-    let a = 0, c = 0;
-    curClass.subjects.forEach((code) => roster.forEach((r) => {
-      if (absMarks[r.id]) return;
-      const v = parseInt(marks[mkKey(selClass, 'ut3', code, r.id)]);
-      if (!isNaN(v)) { a += v; c++; }
-    }));
-    pubAvg = c ? Math.round((a / c / MAX_MARKS) * 100) : 86;
+  const marksAvg = entered ? `${Math.round((sum / entered / maxNum) * 100)}%` : '—';
+  const allEntered = rows.length > 0 && rows.every((r) => (draft[r.studentId] ?? '') !== '');
+
+  async function save() {
+    if (klassId == null || termId == null || !teSubject) return;
+    setSaving(true);
+    try {
+      await saveClassResults(klassId, {
+        termId,
+        subject: teSubject,
+        maxScore: maxNum,
+        entries: rows.map((r) => {
+          const raw = draft[r.studentId] ?? '';
+          return { studentId: r.studentId, score: raw === '' ? null : parseInt(raw) };
+        }),
+      });
+      setToast('saved');
+      setTimeout(() => setToast(''), 2500);
+    } catch {
+      setToast('error');
+      setTimeout(() => setToast(''), 2500);
+    } finally {
+      setSaving(false);
+    }
   }
-  const subjectDone = (code: string) => roster.every((r) => (marks[mkKey(selClass, teExam, code, r.id)] || '') !== '');
 
   return (
     <div className="px-[15px] py-4 pb-6">
@@ -796,13 +800,11 @@ function TeacherMarks({
         {teExams.map((e) => {
           const eid = String(e.id);
           const on = eid === teExam;
-          const st = statusOf(selClass, eid);
-          const tagCol = st === 'final' ? 'text-success' : st === 'provisional' ? 'text-[#c2882a]' : 'text-[#8a6d1f]';
           return (
             <button key={e.id} onClick={() => setTeExam(eid)} className={cx('flex-none min-w-[100px] text-left px-[13px] py-2.5 rounded-[14px] border', on ? 'bg-green border-green' : 'bg-white border-line')}>
               <span className={cx('block text-[12px] font-bold', on ? 'text-white' : 'text-ink')}>{e.name}</span>
               <span className={cx('block text-[10px] font-semibold', on ? 'text-white/80' : 'text-muted')}>{e.subject ? e.subject.name : 'All subjects'}</span>
-              <span className={cx('block text-[10px] font-semibold mt-[3px]', on ? 'text-gold' : tagCol)}>{statusTag[st]}</span>
+              {e.schoolWide && <span className={cx('block text-[10px] font-semibold mt-[3px]', on ? 'text-gold' : 'text-muted')}>School-wide</span>}
             </button>
           );
         })}
@@ -846,13 +848,12 @@ function TeacherMarks({
         )}
       </div>
 
-      {editable ? (
+      {selectedExam == null ? (
+        <div className="text-center text-muted text-[12.5px] py-8">Select or add an exam to enter marks.</div>
+      ) : (
         <>
-          {isEditingFinal && <div className="mb-3.5"><InfoNote><b>Editing finalized results.</b> Marks stay locked for parents until you re-publish. Every change is recorded in the edit history.</InfoNote></div>}
-          {status === 'provisional' && <div className="mb-3.5"><InfoNote tone="amber"><b>Provisional</b> — parents can see these marks, tagged as under review. You can still edit them, then finalize once discussed.</InfoNote></div>}
-
           <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-2">
-            {selectedExam?.subject ? 'Subject (single-subject test)' : 'Subject'}
+            {selectedExam.subject ? 'Subject (single-subject test)' : 'Subject'}
           </div>
           <div className="gw-scroll flex gap-1.5 overflow-x-auto mb-3.5 pb-0.5">
             {subjectChoices.map((s) => {
@@ -860,7 +861,7 @@ function TeacherMarks({
               return (
                 <button key={s.id} onClick={() => setTeSubject(s.name)} className={cx('flex-none flex items-center gap-1.5 px-3 py-2.5 rounded-xl border-[1.5px]', on ? 'border-green bg-mist' : 'border-line bg-white')}>
                   <span className={cx('text-[12px] font-bold', on ? 'text-green' : 'text-muted')}>{s.name}</span>
-                  {subjectDone(s.name) && <span className="text-success"><Glyph d={GLYPH.check} size={12} stroke={3} /></span>}
+                  {on && allEntered && <span className="text-success"><Glyph d={GLYPH.check} size={12} stroke={3} /></span>}
                 </button>
               );
             })}
@@ -868,75 +869,37 @@ function TeacherMarks({
 
           <div className="flex gap-2.5 mb-3">
             <StatCard value={marksAvg} label="Class avg" dark />
-            <StatCard value={entered} label={`of ${count} in`} />
-            <StatCard value={MAX_MARKS} label="Max" />
+            <StatCard value={entered} label={`of ${rows.length} in`} />
+            <div className="flex-1 bg-white border-[1.5px] border-line rounded-[16px] px-2 py-2.5 text-center">
+              <input inputMode="numeric" value={maxScore} onChange={(e) => setMaxScore(e.target.value.replace(/[^0-9]/g, '').slice(0, 3))} className="w-full text-center font-serif text-[22px] leading-none text-green bg-transparent outline-none" />
+              <div className="text-[10px] uppercase text-muted font-semibold mt-1">Max</div>
+            </div>
           </div>
 
-          <Card className="px-3.5 py-1.5 mb-3">
-            {roster.map((r) => {
-              const isAbs = !!absMarks[r.id];
-              return (
-                <div key={r.id} className="flex items-center gap-2.5 py-2 border-t border-[#f0f2ee] first:border-t-0">
-                  <span className="w-5 text-[11px] text-muted font-semibold flex-none">{r.roll}</span>
-                  <span className="flex-1 text-[13px] font-semibold truncate">{r.name}</span>
-                  {isAbs ? (
-                    <span className="text-[11px] font-bold text-danger w-[78px] text-center">ABSENT</span>
-                  ) : (
-                    <>
-                      <input type="number" value={marks[mkKey(selClass, teExam, teSubject, r.id)] || ''} onChange={(e) => setMark(r.id, e.target.value)} placeholder="—" className="w-[50px] text-center px-1 py-2 border-[1.5px] border-line rounded-[10px] text-[13px] font-semibold bg-white box-border" />
-                      <span className="text-[11px] text-[#b7bfb6] flex-none w-6">/{MAX_MARKS}</span>
-                    </>
-                  )}
-                  <button onClick={() => toggleAbsent(r.id)} className={cx('w-7 h-7 rounded-[9px] text-[12px] font-bold flex-none', isAbs ? 'bg-danger text-white' : 'bg-[#f1f5f1] text-[#9aa39b]')}>A</button>
-                </div>
-              );
-            })}
-          </Card>
-
-          {toast === 'saved' && <MarksToast tone="green" icon={GLYPH.check}>Changes saved · parents see the updated marks</MarksToast>}
-          {toast === 'provisional' && <MarksToast tone="amber" icon={GLYPH.bell}>Provisional results sent to {curClass.label} parents</MarksToast>}
-
-          {isEditingFinal ? (
-            <>
-              <div className="flex gap-[9px]">
-                <OutlineButton onClick={() => { setEditingFinal((e) => { const n = { ...e }; delete n[editKey]; return n; }); setToast(''); }}>Cancel</OutlineButton>
-                <PrimaryButton onClick={() => { setEditingFinal((e) => { const n = { ...e }; delete n[editKey]; return n; }); setToast('updated'); }}>Save &amp; re-publish</PrimaryButton>
-              </div>
-              <div className="text-center text-[11px] text-muted mt-2.5 leading-[1.4]">Re-publishing pushes the corrected report cards to parents and notes the update.</div>
-            </>
-          ) : status === 'draft' ? (
-            <>
-              <PrimaryButton onClick={() => setStatus('provisional', 'provisional')}>Publish as provisional</PrimaryButton>
-              <div className="text-center text-[11px] text-muted mt-2.5 leading-[1.4]">Provisional results reach parents tagged “under review”. You finalize them after discussion.</div>
-            </>
+          {rows.length === 0 ? (
+            <Card className="p-6 mb-3 text-center text-muted text-[12.5px]">
+              {loading ? 'Loading roster…' : 'No students enrolled in this class yet.'}
+            </Card>
           ) : (
-            <>
-              <div className="flex gap-[9px]">
-                <button onClick={() => setToast('saved')} className="flex-1 py-3.5 rounded-[14px] bg-white text-green font-semibold text-[13.5px] border-[1.5px] border-green">Save changes</button>
-                <PrimaryButton onClick={() => setStatus('final', 'final')}>Finalize results</PrimaryButton>
-              </div>
-              <div className="text-center text-[11px] text-muted mt-2.5 leading-[1.4]">Finalizing locks the marks and removes the “provisional” tag for parents.</div>
-            </>
+            <Card className="px-3.5 py-1.5 mb-3">
+              {rows.map((r, i) => (
+                <div key={r.studentId} className="flex items-center gap-2.5 py-2 border-t border-[#f0f2ee] first:border-t-0">
+                  <span className="w-5 text-[11px] text-muted font-semibold flex-none">{i + 1}</span>
+                  <span className="flex-1 text-[13px] font-semibold truncate">{r.name}</span>
+                  <input type="number" value={draft[r.studentId] ?? ''} onChange={(e) => setMark(r.studentId, e.target.value)} placeholder="—" className="w-[50px] text-center px-1 py-2 border-[1.5px] border-line rounded-[10px] text-[13px] font-semibold bg-white box-border" />
+                  <span className="text-[11px] text-[#b7bfb6] flex-none w-6">/{maxNum}</span>
+                </div>
+              ))}
+            </Card>
           )}
-        </>
-      ) : (
-        <>
-          <Card className="p-[18px] mb-3">
-            <div className="flex items-center gap-2.5 mb-3.5">
-              <div className="w-10 h-10 rounded-xl bg-mist grid place-items-center flex-none text-success"><Glyph d={GLYPH.check} size={21} stroke={2.4} /></div>
-              <div><b className="text-[14px] font-bold block">Results finalized</b><small className="text-[11.5px] text-muted">{teExamName} · {curClass.label} · locked</small></div>
-            </div>
-            <div className="flex gap-2.5">
-              <div className="flex-1 bg-cloud rounded-[14px] p-3 text-center"><div className="font-serif text-[23px] leading-none text-green">{pubAvg}<span className="text-[12px]">%</span></div><small className="text-[10px] uppercase text-muted font-semibold">Class avg</small></div>
-              <div className="flex-1 bg-cloud rounded-[14px] p-3 text-center"><div className="font-serif text-[23px] leading-none text-green">{count}</div><small className="text-[10px] uppercase text-muted font-semibold">Cards sent</small></div>
-            </div>
-            <button onClick={() => { setEditingFinal((e) => ({ ...e, [editKey]: true })); setToast(''); }} className="w-full mt-3.5 py-3 rounded-[14px] bg-white text-green font-semibold text-[13.5px] border-[1.5px] border-green flex items-center justify-center gap-2">
-              <Glyph d={GLYPH.edit} size={16} stroke={2} />Edit marks
-            </button>
-            <div className="text-center text-[11px] text-muted mt-2.5 leading-[1.4]">Marks stay editable after finalizing. Corrections re-send updated report cards to parents.</div>
-          </Card>
-          {toast === 'final' && <MarksToast tone="green" icon={GLYPH.bell}>Final report cards sent to all parents in {curClass.label}.</MarksToast>}
-          {toast === 'updated' && <MarksToast tone="green" icon={GLYPH.bell}>Updated {teExamName} report cards re-sent to {curClass.label} parents. The edit is logged.</MarksToast>}
+
+          {toast === 'saved' && <MarksToast tone="green" icon={GLYPH.check}>Marks saved · parents see the updated results</MarksToast>}
+          {toast === 'error' && <MarksToast tone="amber" icon={GLYPH.bell}>Couldn’t save marks — please try again</MarksToast>}
+
+          <PrimaryButton onClick={save} disabled={saving || rows.length === 0}>
+            {saving ? 'Saving…' : 'Save marks'}
+          </PrimaryButton>
+          <div className="text-center text-[11px] text-muted mt-2.5 leading-[1.4]">Saved marks are visible to parents in each student's report card. Leave a box blank to clear that mark.</div>
         </>
       )}
     </div>
