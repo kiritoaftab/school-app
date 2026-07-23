@@ -66,6 +66,19 @@ export async function listStudentTerms(studentId: number): Promise<ParentTerm[]>
   return data;
 }
 
+/** A school calendar event. date is 'YYYY-MM-DD'. */
+export interface ParentEvent {
+  id: number;
+  title: string;
+  description: string | null;
+  date: string;
+}
+
+export async function listEvents(): Promise<ParentEvent[]> {
+  const { data } = await api.get<ParentEvent[]>('/parent/events');
+  return data;
+}
+
 export interface StudentResults {
   term: { id: number; name: string } | null;
   overallPct: number | null;

@@ -9,13 +9,14 @@ import {
   CalendarScreen, NoticeBoardScreen, NoticeDetailScreen, NotificationsScreen, PhotosScreen,
 } from './SharedScreens';
 import { AccountSheet } from './AccountSheet';
-import { GLYPH, NOTICES, SCHOOL, gradeFor, ordinal } from './data';
+import { GLYPH, NOTICES, SCHOOL, gradeFor, ordinal, type CalEvent } from './data';
 import {
   listMyStudents, listStudentDiary, getStudentAttendance, listStudentTerms, getStudentResults,
+  listEvents,
   type ParentStudent, type ParentDiaryEntry, type AttendanceStatus, type StudentResults,
 } from '../api/parent';
 import {
-  MONTHS, DAY_SHORT, DAY_FULL, ymd, ym, addDays, startOfWeek,
+  MONTHS, MONTH_ABBR, DAY_SHORT, DAY_FULL, ymd, ym, addDays, startOfWeek,
 } from '../lib/date';
 import { getDone, setDone } from '../lib/diaryDone';
 
@@ -24,6 +25,18 @@ type Screen =
   | 'noticeBoard' | 'notice' | 'notifs';
 
 const TOP_LEVEL: Screen[] = ['home', 'diary', 'calendar', 'results', 'photos'];
+
+/** Map a backend event ('YYYY-MM-DD' + title/description) to the calendar's shape. */
+function toCalEvent(e: { title: string; description: string | null; date: string }): CalEvent {
+  const [, month, day] = e.date.split('-');
+  return {
+    m: MONTH_ABBR[(parseInt(month) || 1) - 1] ?? '',
+    d: day ?? '',
+    title: e.title,
+    sub: e.description || 'School event',
+    accent: '#c2a04e',
+  };
+}
 
 export function ParentApp() {
   const { user, logout } = useAuth();
@@ -75,6 +88,16 @@ export function ParentApp() {
     if (selStudentId == null) return;
     setDoneSet((cur) => setDone(selStudentId, entryId, !cur.has(entryId)));
   }, [selStudentId]);
+
+  // ---- calendar events ----
+  const [calEvents, setCalEvents] = useState<CalEvent[]>([]);
+  useEffect(() => {
+    let alive = true;
+    listEvents()
+      .then((evs) => alive && setCalEvents(evs.map(toCalEvent)))
+      .catch(() => alive && setCalEvents([]));
+    return () => { alive = false; };
+  }, []);
 
   // ---- notices (still mock) ----
   const [acked, setAcked] = useState<Record<string, boolean>>({});
@@ -197,7 +220,7 @@ export function ParentApp() {
           doneSet={doneSet} toggleDone={toggleDone}
         />
       )}
-      {screen === 'calendar' && <CalendarScreen />}
+      {screen === 'calendar' && <CalendarScreen events={calEvents} />}
       {screen === 'results' && <ResultsParent studentId={selStudentId} />}
       {screen === 'photos' && <PhotosScreen />}
       {screen === 'noticeBoard' && <NoticeBoardScreen role="parent" notices={NOTICES} acked={acked} onOpen={(id) => { setActiveNoticeId(id); go('notice'); }} />}
