@@ -48,6 +48,11 @@ const NOTICE_ICON: Record<string, string> = {
   Library: GLYPH.diary,
 };
 
+/** At most 2 decimal places, trailing zeros trimmed (90 → 90, 66.6666 → 66.67). */
+function pct2(n: number): number {
+  return Number(n.toFixed(2));
+}
+
 /** "24 Jun" from an ISO timestamp. */
 function shortDate(iso: string): string {
   const d = new Date(iso);
@@ -256,7 +261,7 @@ export function ParentApp() {
         <HomeParent
           student={selStudent} childCount={students.length}
           diary={diary} doneSet={doneSet} toggleDone={toggleDone}
-          notices={notices} acked={acked} go={go}
+          notices={notices} acked={acked} events={calEvents} go={go}
           openSwitcher={() => setPickerOpen(true)}
           openNotice={(id) => { setActiveNoticeId(id); go('notice'); }}
         />
@@ -426,7 +431,7 @@ function DiaryParent({
 
 // ---------- HOME ----------
 function HomeParent({
-  student, childCount, diary, doneSet, toggleDone, notices, acked, go, openSwitcher, openNotice,
+  student, childCount, diary, doneSet, toggleDone, notices, acked, events, go, openSwitcher, openNotice,
 }: {
   student: ParentStudent | null;
   childCount: number;
@@ -435,6 +440,7 @@ function HomeParent({
   toggleDone: (entryId: number) => void;
   notices: Notice[];
   acked: Record<string, boolean>;
+  events: CalEvent[];
   go: (s: Screen) => void;
   openSwitcher: () => void;
   openNotice: (id: string) => void;
@@ -444,7 +450,8 @@ function HomeParent({
   const doneCount = todayTasks.filter((t) => doneSet.has(t.id)).length;
   const unread = notices.filter((n) => !acked[n.id]);
   const homeNotices = unread.slice(0, 4);
-  const upNext = { m: 'JUN', d: '28', title: 'Parent–Teacher Meeting', sub: '9:00 AM – 1:00 PM · Main block' };
+  // Events arrive sorted ascending from today, so the first is the nearest upcoming.
+  const upNext = events[0] ?? null;
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
   const name = student?.name ?? 'Your child';
@@ -519,16 +526,20 @@ function HomeParent({
 
       <Card onClick={() => go('calendar')} className="p-[15px] mb-3">
         <SectionLabel right={<span className="text-green">Calendar →</span>}>Up Next</SectionLabel>
-        <div className="flex gap-3 items-center">
-          <div className="w-[50px] flex-none rounded-[14px] bg-[#f1f5f1] text-center py-2">
-            <span className="text-[10px] font-bold text-gold tracking-[0.06em] block">{upNext.m}</span>
-            <span className="font-serif text-[22px] leading-none">{upNext.d}</span>
+        {upNext ? (
+          <div className="flex gap-3 items-center">
+            <div className="w-[50px] flex-none rounded-[14px] bg-[#f1f5f1] text-center py-2">
+              <span className="text-[10px] font-bold text-gold tracking-[0.06em] block">{upNext.m}</span>
+              <span className="font-serif text-[22px] leading-none">{upNext.d}</span>
+            </div>
+            <div className="flex-1">
+              <b className="text-[14px] font-semibold block">{upNext.title}</b>
+              <small className="text-[11.5px] text-muted">{upNext.sub}</small>
+            </div>
           </div>
-          <div className="flex-1">
-            <b className="text-[14px] font-semibold block">{upNext.title}</b>
-            <small className="text-[11.5px] text-muted">{upNext.sub}</small>
-          </div>
-        </div>
+        ) : (
+          <div className="text-[12.5px] text-muted pt-1">No upcoming events.</div>
+        )}
       </Card>
 
       <Card onClick={() => go('photos')} className="p-[15px] pb-[13px] mb-3">
@@ -773,7 +784,7 @@ function ResultsParent({ studentId }: { studentId: number | null }) {
       ) : results && results.subjects.length > 0 ? (
         <>
           <div className="flex gap-2.5 mb-3.5">
-            <StatCard value={overall != null ? <>{overall}<span className="text-[14px]">%</span></> : '—'} label="Overall" />
+            <StatCard value={overall != null ? <>{pct2(overall)}<span className="text-[14px]">%</span></> : '—'} label="Overall" />
             <StatCard value={results.rank != null ? ordinal(results.rank) : '—'} label="Class rank" />
             <StatCard value={overall != null ? gradeFor(overall) : '—'} label="Grade" />
           </div>
@@ -783,7 +794,7 @@ function ResultsParent({ studentId }: { studentId: number | null }) {
               return (
                 <div key={i} className="mb-[13px] last:mb-0">
                   <div className="flex justify-between text-[13px] font-semibold mb-1.5">
-                    <span>{s.subject}</span><span className="text-muted">{s.score} / {s.maxScore}</span>
+                    <span>{s.subject}</span><span className="text-muted">{pct2(s.score)} / {pct2(s.maxScore)}</span>
                   </div>
                   <div className="h-[7px] rounded-md bg-[#f1f5f1] overflow-hidden">
                     <i className="block h-full rounded-md" style={{ width: `${pct}%`, background: 'linear-gradient(90deg,#15412f,#1d5740)' }} />
