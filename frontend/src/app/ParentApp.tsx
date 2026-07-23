@@ -9,11 +9,12 @@ import {
   CalendarScreen, NoticeBoardScreen, NoticeDetailScreen, NotificationsScreen, PhotosScreen,
 } from './SharedScreens';
 import { AccountSheet } from './AccountSheet';
-import { GLYPH, NOTICES, SCHOOL, gradeFor, ordinal, type CalEvent } from './data';
+import { GLYPH, SCHOOL, gradeFor, ordinal, type CalEvent, type Notice } from './data';
 import {
   listMyStudents, listStudentDiary, getStudentAttendance, listStudentTerms, getStudentResults,
-  listEvents,
+  listEvents, listNotices, ackNotice, submitLeave,
   type ParentStudent, type ParentDiaryEntry, type AttendanceStatus, type StudentResults,
+  type ParentNotice, type LeaveType,
 } from '../api/parent';
 import {
   MONTHS, MONTH_ABBR, DAY_SHORT, DAY_FULL, ymd, ym, addDays, startOfWeek,
@@ -35,6 +36,41 @@ function toCalEvent(e: { title: string; description: string | null; date: string
     title: e.title,
     sub: e.description || 'School event',
     accent: '#c2a04e',
+  };
+}
+
+// Category → board icon; falls back to the generic bell/notice glyph.
+const NOTICE_ICON: Record<string, string> = {
+  Principal: GLYPH.notices,
+  Admin: 'M4 8h16M7 3v3M17 3v3M5 6h14v14H5z',
+  Accounts: 'M3 7h18v10H3zM3 11h18',
+  Sports: 'M6 4h12v3a6 6 0 01-12 0zM10 13h4v3h-4z',
+  Library: GLYPH.diary,
+};
+
+/** "24 Jun" from an ISO timestamp. */
+function shortDate(iso: string): string {
+  const d = new Date(iso);
+  const a = MONTH_ABBR[d.getMonth()] ?? '';
+  return `${d.getDate()} ${a ? a[0] + a.slice(1).toLowerCase() : ''}`;
+}
+
+/** Adapt a live notice to the shared `Notice` shape the board/detail screens expect. */
+function toNotice(n: ParentNotice, schoolName: string): Notice {
+  // The detail screen adds +1 to the leading count when this parent has acked,
+  // so pass a base that excludes them.
+  const base = Math.max(0, n.ackCount - (n.acked ? 1 : 0));
+  return {
+    id: String(n.id),
+    category: n.category,
+    from: `${n.category} · ${schoolName}`,
+    pinned: n.pinned,
+    date: shortDate(n.createdAt),
+    icon: NOTICE_ICON[n.category] ?? GLYPH.notices,
+    title: n.title,
+    preview: n.preview,
+    body: n.body,
+    ackStat: `${base} of ${n.totalParents} parents have acknowledged`,
   };
 }
 
@@ -99,13 +135,33 @@ export function ParentApp() {
     return () => { alive = false; };
   }, []);
 
-  // ---- notices (still mock) ----
+  // ---- notices (live) ----
+  const schoolName = user?.school?.name ?? SCHOOL;
+  const [notices, setNotices] = useState<Notice[]>([]);
   const [acked, setAcked] = useState<Record<string, boolean>>({});
-  const [activeNoticeId, setActiveNoticeId] = useState('ptm');
+  const [activeNoticeId, setActiveNoticeId] = useState('');
 
-  // ---- leave (still mock submit) ----
+  useEffect(() => {
+    let alive = true;
+    listNotices()
+      .then((list) => {
+        if (!alive) return;
+        setNotices(list.map((n) => toNotice(n, schoolName)));
+        setAcked(Object.fromEntries(list.map((n) => [String(n.id), n.acked])));
+      })
+      .catch(() => { if (alive) { setNotices([]); setAcked({}); } });
+    return () => { alive = false; };
+  }, [schoolName]);
+
+  function acknowledge(id: string) {
+    setAcked((a) => ({ ...a, [id]: true }));
+    ackNotice(Number(id)).catch(() => {/* optimistic; leave the tick on */});
+  }
+
+  const activeNotice = notices.find((n) => n.id === activeNoticeId) ?? null;
+
+  // ---- leave ----
   const [leaveSent, setLeaveSent] = useState(false);
-  const [leaveType, setLeaveType] = useState<'Sick' | 'Casual' | 'Other'>('Sick');
 
   function go(s: Screen) {
     setScreen(s);
@@ -124,11 +180,9 @@ export function ParentApp() {
   else if (screen === 'photos') { title = 'Moments'; sub = 'SHARED BY THE SCHOOL'; }
   else if (screen === 'attendance') { title = 'Attendance'; sub = `${childName}${childKlass ? ` · ${childKlass}` : ''}`.toUpperCase(); }
   else if (screen === 'leave') { title = 'Apply for Leave'; sub = `${childName}${childKlass ? ` · ${childKlass}` : ''}`.toUpperCase(); }
-  else if (screen === 'noticeBoard') { title = 'Notice Board'; sub = (user?.school?.name ?? SCHOOL).toUpperCase(); }
-  else if (screen === 'notice') {
-    const n = NOTICES.find((x) => x.id === activeNoticeId)!;
-    title = 'Notice'; sub = n.from.toUpperCase();
-  } else if (screen === 'notifs') { title = 'Notifications'; sub = (user?.school?.name ?? SCHOOL).toUpperCase(); }
+  else if (screen === 'noticeBoard') { title = 'Notice Board'; sub = schoolName.toUpperCase(); }
+  else if (screen === 'notice') { title = 'Notice'; sub = (activeNotice?.from ?? schoolName).toUpperCase(); }
+  else if (screen === 'notifs') { title = 'Notifications'; sub = schoolName.toUpperCase(); }
 
   const topLevel = TOP_LEVEL.includes(screen);
   const onBack = topLevel ? undefined : () => go(screen === 'notice' ? 'noticeBoard' : 'home');
@@ -202,7 +256,7 @@ export function ParentApp() {
         <HomeParent
           student={selStudent} childCount={students.length}
           diary={diary} doneSet={doneSet} toggleDone={toggleDone}
-          acked={acked} go={go}
+          notices={notices} acked={acked} go={go}
           openSwitcher={() => setPickerOpen(true)}
           openNotice={(id) => { setActiveNoticeId(id); go('notice'); }}
         />
@@ -211,7 +265,7 @@ export function ParentApp() {
       {screen === 'leave' && (leaveSent ? (
         <SuccessScreen title="Request sent" body="The class teacher will see this right away. You'll get a notification once it's approved." buttonLabel="Back to home" onButton={() => { setLeaveSent(false); go('home'); }} />
       ) : (
-        <LeaveParent student={selStudent} type={leaveType} setType={setLeaveType} onSubmit={() => setLeaveSent(true)} />
+        <LeaveParent student={selStudent} onSuccess={() => setLeaveSent(true)} />
       ))}
       {screen === 'diary' && (
         <DiaryParent
@@ -223,13 +277,13 @@ export function ParentApp() {
       {screen === 'calendar' && <CalendarScreen events={calEvents} />}
       {screen === 'results' && <ResultsParent studentId={selStudentId} />}
       {screen === 'photos' && <PhotosScreen />}
-      {screen === 'noticeBoard' && <NoticeBoardScreen role="parent" notices={NOTICES} acked={acked} onOpen={(id) => { setActiveNoticeId(id); go('notice'); }} />}
-      {screen === 'notice' && (
+      {screen === 'noticeBoard' && <NoticeBoardScreen role="parent" notices={notices} acked={acked} onOpen={(id) => { setActiveNoticeId(id); go('notice'); }} />}
+      {screen === 'notice' && activeNotice && (
         <NoticeDetailScreen
-          notice={NOTICES.find((n) => n.id === activeNoticeId)!}
+          notice={activeNotice}
           acked={!!acked[activeNoticeId]}
           showAck
-          onAcknowledge={() => setAcked((a) => ({ ...a, [activeNoticeId]: true }))}
+          onAcknowledge={() => acknowledge(activeNoticeId)}
         />
       )}
       {screen === 'notifs' && <NotificationsScreen />}
@@ -372,13 +426,14 @@ function DiaryParent({
 
 // ---------- HOME ----------
 function HomeParent({
-  student, childCount, diary, doneSet, toggleDone, acked, go, openSwitcher, openNotice,
+  student, childCount, diary, doneSet, toggleDone, notices, acked, go, openSwitcher, openNotice,
 }: {
   student: ParentStudent | null;
   childCount: number;
   diary: ParentDiaryEntry[];
   doneSet: Set<number>;
   toggleDone: (entryId: number) => void;
+  notices: Notice[];
   acked: Record<string, boolean>;
   go: (s: Screen) => void;
   openSwitcher: () => void;
@@ -387,7 +442,7 @@ function HomeParent({
   const todayKey = ymd(new Date());
   const todayTasks = diary.filter((e) => e.date === todayKey && e.subject != null);
   const doneCount = todayTasks.filter((t) => doneSet.has(t.id)).length;
-  const unread = NOTICES.filter((n) => !acked[n.id]);
+  const unread = notices.filter((n) => !acked[n.id]);
   const homeNotices = unread.slice(0, 4);
   const upNext = { m: 'JUN', d: '28', title: 'Parent–Teacher Meeting', sub: '9:00 AM – 1:00 PM · Main block' };
   const hour = new Date().getHours();
@@ -424,7 +479,7 @@ function HomeParent({
       </button>
 
       <Card className="p-[15px] mb-3">
-        <SectionLabel right={<span onClick={() => go('noticeBoard')} className="text-green cursor-pointer">View all ({NOTICES.length}) →</span>}>
+        <SectionLabel right={<span onClick={() => go('noticeBoard')} className="text-green cursor-pointer">View all ({notices.length}) →</span>}>
           Notices · {unread.length > 0 ? `${unread.length} new` : 'all read'}
         </SectionLabel>
         {unread.length > 0 ? (
@@ -583,16 +638,39 @@ function AttendanceParent({ studentId, go }: { studentId: number | null; go: (s:
   );
 }
 
-// ---------- LEAVE (mock submit) ----------
-function LeaveParent({
-  student, type, setType, onSubmit,
-}: {
-  student: ParentStudent | null;
-  type: 'Sick' | 'Casual' | 'Other';
-  setType: (t: 'Sick' | 'Casual' | 'Other') => void;
-  onSubmit: () => void;
-}) {
+// ---------- LEAVE ----------
+const LEAVE_TYPES: { label: string; value: LeaveType }[] = [
+  { label: 'Sick', value: 'SICK' },
+  { label: 'Casual', value: 'CASUAL' },
+  { label: 'Other', value: 'OTHER' },
+];
+
+function LeaveParent({ student, onSuccess }: { student: ParentStudent | null; onSuccess: () => void }) {
   const name = student?.name ?? 'Your child';
+  const todayKey = ymd(new Date());
+  const [type, setType] = useState<LeaveType>('SICK');
+  const [fromDate, setFromDate] = useState(todayKey);
+  const [toDate, setToDate] = useState(todayKey);
+  const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+
+  const ready = student != null && reason.trim().length > 0 && fromDate !== '' && toDate !== '' && toDate >= fromDate;
+
+  async function submit() {
+    if (!ready || student == null || busy) return;
+    setBusy(true);
+    setErr('');
+    try {
+      await submitLeave({ studentId: student.id, type, fromDate, toDate, reason: reason.trim() });
+      onSuccess();
+    } catch {
+      setErr("Couldn't send the request. Please try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <div className="px-[15px] py-4 pb-6">
       <Card className="p-[15px] mb-3.5 flex items-center gap-2.5">
@@ -602,23 +680,24 @@ function LeaveParent({
       <div className="mb-3.5">
         <label className="block text-[12px] font-semibold mb-[7px]">Type of leave</label>
         <div className="flex gap-[7px]">
-          {(['Sick', 'Casual', 'Other'] as const).map((t) => (
-            <Chip key={t} active={type === t} onClick={() => setType(t)} className="flex-1 text-center py-2.5">{t}</Chip>
+          {LEAVE_TYPES.map((t) => (
+            <Chip key={t.value} active={type === t.value} onClick={() => setType(t.value)} className="flex-1 text-center py-2.5">{t.label}</Chip>
           ))}
         </div>
       </div>
       <div className="mb-3.5">
         <label className="block text-[12px] font-semibold mb-[7px]">Dates</label>
         <div className="flex gap-[9px]">
-          <input defaultValue="26 Jun" readOnly className="w-full px-3 py-[11px] border-[1.5px] border-line rounded-xl text-[13px] bg-white text-center" />
-          <input defaultValue="27 Jun" readOnly className="w-full px-3 py-[11px] border-[1.5px] border-line rounded-xl text-[13px] bg-white text-center" />
+          <input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} className="w-full px-3 py-[11px] border-[1.5px] border-line rounded-xl text-[13px] bg-white text-center" />
+          <input type="date" value={toDate} min={fromDate} onChange={(e) => setToDate(e.target.value)} className="w-full px-3 py-[11px] border-[1.5px] border-line rounded-xl text-[13px] bg-white text-center" />
         </div>
       </div>
       <div className="mb-3.5">
         <label className="block text-[12px] font-semibold mb-[7px]">Reason for the class teacher</label>
-        <textarea defaultValue="Mild fever, advised rest by the doctor." className="w-full px-3 py-[11px] border-[1.5px] border-line rounded-xl text-[13px] bg-white resize-none h-[74px]" />
+        <textarea value={reason} onChange={(e) => setReason(e.target.value)} placeholder="e.g. Mild fever, advised rest by the doctor." className="w-full box-border px-3 py-[11px] border-[1.5px] border-line rounded-xl text-[13px] bg-white resize-none h-[74px]" />
       </div>
-      <PrimaryButton onClick={onSubmit}>Send request</PrimaryButton>
+      {err && <div className="text-[11.5px] text-danger font-semibold mb-2">{err}</div>}
+      <PrimaryButton onClick={submit} disabled={!ready || busy}>{busy ? 'Sending…' : 'Send request'}</PrimaryButton>
     </div>
   );
 }

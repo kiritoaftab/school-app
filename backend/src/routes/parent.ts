@@ -111,6 +111,8 @@ parentRouter.get(
       notices.map((n) => ({
         id: n.id,
         title: n.title,
+        body: n.body,
+        preview: n.body.replace(/\s+/g, ' ').trim().slice(0, 140),
         category: n.category,
         pinned: n.pinned,
         createdAt: n.createdAt,

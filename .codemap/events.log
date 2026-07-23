@@ -386,3 +386,47 @@
 2026-07-23 14:47:31 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |   -728 | 
 2026-07-23 14:47:31 | CREATE | frontend/src/app/ParentApp.tsx           |  728 |   +728 | dirty
 2026-07-23 14:47:31 | CREATE | frontend/src/app/ParentApp.tsx           |  728 |   +728 | dirty
+2026-07-23 14:52:28 | REMOVE | backend/src/routes/parent.ts             |    0 |   -395 | 
+2026-07-23 14:52:28 | REMOVE | backend/src/routes/parent.ts             |    0 |   -395 | 
+2026-07-23 14:52:28 | CREATE | backend/src/routes/parent.ts             |  397 |   +397 | dirty
+2026-07-23 14:52:28 | CREATE | backend/src/routes/parent.ts             |  397 |   +397 | dirty
+2026-07-23 14:52:36 | REMOVE | frontend/src/api/parent.ts               |    0 |    -98 | 
+2026-07-23 14:52:36 | REMOVE | frontend/src/api/parent.ts               |    0 |    -98 | 
+2026-07-23 14:52:36 | CREATE | frontend/src/api/parent.ts               |  133 |   +133 | dirty
+2026-07-23 14:52:36 | CREATE | frontend/src/api/parent.ts               |  133 |   +133 | dirty
+2026-07-23 14:53:06 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |   -728 | 
+2026-07-23 14:53:06 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |   -728 | 
+2026-07-23 14:53:06 | CREATE | frontend/src/app/ParentApp.tsx           |  729 |   +729 | dirty
+2026-07-23 14:53:06 | CREATE | frontend/src/app/ParentApp.tsx           |  729 |   +729 | dirty
+2026-07-23 14:53:48 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |   -729 | 
+2026-07-23 14:53:48 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |   -729 | 
+2026-07-23 14:53:48 | CREATE | frontend/src/app/ParentApp.tsx           |  764 |   +764 | dirty
+2026-07-23 14:53:48 | CREATE | frontend/src/app/ParentApp.tsx           |  764 |   +764 | dirty
+2026-07-23 14:53:58 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |   -764 | 
+2026-07-23 14:53:58 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |   -764 | 
+2026-07-23 14:53:59 | CREATE | frontend/src/app/ParentApp.tsx           |  784 |   +784 | dirty
+2026-07-23 14:53:59 | CREATE | frontend/src/app/ParentApp.tsx           |  784 |   +784 | dirty
+2026-07-23 14:54:06 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |   -784 | 
+2026-07-23 14:54:06 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |   -784 | 
+2026-07-23 14:54:06 | CREATE | frontend/src/app/ParentApp.tsx           |  782 |   +782 | dirty
+2026-07-23 14:54:06 | CREATE | frontend/src/app/ParentApp.tsx           |  782 |   +782 | dirty
+2026-07-23 14:54:17 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |   -782 | 
+2026-07-23 14:54:17 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |   -782 | 
+2026-07-23 14:54:17 | CREATE | frontend/src/app/ParentApp.tsx           |  782 |   +782 | dirty
+2026-07-23 14:54:17 | CREATE | frontend/src/app/ParentApp.tsx           |  782 |   +782 | dirty
+2026-07-23 14:54:24 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |   -782 | 
+2026-07-23 14:54:24 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |   -782 | 
+2026-07-23 14:54:24 | CREATE | frontend/src/app/ParentApp.tsx           |  782 |   +782 | dirty
+2026-07-23 14:54:24 | CREATE | frontend/src/app/ParentApp.tsx           |  782 |   +782 | dirty
+2026-07-23 14:54:33 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |   -782 | 
+2026-07-23 14:54:33 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |   -782 | 
+2026-07-23 14:54:33 | CREATE | frontend/src/app/ParentApp.tsx           |  783 |   +783 | dirty
+2026-07-23 14:54:33 | CREATE | frontend/src/app/ParentApp.tsx           |  783 |   +783 | dirty
+2026-07-23 14:54:45 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |   -783 | 
+2026-07-23 14:54:45 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |   -783 | 
+2026-07-23 14:54:45 | CREATE | frontend/src/app/ParentApp.tsx           |  783 |   +783 | dirty
+2026-07-23 14:54:45 | CREATE | frontend/src/app/ParentApp.tsx           |  783 |   +783 | dirty
+2026-07-23 14:55:10 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |   -783 | 
+2026-07-23 14:55:10 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |   -783 | 
+2026-07-23 14:55:10 | CREATE | frontend/src/app/ParentApp.tsx           |  807 |   +807 | dirty
+2026-07-23 14:55:10 | CREATE | frontend/src/app/ParentApp.tsx           |  807 |   +807 | dirty

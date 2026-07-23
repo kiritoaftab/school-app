@@ -66,6 +66,41 @@ export async function listStudentTerms(studentId: number): Promise<ParentTerm[]>
   return data;
 }
 
+/** A school notice as seen by a parent. `acked` is this parent's own status. */
+export interface ParentNotice {
+  id: number;
+  title: string;
+  body: string;
+  preview: string;
+  category: string;
+  pinned: boolean;
+  createdAt: string;
+  acked: boolean;
+  ackCount: number;
+  totalParents: number;
+}
+
+export async function listNotices(): Promise<ParentNotice[]> {
+  const { data } = await api.get<ParentNotice[]>('/parent/notices');
+  return data;
+}
+
+export async function ackNotice(id: number): Promise<void> {
+  await api.post(`/parent/notices/${id}/ack`);
+}
+
+export type LeaveType = 'SICK' | 'CASUAL' | 'OTHER';
+
+export async function submitLeave(input: {
+  studentId: number;
+  type: LeaveType;
+  fromDate: string;
+  toDate: string;
+  reason: string;
+}): Promise<void> {
+  await api.post('/parent/leave', input);
+}
+
 /** A school calendar event. date is 'YYYY-MM-DD'. */
 export interface ParentEvent {
   id: number;
