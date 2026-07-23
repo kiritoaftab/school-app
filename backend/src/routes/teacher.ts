@@ -4,6 +4,7 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '../db.js';
 import { ah, HttpError } from '../lib/http.js';
 import { requireAuth, requireRole, requireSchoolId } from '../middleware/auth.js';
+import { nextAdmissionNo } from './admin.js';
 
 export const teacherRouter = Router();
 teacherRouter.use(requireAuth, requireRole('TEACHER'));
@@ -221,6 +222,21 @@ teacherRouter.post('/classes/:id/results', ah(async (req, res) => {
   res.json({ ok: true, count: entries.length });
 }));
 
+/** Upcoming school calendar events (read-only for teachers). */
+teacherRouter.get('/events', ah(async (req, res) => {
+  const schoolId = requireSchoolId(req);
+  const events = await prisma.event.findMany({
+    where: { schoolId, date: { gte: new Date(new Date().toDateString()) } },
+    orderBy: { date: 'asc' },
+  });
+  res.json(events.map((e) => ({
+    id: e.id,
+    title: e.title,
+    description: e.description,
+    date: e.date.toISOString().slice(0, 10),
+  })));
+}));
+
 /** Parse a 'YYYY-MM-DD' string into the UTC midnight used by @db.Date columns. */
 function dateOnly(s: string): Date {
   const d = new Date(`${s}T00:00:00.000Z`);
@@ -341,6 +357,72 @@ teacherRouter.get('/classes/:id/roster', ah(async (req, res) => {
       status: byStudent.get(e.student.id) ?? null,
     })),
   });
+}));
+
+/** Students in a class, with guardian details — any teacher of the class may view. */
+teacherRouter.get('/classes/:id/students', ah(async (req, res) => {
+  const { userId } = req.auth!;
+  const schoolId = requireSchoolId(req);
+  const klassId = Number(req.params.id);
+
+  const access = await allowedSubjects(userId, schoolId, klassId);
+  if (!access) throw new HttpError(403, 'You do not teach this class');
+
+  const enrollments = await prisma.enrollment.findMany({
+    where: { klassId },
+    include: { student: { include: { parentLinks: { include: { parent: true } } } } },
+    orderBy: { student: { name: 'asc' } },
+  });
+  res.json(
+    enrollments.map((e) => {
+      const link = e.student.parentLinks[0];
+      return {
+        id: e.student.id,
+        name: e.student.name,
+        admissionNo: e.student.admissionNo,
+        guardian: link
+          ? { name: link.parent.name, phone: link.parent.phone, relation: link.relation }
+          : null,
+      };
+    }),
+  );
+}));
+
+// Guardian is mandatory: their mobile is the parent login.
+const teacherStudentSchema = z.object({
+  name: z.string().min(1),
+  guardianName: z.string().min(1),
+  guardianPhone: z.string().min(10),
+  relation: z.enum(['Mother', 'Father', 'Guardian']),
+});
+/** Add a student to a class — only the class teacher may do this. */
+teacherRouter.post('/classes/:id/students', ah(async (req, res) => {
+  const { userId } = req.auth!;
+  const schoolId = requireSchoolId(req);
+  const klassId = Number(req.params.id);
+
+  const access = await allowedSubjects(userId, schoolId, klassId);
+  if (!access) throw new HttpError(403, 'You do not teach this class');
+  if (!access.isClassTeacher) throw new HttpError(403, 'Only the class teacher can add students');
+
+  const data = teacherStudentSchema.parse(req.body);
+  const phone = data.guardianPhone.replace(/\D/g, '');
+  if (phone.length !== 10) throw new HttpError(400, 'Guardian mobile must be 10 digits');
+
+  const admissionNo = await nextAdmissionNo(schoolId);
+  const student = await prisma.$transaction(async (tx) => {
+    const s = await tx.student.create({ data: { schoolId, name: data.name.trim(), admissionNo } });
+    await tx.enrollment.create({ data: { studentId: s.id, klassId, academicYear: String(new Date().getFullYear()) } });
+    // One parent account per mobile — a second child reuses the same login.
+    const parent =
+      (await tx.user.findFirst({ where: { schoolId, phone, role: 'PARENT' } })) ??
+      (await tx.user.create({ data: { schoolId, phone, name: data.guardianName.trim(), role: 'PARENT' } }));
+    await tx.parentStudentLink.create({
+      data: { parentUserId: parent.id, studentId: s.id, relation: data.relation },
+    });
+    return s;
+  });
+  res.status(201).json({ id: student.id, name: student.name, admissionNo: student.admissionNo });
 }));
 
 const markSchema = z.object({

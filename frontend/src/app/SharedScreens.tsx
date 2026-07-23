@@ -68,8 +68,12 @@ function Tile({ cover, caption, span }: { cover: string; caption?: string; span?
 }
 
 // ============ CALENDAR ============
-export function CalendarScreen({ admin }: { admin?: boolean }) {
-  const [events, setEvents] = useState<CalEvent[]>(CAL_EVENTS);
+export function CalendarScreen({ admin, events: liveEvents }: { admin?: boolean; events?: CalEvent[] }) {
+  // When `events` is passed the screen is data-driven (read-only); otherwise it
+  // falls back to the local mock catalogue that the admin add/remove flow edits.
+  const live = liveEvents != null;
+  const [mockEvents, setMockEvents] = useState<CalEvent[]>(CAL_EVENTS);
+  const events = live ? liveEvents : mockEvents;
   const [adding, setAdding] = useState(false);
   const [form, setForm] = useState({ m: 'JUL', d: '', title: '', sub: '' });
 
@@ -79,7 +83,7 @@ export function CalendarScreen({ admin }: { admin?: boolean }) {
 
   function addEvent() {
     if (!form.title.trim() || !form.d.trim()) return;
-    setEvents((e) => [
+    setMockEvents((e) => [
       ...e,
       {
         m: (form.m || 'JUL').toUpperCase().slice(0, 3),
@@ -152,6 +156,9 @@ export function CalendarScreen({ admin }: { admin?: boolean }) {
       )}
 
       <div className="text-[11.5px] text-muted mb-3.5">Upcoming at Greenwood</div>
+      {sorted.length === 0 && (
+        <div className="text-center text-muted text-[12.5px] py-8">No upcoming events.</div>
+      )}
       {sorted.map((ev, i) => (
         <div key={i} className="flex gap-3 mb-[11px] items-stretch">
           <div className="w-[50px] flex-none rounded-[14px] bg-white border border-line text-center py-2 flex flex-col justify-center">
@@ -168,7 +175,7 @@ export function CalendarScreen({ admin }: { admin?: boolean }) {
             </div>
             {admin && (
               <button
-                onClick={() => setEvents((e) => e.filter((x) => x !== ev))}
+                onClick={() => setMockEvents((e) => e.filter((x) => x !== ev))}
                 className="flex-none w-[30px] h-[30px] rounded-[9px] bg-[#faeeee] grid place-items-center text-danger"
                 aria-label="Remove"
               >

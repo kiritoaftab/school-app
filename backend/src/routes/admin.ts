@@ -307,7 +307,7 @@ async function requireKlass(schoolId: number, klassId: number) {
 }
 
 // Admission numbers are generated, not typed — "2026-0007" style, per school.
-async function nextAdmissionNo(schoolId: number) {
+export async function nextAdmissionNo(schoolId: number) {
   const year = new Date().getFullYear();
   const count = await prisma.student.count({ where: { schoolId } });
   return `${year}-${String(count + 1).padStart(4, '0')}`;

@@ -8,8 +8,9 @@ import {
 import {
   listMyClasses, listDiary, createDiaryEntry, deleteDiaryEntry,
   listClassExams, createClassExam, deleteClassExam,
-  listClassResults, saveClassResults,
-  type TeacherKlass, type DiaryEntry, type TeacherExam, type TeacherSubject, type ResultRow,
+  listClassResults, saveClassResults, listEvents,
+  listClassStudents, addClassStudent,
+  type TeacherKlass, type DiaryEntry, type TeacherExam, type TeacherSubject, type ResultRow, type TeacherStudent,
 } from '../api/teacher';
 import { CalendarScreen, NotificationsScreen } from './SharedScreens';
 import { AccountSheet } from './AccountSheet';
@@ -17,7 +18,7 @@ import {
   SCHOOL, GLYPH, TEACHER_CLASSES, ROSTERS, CT_NAME_OF, SEEDED_ABS,
   CLASS_DIARY, TODAY_DATE,
   initialsOf, maskPhone,
-  type ClassDiary, type RosterStudent,
+  type ClassDiary, type RosterStudent, type CalEvent,
 } from './data';
 
 type Screen = 'home' | 'attendance' | 'diary' | 'calendar' | 'results' | 'students' | 'notifs';
@@ -25,6 +26,20 @@ type ExamStatus = 'draft' | 'provisional' | 'final';
 type Rostered = { id: string; name: string; roll: number; guardian?: RosterStudent['guardian'] };
 const TOP_LEVEL: Screen[] = ['home', 'diary', 'calendar', 'results', 'students'];
 const PUBLISHED_EXAMS = ['ut1', 'hy', 'ut2'];
+
+const MONTH_ABBR = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
+/** Map a backend event ('YYYY-MM-DD' + title/description) to the calendar's shape. */
+function toCalEvent(e: { title: string; description: string | null; date: string }): CalEvent {
+  const [, month, day] = e.date.split('-');
+  return {
+    m: MONTH_ABBR[(parseInt(month) || 1) - 1] ?? '',
+    d: day ?? '',
+    title: e.title,
+    sub: e.description || 'School event',
+    accent: '#c2a04e',
+  };
+}
+
 const seedRosters = (): Record<string, RosterStudent[]> => {
   const out: Record<string, RosterStudent[]> = {};
   Object.keys(ROSTERS).forEach((k) => { out[k] = ROSTERS[k].map((name) => ({ name })); });
@@ -44,6 +59,7 @@ export function TeacherApp() {
   const [classesErr, setClassesErr] = useState('');
   const [loadingClasses, setLoadingClasses] = useState(true);
   const [selClassId, setSelClassId] = useState<number | null>(null);
+  const [calEvents, setCalEvents] = useState<CalEvent[]>([]);
 
   useEffect(() => {
     let alive = true;
@@ -55,6 +71,14 @@ export function TeacherApp() {
       })
       .catch(() => alive && setClassesErr('Could not load your classes.'))
       .finally(() => alive && setLoadingClasses(false));
+    return () => { alive = false; };
+  }, []);
+
+  useEffect(() => {
+    let alive = true;
+    listEvents()
+      .then((evs) => alive && setCalEvents(evs.map(toCalEvent)))
+      .catch(() => alive && setCalEvents([]));
     return () => { alive = false; };
   }, []);
 
@@ -73,7 +97,7 @@ export function TeacherApp() {
   const [toast, setToast] = useState('');
 
   // Editable rosters (class teacher can add/edit/remove students).
-  const [teRosters, setTeRosters] = useState<Record<string, RosterStudent[]>>(seedRosters);
+  const [teRosters] = useState<Record<string, RosterStudent[]>>(seedRosters);
   // Live examination catalogue for the selected class.
   const [teExams, setTeExams] = useState<TeacherExam[]>([]);
 
@@ -125,30 +149,6 @@ export function TeacherApp() {
   function statusOf(cls: string, examId: string): ExamStatus {
     if (PUBLISHED_EXAMS.includes(examId)) return 'final';
     return examStatus[`${cls}.${examId}`] || 'draft';
-  }
-
-  // ---- roster mutations (class teacher) ----
-  function teAddStudent(student: RosterStudent) {
-    setTeRosters((r) => ({ ...r, [selClass]: [...(r[selClass] || []), student] }));
-  }
-  function teRemoveStudent(idx: number) {
-    setTeRosters((r) => ({ ...r, [selClass]: (r[selClass] || []).filter((_, i) => i !== idx) }));
-  }
-  function teSetStudentField(idx: number, field: 'name' | 'gname' | 'gphone' | 'grel', val: string) {
-    setTeRosters((r) => {
-      const arr = (r[selClass] || []).slice();
-      const e: RosterStudent = { ...arr[idx] };
-      if (field === 'name') e.name = val;
-      else {
-        const g = { name: '', phone: '', relation: 'Mother', ...(e.guardian || {}) };
-        if (field === 'gname') g.name = val;
-        if (field === 'gphone') g.phone = val.replace(/\D/g, '').slice(0, 10);
-        if (field === 'grel') g.relation = val;
-        e.guardian = g;
-      }
-      arr[idx] = e;
-      return { ...r, [selClass]: arr };
-    });
   }
 
   // ---- exam catalogue mutations (any teacher of the class) ----
@@ -242,8 +242,10 @@ export function TeacherApp() {
       )}
       {screen === 'students' && (
         <TeacherStudents
-          curClass={curClass} roster={roster}
-          onAdd={teAddStudent} onRemove={teRemoveStudent} onSetField={teSetStudentField}
+          klassId={liveClass?.id ?? null}
+          label={curClass.label}
+          roleLabel={curClass.roleLabel}
+          isClassTeacher={liveClass?.isClassTeacher ?? false}
         />
       )}
       {screen === 'diary' && (
@@ -258,7 +260,7 @@ export function TeacherApp() {
           toast={toast} setToast={setToast}
         />
       )}
-      {screen === 'calendar' && <CalendarScreen />}
+      {screen === 'calendar' && <CalendarScreen events={calEvents} />}
       {screen === 'notifs' && <NotificationsScreen />}
     </Shell>
   );
@@ -911,46 +913,75 @@ const relChips = ['Mother', 'Father', 'Guardian'];
 const teInputCls = 'w-full box-border border-[1.5px] border-line rounded-[11px] px-3 py-2.5 text-[13px] bg-white';
 
 function TeacherStudents({
-  curClass, roster, onAdd, onRemove, onSetField,
+  klassId, label, roleLabel, isClassTeacher,
 }: {
-  curClass: typeof TEACHER_CLASSES[number];
-  roster: Rostered[];
-  onAdd: (s: RosterStudent) => void;
-  onRemove: (idx: number) => void;
-  onSetField: (idx: number, field: 'name' | 'gname' | 'gphone' | 'grel', val: string) => void;
+  klassId: number | null;
+  label: string;
+  roleLabel: string;
+  isClassTeacher: boolean;
 }) {
+  const [students, setStudents] = useState<TeacherStudent[]>([]);
+  const [loading, setLoading] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [name, setName] = useState('');
   const [gName, setGName] = useState('');
   const [gPhone, setGPhone] = useState('');
   const [gRel, setGRel] = useState('Mother');
-  const [editIdx, setEditIdx] = useState<number | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+
+  const reload = useCallback(async () => {
+    if (klassId == null) { setStudents([]); return; }
+    const list = await listClassStudents(klassId);
+    setStudents(list);
+  }, [klassId]);
+
+  useEffect(() => {
+    let alive = true;
+    if (klassId == null) { setStudents([]); return; }
+    setLoading(true);
+    listClassStudents(klassId)
+      .then((list) => alive && setStudents(list))
+      .catch(() => alive && setStudents([]))
+      .finally(() => alive && setLoading(false));
+    return () => { alive = false; };
+  }, [klassId]);
 
   const ready = name.trim().length > 0 && gPhone.replace(/\D/g, '').length === 10;
 
-  function submit() {
-    if (!ready) return;
-    onAdd({ name: name.trim(), guardian: { name: gName.trim() || 'Guardian', phone: gPhone.replace(/\D/g, ''), relation: gRel } });
-    setName(''); setGName(''); setGPhone(''); setGRel('Mother'); setAddOpen(false);
-  }
-
-  if (!curClass.ct) {
-    return (
-      <div className="px-[15px] py-4 pb-6">
-        <InfoNote tone="amber" icon="M12 9v4M12 17h.01M10.3 3.9L2 18a2 2 0 001.7 3h16.6a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z">
-          Only the <b>class teacher</b> can add or remove students. You teach {curClass.roleLabel} in {curClass.label} — switch to a class you lead to manage its roster.
-        </InfoNote>
-      </div>
-    );
+  async function submit() {
+    if (!ready || klassId == null || busy) return;
+    setBusy(true);
+    setErr('');
+    try {
+      await addClassStudent(klassId, {
+        name: name.trim(),
+        guardianName: gName.trim() || 'Guardian',
+        guardianPhone: gPhone.replace(/\D/g, ''),
+        relation: gRel,
+      });
+      await reload();
+      setName(''); setGName(''); setGPhone(''); setGRel('Mother'); setAddOpen(false);
+    } catch {
+      setErr("Couldn't add the student. Please try again.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
     <div className="px-[15px] py-4 pb-6">
-      {addOpen ? (
+      {!isClassTeacher ? (
+        <div className="mb-3.5">
+          <InfoNote tone="amber" icon="M12 9v4M12 17h.01M10.3 3.9L2 18a2 2 0 001.7 3h16.6a2 2 0 001.7-3L13.7 3.9a2 2 0 00-3.4 0z">
+            Only the <b>class teacher</b> can add students. You teach {roleLabel} in {label} — you can view the roster here.
+          </InfoNote>
+        </div>
+      ) : addOpen ? (
         <Card className="p-3.5 mb-3.5">
           <div className="flex items-center mb-2.5">
-            <div className="flex-1 text-[10px] tracking-[0.13em] uppercase font-semibold text-muted">Add a student to {curClass.label}</div>
-            <button onClick={() => setAddOpen(false)} className="w-[26px] h-[26px] rounded-lg border border-line bg-white text-muted text-[15px] font-bold flex-none">×</button>
+            <div className="flex-1 text-[10px] tracking-[0.13em] uppercase font-semibold text-muted">Add a student to {label}</div>
+            <button onClick={() => { setAddOpen(false); setErr(''); }} className="w-[26px] h-[26px] rounded-lg border border-line bg-white text-muted text-[15px] font-bold flex-none">×</button>
           </div>
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Student's full name" className={cx(teInputCls, 'mb-2.25')} />
           <input value={gName} onChange={(e) => setGName(e.target.value)} placeholder="Guardian's name" className={cx(teInputCls, 'mb-2.25')} />
@@ -961,7 +992,8 @@ function TeacherStudents({
           <div className="flex gap-1.5 mb-3">
             {relChips.map((r) => <Chip key={r} active={gRel === r} onClick={() => setGRel(r)} className="flex-1 text-center py-2">{r}</Chip>)}
           </div>
-          <button onClick={submit} disabled={!ready} className={cx('w-full py-3 rounded-xl font-bold text-[13.5px]', ready ? 'bg-green text-white' : 'bg-[#dfe5df] text-[#9aa39b]')}>Add student</button>
+          {err && <div className="text-[11.5px] text-danger font-semibold mb-2">{err}</div>}
+          <button onClick={submit} disabled={!ready || busy} className={cx('w-full py-3 rounded-xl font-bold text-[13.5px]', ready && !busy ? 'bg-green text-white' : 'bg-[#dfe5df] text-[#9aa39b]')}>{busy ? 'Adding…' : 'Add student'}</button>
           <div className="flex gap-2 items-start mt-2.75">
             <span className="flex-none mt-px text-muted"><Glyph d={GLYPH.info} size={14} stroke={1.9} /></span>
             <div className="text-[11px] text-muted leading-[1.5]">The guardian's mobile is their login — they sign in with it and a one-time code. No separate sign-up.</div>
@@ -972,30 +1004,15 @@ function TeacherStudents({
           <Glyph d={GLYPH.plus} size={18} stroke={2.2} />Add student
         </button>
       )}
-      <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-2.5">{roster.length} students</div>
-      {roster.map((r, i) => {
-        const g = r.guardian;
-        const editing = editIdx === i;
-        return (
-          <Card key={r.id} className="p-3 mb-2 rounded-[14px]">
-            {editing ? (
-              <div>
-                <div className="text-[9.5px] tracking-[0.1em] uppercase font-semibold text-[#9aa39b] mb-1.5">Editing #{('0' + (i + 1)).slice(-2)}</div>
-                <input value={r.name} onChange={(e) => onSetField(i, 'name', e.target.value)} placeholder="Student's full name" className={cx(teInputCls, 'mb-2')} />
-                <input value={g?.name || ''} onChange={(e) => onSetField(i, 'gname', e.target.value)} placeholder="Guardian's name" className={cx(teInputCls, 'mb-2')} />
-                <div className="flex items-center bg-white border-[1.5px] border-line rounded-[10px] overflow-hidden mb-2">
-                  <span className="px-2.5 text-[12.5px] font-semibold border-r border-line h-10 flex items-center">+91</span>
-                  <input value={g?.phone || ''} onChange={(e) => onSetField(i, 'gphone', e.target.value)} inputMode="numeric" placeholder="Guardian mobile (login)" className="flex-1 min-w-0 border-none px-2.5 h-10 text-[13px] bg-transparent" />
-                </div>
-                <div className="flex gap-1.5 mb-2.5">
-                  {relChips.map((rel) => <Chip key={rel} active={(g?.relation || 'Mother') === rel} onClick={() => onSetField(i, 'grel', rel)} className="flex-1 text-center py-1.5">{rel}</Chip>)}
-                </div>
-                <div className="flex gap-2">
-                  <button onClick={() => setEditIdx(null)} className="flex-1 py-2.75 rounded-[11px] bg-green text-white font-bold text-[13px]">Done</button>
-                  <button onClick={() => { onRemove(i); setEditIdx(null); }} className="px-4 rounded-[11px] bg-[#f6ecec] text-danger font-bold text-[13px]">Remove</button>
-                </div>
-              </div>
-            ) : (
+
+      <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-2.5">{students.length} students</div>
+      {students.length === 0 ? (
+        <div className="text-center text-muted text-[12.5px] py-8">{loading ? 'Loading roster…' : 'No students in this class yet.'}</div>
+      ) : (
+        students.map((r, i) => {
+          const g = r.guardian;
+          return (
+            <Card key={r.id} className="p-3 mb-2 rounded-[14px]">
               <div className="flex gap-[11px] items-center">
                 <span className="w-[26px] h-[26px] rounded-lg bg-[#f1f5f1] text-muted text-[11px] font-bold grid place-items-center flex-none">{('0' + (i + 1)).slice(-2)}</span>
                 <div className="flex-1 min-w-0">
@@ -1003,13 +1020,11 @@ function TeacherStudents({
                   {g ? <small className="text-[10.5px] text-muted">{g.relation} · {g.name} · {maskPhone(g.phone)}</small>
                     : <small className="text-[10.5px] text-[#a9761b] font-semibold">No guardian phone — can't log in yet</small>}
                 </div>
-                <button onClick={() => setEditIdx(i)} className="w-7 h-7 rounded-[9px] border border-[#dbe5db] bg-white text-green grid place-items-center flex-none" aria-label="Edit"><Glyph d={GLYPH.edit} size={14} stroke={2} /></button>
-                <button onClick={() => onRemove(i)} className="w-7 h-7 rounded-[9px] bg-[#f6ecec] text-danger text-[16px] font-bold flex-none">×</button>
               </div>
-            )}
-          </Card>
-        );
-      })}
+            </Card>
+          );
+        })
+      )}
     </div>
   );
 }

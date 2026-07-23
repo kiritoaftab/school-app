@@ -116,6 +116,39 @@ export async function listClassResults(
   return data;
 }
 
+/** A student in a class, with guardian (parent) login details. */
+export interface TeacherStudent {
+  id: number;
+  name: string;
+  admissionNo: string | null;
+  guardian: { name: string; phone: string; relation: string } | null;
+}
+
+export async function listClassStudents(klassId: number): Promise<TeacherStudent[]> {
+  const { data } = await api.get<TeacherStudent[]>(`/teacher/classes/${klassId}/students`);
+  return data;
+}
+
+export async function addClassStudent(
+  klassId: number,
+  input: { name: string; guardianName: string; guardianPhone: string; relation: string },
+): Promise<void> {
+  await api.post(`/teacher/classes/${klassId}/students`, input);
+}
+
+/** A school calendar event. date is 'YYYY-MM-DD'. */
+export interface TeacherEvent {
+  id: number;
+  title: string;
+  description: string | null;
+  date: string;
+}
+
+export async function listEvents(): Promise<TeacherEvent[]> {
+  const { data } = await api.get<TeacherEvent[]>('/teacher/events');
+  return data;
+}
+
 export async function saveClassResults(
   klassId: number,
   input: {
