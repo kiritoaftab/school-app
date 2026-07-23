@@ -63,3 +63,32 @@ export async function createDiaryEntry(input: {
 export async function deleteDiaryEntry(id: number): Promise<void> {
   await api.delete(`/teacher/diary/${id}`);
 }
+
+/** An exam/test. subject null = covers all subjects; set = single-subject test. */
+export interface TeacherExam {
+  id: number;
+  name: string;
+  schoolWide: boolean;
+  subject: { id: number; name: string } | null;
+}
+
+export async function listClassExams(klassId: number): Promise<TeacherExam[]> {
+  const { data } = await api.get<TeacherExam[]>(`/teacher/classes/${klassId}/exams`);
+  return data;
+}
+
+export async function createClassExam(
+  klassId: number,
+  name: string,
+  subjectId: number | null,
+): Promise<TeacherExam> {
+  const { data } = await api.post<TeacherExam>(`/teacher/classes/${klassId}/exams`, {
+    name,
+    subjectId,
+  });
+  return data;
+}
+
+export async function deleteClassExam(id: number): Promise<void> {
+  await api.delete(`/teacher/exams/${id}`);
+}

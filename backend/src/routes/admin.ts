@@ -454,18 +454,34 @@ adminRouter.get('/classes/:id/exams', ah(async (req, res) => {
   await requireKlass(schoolId, klassId);
   const terms = await prisma.term.findMany({
     where: { schoolId, OR: [{ klassId }, { klassId: null }] },
+    include: { subject: true },
     orderBy: { id: 'asc' },
   });
-  res.json(terms.map((t) => ({ id: t.id, name: t.name, schoolWide: t.klassId === null })));
+  res.json(terms.map((t) => ({
+    id: t.id,
+    name: t.name,
+    schoolWide: t.klassId === null,
+    subject: t.subject ? { id: t.subject.id, name: t.subject.name } : null,
+  })));
 }));
 
-const examSchema = z.object({ name: z.string().min(1), allSchool: z.boolean().default(false) });
+const examSchema = z.object({
+  name: z.string().min(1),
+  allSchool: z.boolean().default(false),
+  // Null/absent = exam covers all subjects; set = single-subject test.
+  subjectId: z.number().int().positive().nullable().optional(),
+});
 adminRouter.post('/classes/:id/exams', ah(async (req, res) => {
   const schoolId = requireSchoolId(req);
   const klassId = Number(req.params.id);
   await requireKlass(schoolId, klassId);
-  const { name: rawName, allSchool } = examSchema.parse(req.body);
+  const { name: rawName, allSchool, subjectId } = examSchema.parse(req.body);
   const name = rawName.trim();
+
+  if (subjectId != null) {
+    const subject = await prisma.subject.findFirst({ where: { id: subjectId, schoolId } });
+    if (!subject) throw new HttpError(404, 'Subject not found');
+  }
 
   // "All school" fans out to one row per class, so each class owns its copy
   // and can delete or grade it independently.
@@ -474,11 +490,19 @@ adminRouter.post('/classes/:id/exams', ah(async (req, res) => {
     : [klassId];
 
   await prisma.term.createMany({
-    data: targets.map((kId) => ({ schoolId, klassId: kId, name })),
+    data: targets.map((kId) => ({ schoolId, klassId: kId, name, subjectId: subjectId ?? null })),
     skipDuplicates: true,
   });
-  const created = await prisma.term.findFirst({ where: { schoolId, klassId, name } });
-  res.status(201).json({ id: created?.id ?? null, name, count: targets.length });
+  const created = await prisma.term.findFirst({
+    where: { schoolId, klassId, name, subjectId: subjectId ?? null },
+    include: { subject: true },
+  });
+  res.status(201).json({
+    id: created?.id ?? null,
+    name,
+    count: targets.length,
+    subject: created?.subject ? { id: created.subject.id, name: created.subject.name } : null,
+  });
 }));
 
 adminRouter.delete('/exams/:id', ah(async (req, res) => {

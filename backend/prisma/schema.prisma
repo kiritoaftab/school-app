@@ -152,6 +152,7 @@ model Subject {
 
   school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   teachingAssignments TeachingAssignment[]
+  terms  Term[]
 
   @@unique([schoolId, name])
   @@index([schoolId])
@@ -320,15 +321,19 @@ model Term {
   // Null for legacy school-wide terms. A school-wide exam created from the UI
   // is fanned out as one row per class, so each class owns its own copy.
   klassId  Int?
+  // Null = exam covers all subjects (graded per subject); set = single-subject test.
+  subjectId Int?
   name     String
 
   school     School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   klass      Klass?       @relation(fields: [klassId], references: [id], onDelete: Cascade)
+  subject    Subject?     @relation(fields: [subjectId], references: [id], onDelete: Cascade)
   results    Result[]
   resultMeta ResultMeta[]
 
-  @@unique([schoolId, klassId, name])
+  @@unique([schoolId, klassId, name, subjectId])
   @@index([klassId])
+  @@index([subjectId])
 }
 
 model Result {

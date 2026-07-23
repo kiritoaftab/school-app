@@ -1799,6 +1799,8 @@ function ClassDetail({
   const [examAddOpen, setExamAddOpen] = useState(false);
   const [newExam, setNewExam] = useState("");
   const [examAllSchool, setExamAllSchool] = useState(false);
+  // null = exam covers all subjects; a subject id = single-subject test.
+  const [examSubjectId, setExamSubjectId] = useState<number | null>(null);
 
   const klassId = klass?.id ?? null;
 
@@ -2381,6 +2383,8 @@ function ClassDetail({
                     onClick={() => {
                       setExamAddOpen(false);
                       setNewExam("");
+                      setExamAllSchool(false);
+                      setExamSubjectId(null);
                     }}
                     className="w-[26px] h-[26px] rounded-lg border border-line bg-white text-muted text-[15px] font-bold flex-none"
                   >
@@ -2398,10 +2402,16 @@ function ClassDetail({
                     disabled={!newExam.trim() || busy}
                     onClick={async () => {
                       await run(() =>
-                        addClassExam(klass.id, newExam.trim(), examAllSchool),
+                        addClassExam(
+                          klass.id,
+                          newExam.trim(),
+                          examAllSchool,
+                          examSubjectId,
+                        ),
                       );
                       setNewExam("");
                       setExamAllSchool(false);
+                      setExamSubjectId(null);
                       setExamAddOpen(false);
                     }}
                     className={cx(
@@ -2414,7 +2424,7 @@ function ClassDetail({
                     Add
                   </button>
                 </div>
-                <div className="flex gap-1.5">
+                <div className="flex gap-1.5 mb-2.5">
                   <Chip
                     active={!examAllSchool}
                     onClick={() => setExamAllSchool(false)}
@@ -2430,10 +2440,36 @@ function ClassDetail({
                     All school
                   </Chip>
                 </div>
+                <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-1.5">
+                  Subject
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  <Chip
+                    active={examSubjectId === null}
+                    onClick={() => setExamSubjectId(null)}
+                    className="py-2"
+                  >
+                    All subjects
+                  </Chip>
+                  {(subjects ?? []).map((s) => (
+                    <Chip
+                      key={s.id}
+                      active={examSubjectId === s.id}
+                      onClick={() => setExamSubjectId(s.id)}
+                      className="py-2"
+                    >
+                      {s.name}
+                    </Chip>
+                  ))}
+                </div>
                 <div className="text-[11px] text-muted leading-[1.5] mt-2">
-                  {examAllSchool
-                    ? "Creates this exam in every class. Each class keeps its own copy, so you can delete or grade them separately."
-                    : `Creates this exam in ${klass.label} only.`}
+                  {examSubjectId === null
+                    ? examAllSchool
+                      ? "An all-subjects exam in every class. Each class keeps its own copy, graded per subject."
+                      : `An all-subjects exam in ${klass.label}, graded per subject.`
+                    : examAllSchool
+                      ? "A single-subject test in every class. Each class keeps its own copy."
+                      : `A single-subject test in ${klass.label}.`}
                 </div>
               </Card>
             ) : (
@@ -2468,11 +2504,10 @@ function ClassDetail({
                     <b className="text-[13.5px] font-semibold block">
                       {e.name}
                     </b>
-                    {e.schoolWide && (
-                      <small className="text-[10.5px] text-muted">
-                        School-wide
-                      </small>
-                    )}
+                    <small className="text-[10.5px] text-muted">
+                      {e.subject ? e.subject.name : "All subjects"}
+                      {e.schoolWide && " · School-wide"}
+                    </small>
                   </div>
                   <button
                     disabled={busy}

@@ -7,15 +7,16 @@ import {
 } from './kit';
 import {
   listMyClasses, listDiary, createDiaryEntry, deleteDiaryEntry,
-  type TeacherKlass, type DiaryEntry,
+  listClassExams, createClassExam, deleteClassExam,
+  type TeacherKlass, type DiaryEntry, type TeacherExam, type TeacherSubject,
 } from '../api/teacher';
 import { CalendarScreen, NotificationsScreen } from './SharedScreens';
 import { AccountSheet } from './AccountSheet';
 import {
-  SCHOOL, GLYPH, TEACHER_CLASSES, SUBJ_META, ROSTERS, CT_NAME_OF, SEEDED_ABS,
+  SCHOOL, GLYPH, TEACHER_CLASSES, ROSTERS, CT_NAME_OF, SEEDED_ABS,
   CLASS_DIARY, PUB_AVG_MAP, MAX_MARKS, TODAY_DATE,
-  DEFAULT_CLASS_EXAMS, initialsOf, maskPhone,
-  type ClassDiary, type RosterStudent, type ClassExam,
+  initialsOf, maskPhone,
+  type ClassDiary, type RosterStudent,
 } from './data';
 
 type Screen = 'home' | 'attendance' | 'diary' | 'calendar' | 'results' | 'students' | 'notifs';
@@ -67,8 +68,8 @@ export function TeacherApp() {
   const [classDiary] = useState<ClassDiary>(() => JSON.parse(JSON.stringify(CLASS_DIARY)));
   const [teDate, setTeDate] = useState(TODAY_DATE);
 
-  const [teExam, setTeExam] = useState('ut3');
-  const [teSubject, setTeSubject] = useState('math');
+  const [teExam, setTeExam] = useState('');
+  const [teSubject, setTeSubject] = useState('');
   const [marks, setMarks] = useState<Record<string, string>>({});
   const [examStatus, setExamStatus] = useState<Record<string, ExamStatus>>({});
   const [editingFinal, setEditingFinal] = useState<Record<string, boolean>>({});
@@ -76,8 +77,8 @@ export function TeacherApp() {
 
   // Editable rosters (class teacher can add/edit/remove students).
   const [teRosters, setTeRosters] = useState<Record<string, RosterStudent[]>>(seedRosters);
-  // Per-class examination catalogue (class teacher can add/remove).
-  const [teExamsByClass, setTeExamsByClass] = useState<Record<string, ClassExam[]>>({});
+  // Live examination catalogue for the selected class.
+  const [teExams, setTeExams] = useState<TeacherExam[]>([]);
 
   // Bridge to the screens that are still on mock data: they look classes up by
   // the "5B" style key, so derive it from the real grade/section.
@@ -99,7 +100,26 @@ export function TeacherApp() {
     id: `${selClass}-${i}`, name: s.name, roll: i + 1, guardian: s.guardian,
   }));
   const count = roster.length;
-  const teExams = teExamsByClass[selClass] || DEFAULT_CLASS_EXAMS;
+
+  // Live exams for the selected class; keep the selected exam valid as it loads.
+  const reloadExams = useCallback(async () => {
+    if (liveClass == null) { setTeExams([]); return; }
+    const ex = await listClassExams(liveClass.id);
+    setTeExams(ex);
+    setTeExam((cur) => (ex.some((e) => String(e.id) === cur) ? cur : String(ex[0]?.id ?? '')));
+  }, [liveClass]);
+  useEffect(() => {
+    let alive = true;
+    if (liveClass == null) { setTeExams([]); return; }
+    listClassExams(liveClass.id)
+      .then((ex) => {
+        if (!alive) return;
+        setTeExams(ex);
+        setTeExam((cur) => (ex.some((e) => String(e.id) === cur) ? cur : String(ex[0]?.id ?? '')));
+      })
+      .catch(() => alive && setTeExams([]));
+    return () => { alive = false; };
+  }, [liveClass?.id]);
 
   function go(s: Screen) {
     setScreen(s);
@@ -134,18 +154,17 @@ export function TeacherApp() {
     });
   }
 
-  // ---- exam catalogue mutations (class teacher) ----
-  function teAddExam(examName: string) {
+  // ---- exam catalogue mutations (any teacher of the class) ----
+  async function teAddExam(examName: string, subjectId: number | null) {
     const nm = examName.trim();
-    if (!nm) return;
-    setTeExamsByClass((m) => ({ ...m, [selClass]: [...(m[selClass] || DEFAULT_CLASS_EXAMS), { id: 'ex' + Date.now(), name: nm }] }));
+    if (!nm || liveClass == null) return;
+    const created = await createClassExam(liveClass.id, nm, subjectId);
+    await reloadExams();
+    if (created) setTeExam(String(created.id));
   }
-  function teRemoveExam(id: string) {
-    setTeExamsByClass((m) => {
-      const arr = (m[selClass] || DEFAULT_CLASS_EXAMS).filter((e) => e.id !== id);
-      if (id === teExam) setTeExam(arr[0]?.id ?? '');
-      return { ...m, [selClass]: arr };
-    });
+  async function teRemoveExam(id: number) {
+    await deleteClassExam(id);
+    await reloadExams();
   }
 
   // header
@@ -236,6 +255,7 @@ export function TeacherApp() {
       {screen === 'results' && (
         <TeacherMarks
           curClass={curClass} selClass={selClass} roster={roster} count={count}
+          classSubjects={liveClass?.subjects ?? []}
           teExam={teExam} setTeExam={setTeExam} teSubject={teSubject} setTeSubject={setTeSubject}
           teExams={teExams} onAddExam={teAddExam} onRemoveExam={teRemoveExam}
           marks={marks} setMarks={setMarks} attAbs={attAbs} setAttAbs={setAttAbs} statusOf={statusOf}
@@ -676,7 +696,7 @@ function TeacherDiary({ klass, loading, error }: { klass: TeacherKlass | null; l
 
 // ---------- MARKS (results teacher) ----------
 function TeacherMarks({
-  curClass, selClass, roster, count, teExam, setTeExam, teSubject, setTeSubject,
+  curClass, selClass, roster, count, classSubjects, teExam, setTeExam, teSubject, setTeSubject,
   teExams, onAddExam, onRemoveExam, marks, setMarks,
   attAbs, setAttAbs, statusOf, setExamStatus, editingFinal, setEditingFinal, toast, setToast,
 }: {
@@ -684,13 +704,14 @@ function TeacherMarks({
   selClass: string;
   roster: Rostered[];
   count: number;
+  classSubjects: TeacherSubject[];
   teExam: string;
   setTeExam: (v: string) => void;
   teSubject: string;
   setTeSubject: (v: string) => void;
-  teExams: ClassExam[];
-  onAddExam: (name: string) => void;
-  onRemoveExam: (id: string) => void;
+  teExams: TeacherExam[];
+  onAddExam: (name: string, subjectId: number | null) => void;
+  onRemoveExam: (id: number) => void;
   marks: Record<string, string>;
   setMarks: React.Dispatch<React.SetStateAction<Record<string, string>>>;
   attAbs: Record<string, Record<string, boolean>>;
@@ -704,12 +725,26 @@ function TeacherMarks({
 }) {
   const [examMgOpen, setExamMgOpen] = useState(false);
   const [newExam, setNewExam] = useState('');
+  // null = all-subjects exam; a subject id = single-subject test.
+  const [newExamSubjectId, setNewExamSubjectId] = useState<number | null>(null);
   const absMarks = attAbs[selClass] || {};
   const status = statusOf(selClass, teExam);
   const editKey = `${selClass}.${teExam}`;
   const isEditingFinal = status === 'final' && !!editingFinal[editKey];
   const editable = status === 'draft' || status === 'provisional' || isEditingFinal;
-  const teExamName = teExams.find((e) => e.id === teExam)?.name ?? '';
+  const selectedExam = teExams.find((e) => String(e.id) === teExam) ?? null;
+  const teExamName = selectedExam?.name ?? '';
+
+  // A single-subject exam locks grading to its subject; an all-subjects exam
+  // opens every subject the teacher may grade in this class.
+  const subjectChoices: TeacherSubject[] = selectedExam?.subject ? [selectedExam.subject] : classSubjects;
+  const choiceKey = subjectChoices.map((s) => s.name).join('|');
+  useEffect(() => {
+    if (subjectChoices.length && !subjectChoices.some((s) => s.name === teSubject)) {
+      setTeSubject(subjectChoices[0].name);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [teExam, choiceKey]);
 
   const statusTag: Record<ExamStatus, string> = { draft: 'To enter', provisional: 'Provisional', final: 'Published' };
 
@@ -755,59 +790,77 @@ function TeacherMarks({
     <div className="px-[15px] py-4 pb-6">
       <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-2">Examination</div>
       <div className="gw-scroll flex gap-2 overflow-x-auto mb-3.5 pb-0.5">
+        {teExams.length === 0 && (
+          <div className="text-[12.5px] text-muted py-1">No exams yet — add one below.</div>
+        )}
         {teExams.map((e) => {
-          const on = e.id === teExam;
-          const st = statusOf(selClass, e.id);
+          const eid = String(e.id);
+          const on = eid === teExam;
+          const st = statusOf(selClass, eid);
           const tagCol = st === 'final' ? 'text-success' : st === 'provisional' ? 'text-[#c2882a]' : 'text-[#8a6d1f]';
           return (
-            <button key={e.id} onClick={() => { setTeExam(e.id); setTeSubject('math'); }} className={cx('flex-none min-w-[100px] text-left px-[13px] py-2.5 rounded-[14px] border', on ? 'bg-green border-green' : 'bg-white border-line')}>
+            <button key={e.id} onClick={() => setTeExam(eid)} className={cx('flex-none min-w-[100px] text-left px-[13px] py-2.5 rounded-[14px] border', on ? 'bg-green border-green' : 'bg-white border-line')}>
               <span className={cx('block text-[12px] font-bold', on ? 'text-white' : 'text-ink')}>{e.name}</span>
+              <span className={cx('block text-[10px] font-semibold', on ? 'text-white/80' : 'text-muted')}>{e.subject ? e.subject.name : 'All subjects'}</span>
               <span className={cx('block text-[10px] font-semibold mt-[3px]', on ? 'text-gold' : tagCol)}>{statusTag[st]}</span>
             </button>
           );
         })}
       </div>
 
-      {curClass.ct && (
-        <div className="mb-3.5">
-          {!examMgOpen ? (
-            <button onClick={() => setExamMgOpen(true)} className="inline-flex items-center gap-1.5 text-[12px] font-bold text-green bg-mist border-[1.5px] border-[#dbe5db] rounded-[11px] px-[13px] py-2">
-              <Glyph d={GLYPH.plus} size={15} stroke={2.2} />Add / remove exams
-            </button>
-          ) : (
-            <Card className="p-3">
-              <div className="flex items-center mb-2.5">
-                <div className="flex-1 text-[10px] tracking-[0.13em] uppercase font-semibold text-muted">Examinations for {curClass.label}</div>
-                <button onClick={() => { setExamMgOpen(false); setNewExam(''); }} className="w-[26px] h-[26px] rounded-lg border border-line bg-white text-muted text-[15px] font-bold flex-none">×</button>
-              </div>
-              <div className="flex gap-2 mb-2.5">
-                <input value={newExam} onChange={(e) => setNewExam(e.target.value)} placeholder="e.g. Annual Exam" className="flex-1 min-w-0 border-[1.5px] border-line rounded-[11px] px-3 py-2.5 text-[13px] bg-white" />
-                <button onClick={() => { onAddExam(newExam); setNewExam(''); }} disabled={!newExam.trim()} className={cx('flex-none px-4 rounded-[11px] font-bold text-[13px]', newExam.trim() ? 'bg-green text-white' : 'bg-[#dfe5df] text-[#9aa39b]')}>Add</button>
-              </div>
-              {teExams.map((e) => (
-                <div key={e.id} className="flex items-center gap-2.5 py-2.25 px-1 border-t border-[#f0f3ef]">
-                  <b className="flex-1 min-w-0 text-[13px] font-semibold">{e.name}</b>
-                  <button onClick={() => onRemoveExam(e.id)} className="w-[26px] h-[26px] rounded-lg bg-[#f6ecec] text-danger text-[15px] font-bold flex-none">×</button>
-                </div>
+      <div className="mb-3.5">
+        {!examMgOpen ? (
+          <button onClick={() => setExamMgOpen(true)} className="inline-flex items-center gap-1.5 text-[12px] font-bold text-green bg-mist border-[1.5px] border-[#dbe5db] rounded-[11px] px-[13px] py-2">
+            <Glyph d={GLYPH.plus} size={15} stroke={2.2} />Add / remove exams
+          </button>
+        ) : (
+          <Card className="p-3">
+            <div className="flex items-center mb-2.5">
+              <div className="flex-1 text-[10px] tracking-[0.13em] uppercase font-semibold text-muted">Examinations for {curClass.label}</div>
+              <button onClick={() => { setExamMgOpen(false); setNewExam(''); setNewExamSubjectId(null); }} className="w-[26px] h-[26px] rounded-lg border border-line bg-white text-muted text-[15px] font-bold flex-none">×</button>
+            </div>
+            <div className="flex gap-2 mb-2.5">
+              <input value={newExam} onChange={(e) => setNewExam(e.target.value)} placeholder="e.g. Annual Exam" className="flex-1 min-w-0 border-[1.5px] border-line rounded-[11px] px-3 py-2.5 text-[13px] bg-white" />
+              <button onClick={() => { onAddExam(newExam, newExamSubjectId); setNewExam(''); setNewExamSubjectId(null); }} disabled={!newExam.trim()} className={cx('flex-none px-4 rounded-[11px] font-bold text-[13px]', newExam.trim() ? 'bg-green text-white' : 'bg-[#dfe5df] text-[#9aa39b]')}>Add</button>
+            </div>
+            <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-1.5">Subject</div>
+            <div className="flex flex-wrap gap-1.5 mb-2.5">
+              <Chip active={newExamSubjectId === null} onClick={() => setNewExamSubjectId(null)} className="py-2">All subjects</Chip>
+              {classSubjects.map((s) => (
+                <Chip key={s.id} active={newExamSubjectId === s.id} onClick={() => setNewExamSubjectId(s.id)} className="py-2">{s.name}</Chip>
               ))}
-            </Card>
-          )}
-        </div>
-      )}
+            </div>
+            <div className="text-[11px] text-muted leading-[1.5] mb-1">
+              {newExamSubjectId === null ? 'An all-subjects exam, graded per subject.' : 'A single-subject test.'}
+            </div>
+            {teExams.filter((e) => !e.schoolWide).map((e) => (
+              <div key={e.id} className="flex items-center gap-2.5 py-2.25 px-1 border-t border-[#f0f3ef]">
+                <div className="flex-1 min-w-0">
+                  <b className="text-[13px] font-semibold block truncate">{e.name}</b>
+                  <small className="text-[10.5px] text-muted">{e.subject ? e.subject.name : 'All subjects'}</small>
+                </div>
+                <button onClick={() => onRemoveExam(e.id)} className="w-[26px] h-[26px] rounded-lg bg-[#f6ecec] text-danger text-[15px] font-bold flex-none">×</button>
+              </div>
+            ))}
+          </Card>
+        )}
+      </div>
 
       {editable ? (
         <>
           {isEditingFinal && <div className="mb-3.5"><InfoNote><b>Editing finalized results.</b> Marks stay locked for parents until you re-publish. Every change is recorded in the edit history.</InfoNote></div>}
           {status === 'provisional' && <div className="mb-3.5"><InfoNote tone="amber"><b>Provisional</b> — parents can see these marks, tagged as under review. You can still edit them, then finalize once discussed.</InfoNote></div>}
 
-          <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-2">Subject</div>
+          <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-2">
+            {selectedExam?.subject ? 'Subject (single-subject test)' : 'Subject'}
+          </div>
           <div className="gw-scroll flex gap-1.5 overflow-x-auto mb-3.5 pb-0.5">
-            {curClass.subjects.map((code) => {
-              const on = teSubject === code;
+            {subjectChoices.map((s) => {
+              const on = teSubject === s.name;
               return (
-                <button key={code} onClick={() => setTeSubject(code)} className={cx('flex-none flex items-center gap-1.5 px-3 py-2.5 rounded-xl border-[1.5px]', on ? 'border-green bg-mist' : 'border-line bg-white')}>
-                  <span className={cx('text-[12px] font-bold', on ? 'text-green' : 'text-muted')}>{SUBJ_META[code]}</span>
-                  {subjectDone(code) && <span className="text-success"><Glyph d={GLYPH.check} size={12} stroke={3} /></span>}
+                <button key={s.id} onClick={() => setTeSubject(s.name)} className={cx('flex-none flex items-center gap-1.5 px-3 py-2.5 rounded-xl border-[1.5px]', on ? 'border-green bg-mist' : 'border-line bg-white')}>
+                  <span className={cx('text-[12px] font-bold', on ? 'text-green' : 'text-muted')}>{s.name}</span>
+                  {subjectDone(s.name) && <span className="text-success"><Glyph d={GLYPH.check} size={12} stroke={3} /></span>}
                 </button>
               );
             })}

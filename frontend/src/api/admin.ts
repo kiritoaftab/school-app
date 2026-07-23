@@ -112,6 +112,8 @@ export interface ClassExam {
   id: number;
   name: string;
   schoolWide: boolean;
+  // null = exam covers all subjects; set = single-subject test.
+  subject: { id: number; name: string } | null;
 }
 
 export interface StudentInput {
@@ -155,8 +157,9 @@ export async function addClassExam(
   klassId: number,
   name: string,
   allSchool: boolean,
+  subjectId: number | null,
 ): Promise<void> {
-  await api.post(`/admin/classes/${klassId}/exams`, { name, allSchool });
+  await api.post(`/admin/classes/${klassId}/exams`, { name, allSchool, subjectId });
 }
 
 export async function deleteExam(examId: number): Promise<void> {

@@ -13,6 +13,81 @@ teacherRouter.get('/terms', ah(async (req, res) => {
   res.json(await prisma.term.findMany({ where: { schoolId }, orderBy: { id: 'asc' } }));
 }));
 
+/** Shape a Term row for the exam list. */
+function shapeExam(t: { id: number; name: string; klassId: number | null; subject: { id: number; name: string } | null }) {
+  return {
+    id: t.id,
+    name: t.name,
+    schoolWide: t.klassId === null,
+    subject: t.subject ? { id: t.subject.id, name: t.subject.name } : null,
+  };
+}
+
+/** Exams a teacher can grade in a class (its own + legacy school-wide terms). */
+teacherRouter.get('/classes/:id/exams', ah(async (req, res) => {
+  const { userId } = req.auth!;
+  const schoolId = requireSchoolId(req);
+  const klassId = Number(req.params.id);
+
+  const access = await allowedSubjects(userId, schoolId, klassId);
+  if (!access) throw new HttpError(403, 'You do not teach this class');
+
+  const terms = await prisma.term.findMany({
+    where: { schoolId, OR: [{ klassId }, { klassId: null }] },
+    include: { subject: true },
+    orderBy: { id: 'asc' },
+  });
+  res.json(terms.map(shapeExam));
+}));
+
+// subjectId null/absent = all-subjects exam; set = single-subject test.
+const teacherExamSchema = z.object({
+  name: z.string().min(1),
+  subjectId: z.number().int().positive().nullable().optional(),
+});
+/** A teacher creates an exam for their own class only (no all-school fan-out). */
+teacherRouter.post('/classes/:id/exams', ah(async (req, res) => {
+  const { userId } = req.auth!;
+  const schoolId = requireSchoolId(req);
+  const klassId = Number(req.params.id);
+  const { name: rawName, subjectId } = teacherExamSchema.parse(req.body);
+  const name = rawName.trim();
+
+  const access = await allowedSubjects(userId, schoolId, klassId);
+  if (!access) throw new HttpError(403, 'You do not teach this class');
+  // A single-subject test must name a subject the teacher may act on here.
+  if (subjectId != null && !access.subjects.some((s) => s.id === subjectId)) {
+    throw new HttpError(403, 'You do not teach that subject in this class');
+  }
+
+  await prisma.term.createMany({
+    data: [{ schoolId, klassId, name, subjectId: subjectId ?? null }],
+    skipDuplicates: true,
+  });
+  const created = await prisma.term.findFirst({
+    where: { schoolId, klassId, name, subjectId: subjectId ?? null },
+    include: { subject: true },
+  });
+  res.status(201).json(created ? shapeExam(created) : null);
+}));
+
+/** Remove an exam the teacher has access to (backs the Marks screen's × button). */
+teacherRouter.delete('/exams/:id', ah(async (req, res) => {
+  const { userId } = req.auth!;
+  const schoolId = requireSchoolId(req);
+  const id = Number(req.params.id);
+
+  const term = await prisma.term.findFirst({ where: { id, schoolId } });
+  if (!term) throw new HttpError(404, 'Exam not found');
+  // Legacy school-wide terms (no class) are admin-owned; teachers can't delete them.
+  if (term.klassId === null) throw new HttpError(403, 'You cannot delete a school-wide exam');
+  const access = await allowedSubjects(userId, schoolId, term.klassId);
+  if (!access) throw new HttpError(403, 'You do not teach this class');
+
+  await prisma.term.delete({ where: { id } });
+  res.status(204).end();
+}));
+
 /** Parse a 'YYYY-MM-DD' string into the UTC midnight used by @db.Date columns. */
 function dateOnly(s: string): Date {
   const d = new Date(`${s}T00:00:00.000Z`);
