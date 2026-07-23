@@ -16,16 +16,13 @@ import { CalendarScreen, NotificationsScreen } from './SharedScreens';
 import { AccountSheet } from './AccountSheet';
 import {
   SCHOOL, GLYPH, TEACHER_CLASSES, ROSTERS, CT_NAME_OF, SEEDED_ABS,
-  CLASS_DIARY, TODAY_DATE,
   initialsOf, maskPhone,
-  type ClassDiary, type RosterStudent, type CalEvent,
+  type RosterStudent, type CalEvent,
 } from './data';
 
 type Screen = 'home' | 'attendance' | 'diary' | 'calendar' | 'results' | 'students' | 'notifs';
-type ExamStatus = 'draft' | 'provisional' | 'final';
 type Rostered = { id: string; name: string; roll: number; guardian?: RosterStudent['guardian'] };
 const TOP_LEVEL: Screen[] = ['home', 'diary', 'calendar', 'results', 'students'];
-const PUBLISHED_EXAMS = ['ut1', 'hy', 'ut2'];
 
 const MONTH_ABBR = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
 /** Map a backend event ('YYYY-MM-DD' + title/description) to the calendar's shape. */
@@ -87,13 +84,8 @@ export function TeacherApp() {
   const [attAbs, setAttAbs] = useState<Record<string, Record<string, boolean>>>({ '5B': {}, '5A': {}, '6A': {} });
   const [regSaved, setRegSaved] = useState(false);
 
-  // Read-only now that the diary screen is live — TeacherHome still reads it for its mock counts.
-  const [classDiary] = useState<ClassDiary>(() => JSON.parse(JSON.stringify(CLASS_DIARY)));
-  const [teDate, setTeDate] = useState(TODAY_DATE);
-
   const [teExam, setTeExam] = useState('');
   const [teSubject, setTeSubject] = useState('');
-  const [examStatus] = useState<Record<string, ExamStatus>>({});
   const [toast, setToast] = useState('');
 
   // Editable rosters (class teacher can add/edit/remove students).
@@ -145,10 +137,6 @@ export function TeacherApp() {
   function go(s: Screen) {
     setScreen(s);
     setPickerOpen(false);
-  }
-  function statusOf(cls: string, examId: string): ExamStatus {
-    if (PUBLISHED_EXAMS.includes(examId)) return 'final';
-    return examStatus[`${cls}.${examId}`] || 'draft';
   }
 
   // ---- exam catalogue mutations (any teacher of the class) ----
@@ -215,7 +203,7 @@ export function TeacherApp() {
             {classes.map((c) => {
               const on = c.id === selClassId;
               return (
-                <div key={c.id} onClick={() => { setSelClassId(c.id); setPickerOpen(false); setTeSubject('math'); setTeDate(TODAY_DATE); setRegSaved(false); }}
+                <div key={c.id} onClick={() => { setSelClassId(c.id); setPickerOpen(false); setRegSaved(false); }}
                   className={cx('flex items-center gap-2.5 px-3.5 py-[13px] rounded-[15px] cursor-pointer mb-2 border-[1.5px]', on ? 'border-green bg-[#f3f8f4]' : 'border-line bg-white')}>
                   <div className="flex-1">
                     <b className={cx('text-[14px] font-bold block', on ? 'text-green' : 'text-ink')}>{c.label}</b>
@@ -232,9 +220,8 @@ export function TeacherApp() {
     >
       {screen === 'home' && (
         <TeacherHome
-          name={name} curClass={curClass} count={count} statusOf={statusOf} regSaved={regSaved}
-          attAbs={attAbs} classDiary={classDiary} teDate={teDate} go={go} openAcct={() => setAcctOpen(true)}
-          openMarks={() => { setTeExam('ut3'); go('results'); }}
+          name={name} klass={liveClass} classCount={classes.length}
+          go={go} openAcct={() => setAcctOpen(true)}
         />
       )}
       {screen === 'attendance' && (
@@ -268,62 +255,75 @@ export function TeacherApp() {
 
 // ---------- HOME ----------
 function TeacherHome({
-  name, curClass, count, statusOf, regSaved, attAbs, classDiary, teDate, go, openAcct, openMarks,
+  name, klass, classCount, go, openAcct,
 }: {
   name: string;
-  curClass: typeof TEACHER_CLASSES[number];
-  count: number;
-  statusOf: (cls: string, e: string) => ExamStatus;
-  regSaved: boolean;
-  attAbs: Record<string, Record<string, boolean>>;
-  classDiary: ClassDiary;
-  teDate: string;
+  klass: TeacherKlass | null;
+  classCount: number;
   go: (s: Screen) => void;
   openAcct: () => void;
-  openMarks: () => void;
 }) {
-  const abs = attAbs[curClass.id] || {};
-  const regAbsent = Object.keys(abs).length;
-  const regPresent = count - regAbsent;
-  const roAbs = SEEDED_ABS[curClass.id] || [];
-  const classAbsent = curClass.ct ? regAbsent : roAbs.length;
-  const classPresent = count - classAbsent;
-  const hwCount = (classDiary[curClass.id]?.[teDate] || []).length;
-  const ut3 = statusOf(curClass.id, 'ut3');
+  const [hwCount, setHwCount] = useState(0);
+  const [exams, setExams] = useState<TeacherExam[]>([]);
+
+  useEffect(() => {
+    let alive = true;
+    if (klass == null) { setHwCount(0); setExams([]); return; }
+    const today = new Date().toISOString().slice(0, 10);
+    listDiary(klass.id, today, today)
+      .then((w) => alive && setHwCount(w.entries.filter((e) => e.date === today).length))
+      .catch(() => alive && setHwCount(0));
+    listClassExams(klass.id)
+      .then((ex) => alive && setExams(ex))
+      .catch(() => alive && setExams([]));
+    return () => { alive = false; };
+  }, [klass?.id]);
+
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
+  const isCT = klass?.isClassTeacher ?? false;
+  const label = klass?.label ?? '—';
+  const studentCount = klass?.students ?? 0;
+  const latestExam = exams[0] ?? null;
 
   const actions: {
     title: string; sub: string; icon: string; gold?: boolean; badge?: string; onClick: () => void;
-  }[] = [];
-  if (curClass.ct) {
-    actions.push({
-      title: "Mark today's attendance",
-      sub: regSaved ? `Saved · ${regPresent} present` : regAbsent > 0 ? `${regAbsent} marked absent · not saved` : 'Register not taken yet',
-      icon: GLYPH.attendanceCheck, badge: regSaved ? '' : 'DUE', onClick: () => go('attendance'),
-    });
-  } else {
-    actions.push({
-      title: 'Class attendance', sub: `${classPresent} present · ${classAbsent} absent · by ${CT_NAME_OF[curClass.id]}`,
-      icon: GLYPH.staff, badge: 'VIEW', onClick: () => go('attendance'),
-    });
-  }
-  actions.push({ title: 'Post homework', sub: `${hwCount} posted for today · ${curClass.label}`, icon: GLYPH.diary, onClick: () => go('diary') });
-  actions.push({
-    title: 'Enter Unit Test 3 marks',
-    sub: ut3 === 'final' ? 'Finalized & published' : ut3 === 'provisional' ? 'Provisional · under review' : 'Due 12 July · not published',
-    icon: GLYPH.results, gold: true, badge: ut3 === 'draft' ? 'TO DO' : ut3 === 'provisional' ? 'PROVISIONAL' : '', onClick: openMarks,
-  });
+  }[] = [
+    {
+      title: isCT ? "Today's attendance" : 'Class attendance',
+      sub: isCT ? `Open the register · ${studentCount} students` : 'View-only register',
+      icon: isCT ? GLYPH.attendanceCheck : GLYPH.staff,
+      badge: isCT ? '' : 'VIEW',
+      onClick: () => go('attendance'),
+    },
+    {
+      title: 'Post homework',
+      sub: `${hwCount} posted for today · ${label}`,
+      icon: GLYPH.diary,
+      onClick: () => go('diary'),
+    },
+    {
+      title: latestExam ? 'Enter exam marks' : 'Create an exam',
+      sub: latestExam
+        ? `${latestExam.name} · ${latestExam.subject ? latestExam.subject.name : 'All subjects'}`
+        : 'No exams yet — add one to start grading',
+      icon: GLYPH.results, gold: true,
+      badge: latestExam ? 'GRADE' : 'NEW',
+      onClick: () => go('results'),
+    },
+  ];
 
   return (
     <div className="px-[15px] pt-4 pb-6">
       <div className="flex items-center gap-2.5 mb-4">
         <div onClick={openAcct} className="flex items-center gap-2.5 cursor-pointer">
           <div className="w-[38px] h-[38px] rounded-[13px] grid place-items-center text-green font-bold text-[14px] flex-none" style={{ background: 'linear-gradient(140deg,#d7e4da,#a7c4b4)' }}>{initialsOf(name)}</div>
-          <div className="font-semibold text-[14px] leading-[1.1]">{name}<small className="block text-muted font-medium text-[11px] mt-0.5">Mathematics · 3 classes</small></div>
+          <div className="font-semibold text-[14px] leading-[1.1]">{name}<small className="block text-muted font-medium text-[11px] mt-0.5">{klass?.roleLabel ? `${klass.roleLabel} · ` : ''}{classCount} {classCount === 1 ? 'class' : 'classes'}</small></div>
           <span className="text-[#9aa39b] flex-none"><Glyph d={GLYPH.chevronDown} size={16} stroke={2.2} /></span>
         </div>
-        <div className="ml-auto font-serif text-[16px] text-green">Good morning</div>
+        <div className="ml-auto font-serif text-[16px] text-green">{greeting}</div>
       </div>
-      <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-2.5">Today · {curClass.label}</div>
+      <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-2.5">Today · {label}</div>
       {actions.map((a, i) => (
         <Card key={i} onClick={a.onClick} className="p-3.5 mb-2.5 flex gap-3 items-center">
           <div className={cx('w-10 h-10 rounded-xl grid place-items-center flex-none', a.gold ? 'bg-gold-soft text-[#8a6d1f]' : 'bg-mist text-green')}>
@@ -335,9 +335,9 @@ function TeacherHome({
         </Card>
       ))}
       <div className="flex gap-2.5 mt-1.5">
-        <div onClick={() => go('students')} className="flex-1 cursor-pointer"><StatCard value={count} label="Students" /></div>
-        <div onClick={() => go('attendance')} className="flex-1 cursor-pointer"><StatCard value={classPresent} label="Present" /></div>
+        <div onClick={() => go('students')} className="flex-1 cursor-pointer"><StatCard value={studentCount} label="Students" /></div>
         <div onClick={() => go('diary')} className="flex-1 cursor-pointer"><StatCard value={hwCount} label="Homework" /></div>
+        <div onClick={() => go('results')} className="flex-1 cursor-pointer"><StatCard value={exams.length} label="Exams" /></div>
       </div>
     </div>
   );

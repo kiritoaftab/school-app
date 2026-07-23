@@ -1,120 +1,12 @@
 {
-  "updated_at": "2026-07-23T13:10:26.679752+05:30",
+  "updated_at": "2026-07-23T13:24:46.838398+05:30",
   "file_count": 96,
   "hubs": [],
   "importers": {},
   "imports": {},
   "recent_events": [
     {
-      "time": "2026-07-23T12:47:54.260831+05:30",
-      "op": "REMOVE",
-      "path": "frontend/src/app/TeacherApp.tsx",
-      "lang": "typescript",
-      "delta": -1028,
-      "size_delta": -51816
-    },
-    {
-      "time": "2026-07-23T12:47:54.27051+05:30",
-      "op": "CREATE",
-      "path": "frontend/src/app/TeacherApp.tsx",
-      "lang": "typescript",
-      "lines": 1028,
-      "delta": 1028,
-      "size_delta": 51792,
-      "dirty": true
-    },
-    {
-      "time": "2026-07-23T12:48:02.800437+05:30",
-      "op": "REMOVE",
-      "path": "frontend/src/app/TeacherApp.tsx",
-      "lang": "typescript",
-      "delta": -1028,
-      "size_delta": -51792
-    },
-    {
-      "time": "2026-07-23T12:48:02.806212+05:30",
-      "op": "CREATE",
-      "path": "frontend/src/app/TeacherApp.tsx",
-      "lang": "typescript",
-      "lines": 1026,
-      "delta": 1026,
-      "size_delta": 51686,
-      "dirty": true
-    },
-    {
-      "time": "2026-07-23T12:48:08.303626+05:30",
-      "op": "REMOVE",
-      "path": "frontend/src/app/TeacherApp.tsx",
-      "lang": "typescript",
-      "delta": -1026,
-      "size_delta": -51686
-    },
-    {
-      "time": "2026-07-23T12:48:08.304935+05:30",
-      "op": "CREATE",
-      "path": "frontend/src/app/TeacherApp.tsx",
-      "lang": "typescript",
-      "lines": 1024,
-      "delta": 1024,
-      "size_delta": 51524,
-      "dirty": true
-    },
-    {
-      "time": "2026-07-23T12:59:57.194191+05:30",
-      "op": "REMOVE",
-      "path": "backend/src/routes/teacher.ts",
-      "lang": "typescript",
-      "delta": -582,
-      "size_delta": -21775
-    },
-    {
-      "time": "2026-07-23T12:59:57.198542+05:30",
-      "op": "CREATE",
-      "path": "backend/src/routes/teacher.ts",
-      "lang": "typescript",
-      "lines": 597,
-      "delta": 597,
-      "size_delta": 22252,
-      "dirty": true
-    },
-    {
-      "time": "2026-07-23T13:00:02.316222+05:30",
-      "op": "REMOVE",
-      "path": "frontend/src/api/teacher.ts",
-      "lang": "typescript",
-      "delta": -129,
-      "size_delta": -3258
-    },
-    {
-      "time": "2026-07-23T13:00:02.317919+05:30",
-      "op": "CREATE",
-      "path": "frontend/src/api/teacher.ts",
-      "lang": "typescript",
-      "lines": 142,
-      "delta": 142,
-      "size_delta": 3573,
-      "dirty": true
-    },
-    {
-      "time": "2026-07-23T13:00:11.24655+05:30",
-      "op": "REMOVE",
-      "path": "frontend/src/app/SharedScreens.tsx",
-      "lang": "typescript",
-      "delta": -287,
-      "size_delta": -11616
-    },
-    {
-      "time": "2026-07-23T13:00:11.269962+05:30",
-      "op": "CREATE",
-      "path": "frontend/src/app/SharedScreens.tsx",
-      "lang": "typescript",
-      "lines": 291,
-      "delta": 291,
-      "size_delta": 11912,
-      "dirty": true
-    },
-    {
-      "time": "2026-07-23T13:00:17.162764+05:30",
+      "time": "2026-07-23T13:00:17.163351+05:30",
       "op": "REMOVE",
       "path": "frontend/src/app/SharedScreens.tsx",
       "lang": "typescript",
@@ -122,7 +14,7 @@
       "size_delta": -11912
     },
     {
-      "time": "2026-07-23T13:00:17.164863+05:30",
+      "time": "2026-07-23T13:00:17.16443+05:30",
       "op": "CREATE",
       "path": "frontend/src/app/SharedScreens.tsx",
       "lang": "typescript",
@@ -132,7 +24,7 @@
       "dirty": true
     },
     {
-      "time": "2026-07-23T13:00:23.470701+05:30",
+      "time": "2026-07-23T13:00:23.471139+05:30",
       "op": "REMOVE",
       "path": "frontend/src/app/SharedScreens.tsx",
       "lang": "typescript",
@@ -140,7 +32,7 @@
       "size_delta": -11916
     },
     {
-      "time": "2026-07-23T13:00:23.481961+05:30",
+      "time": "2026-07-23T13:00:23.481522+05:30",
       "op": "CREATE",
       "path": "frontend/src/app/SharedScreens.tsx",
       "lang": "typescript",
@@ -150,7 +42,7 @@
       "dirty": true
     },
     {
-      "time": "2026-07-23T13:00:28.915279+05:30",
+      "time": "2026-07-23T13:00:28.915291+05:30",
       "op": "REMOVE",
       "path": "frontend/src/app/SharedScreens.tsx",
       "lang": "typescript",
@@ -158,7 +50,7 @@
       "size_delta": -11920
     },
     {
-      "time": "2026-07-23T13:00:28.921422+05:30",
+      "time": "2026-07-23T13:00:28.921715+05:30",
       "op": "CREATE",
       "path": "frontend/src/app/SharedScreens.tsx",
       "lang": "typescript",
@@ -168,7 +60,7 @@
       "dirty": true
     },
     {
-      "time": "2026-07-23T13:00:37.708182+05:30",
+      "time": "2026-07-23T13:00:37.708158+05:30",
       "op": "REMOVE",
       "path": "frontend/src/app/TeacherApp.tsx",
       "lang": "typescript",
@@ -176,7 +68,7 @@
       "size_delta": -51524
     },
     {
-      "time": "2026-07-23T13:00:37.715055+05:30",
+      "time": "2026-07-23T13:00:37.715114+05:30",
       "op": "CREATE",
       "path": "frontend/src/app/TeacherApp.tsx",
       "lang": "typescript",
@@ -186,7 +78,7 @@
       "dirty": true
     },
     {
-      "time": "2026-07-23T13:00:43.516637+05:30",
+      "time": "2026-07-23T13:00:43.51664+05:30",
       "op": "REMOVE",
       "path": "frontend/src/app/TeacherApp.tsx",
       "lang": "typescript",
@@ -194,7 +86,7 @@
       "size_delta": -51536
     },
     {
-      "time": "2026-07-23T13:00:43.532917+05:30",
+      "time": "2026-07-23T13:00:43.533003+05:30",
       "op": "CREATE",
       "path": "frontend/src/app/TeacherApp.tsx",
       "lang": "typescript",
@@ -204,7 +96,7 @@
       "dirty": true
     },
     {
-      "time": "2026-07-23T13:01:00.431933+05:30",
+      "time": "2026-07-23T13:01:00.431637+05:30",
       "op": "REMOVE",
       "path": "frontend/src/app/TeacherApp.tsx",
       "lang": "typescript",
@@ -212,7 +104,7 @@
       "size_delta": -51559
     },
     {
-      "time": "2026-07-23T13:01:00.440598+05:30",
+      "time": "2026-07-23T13:01:00.440699+05:30",
       "op": "CREATE",
       "path": "frontend/src/app/TeacherApp.tsx",
       "lang": "typescript",
@@ -222,7 +114,7 @@
       "dirty": true
     },
     {
-      "time": "2026-07-23T13:01:12.711311+05:30",
+      "time": "2026-07-23T13:01:12.711716+05:30",
       "op": "REMOVE",
       "path": "frontend/src/app/TeacherApp.tsx",
       "lang": "typescript",
@@ -230,7 +122,7 @@
       "size_delta": -51840
     },
     {
-      "time": "2026-07-23T13:01:12.713051+05:30",
+      "time": "2026-07-23T13:01:12.723998+05:30",
       "op": "CREATE",
       "path": "frontend/src/app/TeacherApp.tsx",
       "lang": "typescript",
@@ -240,7 +132,7 @@
       "dirty": true
     },
     {
-      "time": "2026-07-23T13:01:20.304808+05:30",
+      "time": "2026-07-23T13:01:20.304922+05:30",
       "op": "REMOVE",
       "path": "frontend/src/app/TeacherApp.tsx",
       "lang": "typescript",
@@ -248,7 +140,7 @@
       "size_delta": -52239
     },
     {
-      "time": "2026-07-23T13:01:20.30612+05:30",
+      "time": "2026-07-23T13:01:20.306046+05:30",
       "op": "CREATE",
       "path": "frontend/src/app/TeacherApp.tsx",
       "lang": "typescript",
@@ -258,7 +150,7 @@
       "dirty": true
     },
     {
-      "time": "2026-07-23T13:01:49.429942+05:30",
+      "time": "2026-07-23T13:01:49.430041+05:30",
       "op": "REMOVE",
       "path": "frontend/src/app/TeacherApp.tsx",
       "lang": "typescript",
@@ -266,7 +158,7 @@
       "size_delta": -52258
     },
     {
-      "time": "2026-07-23T13:01:49.438159+05:30",
+      "time": "2026-07-23T13:01:49.438207+05:30",
       "op": "CREATE",
       "path": "frontend/src/app/TeacherApp.tsx",
       "lang": "typescript",
@@ -276,7 +168,7 @@
       "dirty": true
     },
     {
-      "time": "2026-07-23T13:01:57.438164+05:30",
+      "time": "2026-07-23T13:01:57.43778+05:30",
       "op": "REMOVE",
       "path": "frontend/src/app/TeacherApp.tsx",
       "lang": "typescript",
@@ -284,7 +176,7 @@
       "size_delta": -52250
     },
     {
-      "time": "2026-07-23T13:01:57.449712+05:30",
+      "time": "2026-07-23T13:01:57.438878+05:30",
       "op": "CREATE",
       "path": "frontend/src/app/TeacherApp.tsx",
       "lang": "typescript",
@@ -294,7 +186,7 @@
       "dirty": true
     },
     {
-      "time": "2026-07-23T13:07:41.1279+05:30",
+      "time": "2026-07-23T13:07:41.127907+05:30",
       "op": "REMOVE",
       "path": "backend/src/routes/admin.ts",
       "lang": "typescript",
@@ -302,7 +194,7 @@
       "size_delta": -38533
     },
     {
-      "time": "2026-07-23T13:07:41.136191+05:30",
+      "time": "2026-07-23T13:07:41.136027+05:30",
       "op": "CREATE",
       "path": "backend/src/routes/admin.ts",
       "lang": "typescript",
@@ -312,7 +204,7 @@
       "dirty": true
     },
     {
-      "time": "2026-07-23T13:08:00.239966+05:30",
+      "time": "2026-07-23T13:08:00.23994+05:30",
       "op": "REMOVE",
       "path": "backend/src/routes/teacher.ts",
       "lang": "typescript",
@@ -320,7 +212,7 @@
       "size_delta": -22252
     },
     {
-      "time": "2026-07-23T13:08:00.256601+05:30",
+      "time": "2026-07-23T13:08:00.256695+05:30",
       "op": "CREATE",
       "path": "backend/src/routes/teacher.ts",
       "lang": "typescript",
@@ -330,7 +222,7 @@
       "dirty": true
     },
     {
-      "time": "2026-07-23T13:08:17.823225+05:30",
+      "time": "2026-07-23T13:08:17.823296+05:30",
       "op": "REMOVE",
       "path": "backend/src/routes/teacher.ts",
       "lang": "typescript",
@@ -338,7 +230,7 @@
       "size_delta": -22298
     },
     {
-      "time": "2026-07-23T13:08:17.828759+05:30",
+      "time": "2026-07-23T13:08:17.828721+05:30",
       "op": "CREATE",
       "path": "backend/src/routes/teacher.ts",
       "lang": "typescript",
@@ -348,7 +240,7 @@
       "dirty": true
     },
     {
-      "time": "2026-07-23T13:08:44.752374+05:30",
+      "time": "2026-07-23T13:08:44.752522+05:30",
       "op": "REMOVE",
       "path": "frontend/src/api/teacher.ts",
       "lang": "typescript",
@@ -356,7 +248,7 @@
       "size_delta": -3573
     },
     {
-      "time": "2026-07-23T13:08:44.773816+05:30",
+      "time": "2026-07-23T13:08:44.773769+05:30",
       "op": "CREATE",
       "path": "frontend/src/api/teacher.ts",
       "lang": "typescript",
@@ -366,7 +258,7 @@
       "dirty": true
     },
     {
-      "time": "2026-07-23T13:09:04.312159+05:30",
+      "time": "2026-07-23T13:09:04.312236+05:30",
       "op": "REMOVE",
       "path": "frontend/src/app/TeacherApp.tsx",
       "lang": "typescript",
@@ -374,7 +266,7 @@
       "size_delta": -52359
     },
     {
-      "time": "2026-07-23T13:09:04.325657+05:30",
+      "time": "2026-07-23T13:09:04.32581+05:30",
       "op": "CREATE",
       "path": "frontend/src/app/TeacherApp.tsx",
       "lang": "typescript",
@@ -384,7 +276,7 @@
       "dirty": true
     },
     {
-      "time": "2026-07-23T13:09:12.824054+05:30",
+      "time": "2026-07-23T13:09:12.824417+05:30",
       "op": "REMOVE",
       "path": "frontend/src/app/TeacherApp.tsx",
       "lang": "typescript",
@@ -392,7 +284,7 @@
       "size_delta": -52402
     },
     {
-      "time": "2026-07-23T13:09:12.825467+05:30",
+      "time": "2026-07-23T13:09:12.838784+05:30",
       "op": "CREATE",
       "path": "frontend/src/app/TeacherApp.tsx",
       "lang": "typescript",
@@ -402,7 +294,7 @@
       "dirty": true
     },
     {
-      "time": "2026-07-23T13:09:30.016454+05:30",
+      "time": "2026-07-23T13:09:30.016417+05:30",
       "op": "REMOVE",
       "path": "frontend/src/app/TeacherApp.tsx",
       "lang": "typescript",
@@ -410,7 +302,7 @@
       "size_delta": -51431
     },
     {
-      "time": "2026-07-23T13:09:30.017971+05:30",
+      "time": "2026-07-23T13:09:30.018171+05:30",
       "op": "CREATE",
       "path": "frontend/src/app/TeacherApp.tsx",
       "lang": "typescript",
@@ -420,7 +312,7 @@
       "dirty": true
     },
     {
-      "time": "2026-07-23T13:09:36.081108+05:30",
+      "time": "2026-07-23T13:09:36.081075+05:30",
       "op": "REMOVE",
       "path": "frontend/src/app/TeacherApp.tsx",
       "lang": "typescript",
@@ -428,7 +320,7 @@
       "size_delta": -51417
     },
     {
-      "time": "2026-07-23T13:09:36.087793+05:30",
+      "time": "2026-07-23T13:09:36.087963+05:30",
       "op": "CREATE",
       "path": "frontend/src/app/TeacherApp.tsx",
       "lang": "typescript",
@@ -438,7 +330,7 @@
       "dirty": true
     },
     {
-      "time": "2026-07-23T13:10:26.627608+05:30",
+      "time": "2026-07-23T13:10:26.627562+05:30",
       "op": "REMOVE",
       "path": "frontend/src/app/TeacherApp.tsx",
       "lang": "typescript",
@@ -446,7 +338,7 @@
       "size_delta": -51476
     },
     {
-      "time": "2026-07-23T13:10:26.628819+05:30",
+      "time": "2026-07-23T13:10:26.628744+05:30",
       "op": "CREATE",
       "path": "frontend/src/app/TeacherApp.tsx",
       "lang": "typescript",
@@ -454,14 +346,122 @@
       "delta": 1039,
       "size_delta": 50369,
       "dirty": true
+    },
+    {
+      "time": "2026-07-23T13:23:41.562799+05:30",
+      "op": "REMOVE",
+      "path": "frontend/src/app/TeacherApp.tsx",
+      "lang": "typescript",
+      "delta": -1039,
+      "size_delta": -50369
+    },
+    {
+      "time": "2026-07-23T13:23:41.564439+05:30",
+      "op": "CREATE",
+      "path": "frontend/src/app/TeacherApp.tsx",
+      "lang": "typescript",
+      "lines": 1052,
+      "delta": 1052,
+      "size_delta": 50474,
+      "dirty": true
+    },
+    {
+      "time": "2026-07-23T13:23:53.405673+05:30",
+      "op": "REMOVE",
+      "path": "frontend/src/app/TeacherApp.tsx",
+      "lang": "typescript",
+      "delta": -1052,
+      "size_delta": -50474
+    },
+    {
+      "time": "2026-07-23T13:23:53.407084+05:30",
+      "op": "CREATE",
+      "path": "frontend/src/app/TeacherApp.tsx",
+      "lang": "typescript",
+      "lines": 1051,
+      "delta": 1051,
+      "size_delta": 50325,
+      "dirty": true
+    },
+    {
+      "time": "2026-07-23T13:24:10.541112+05:30",
+      "op": "REMOVE",
+      "path": "frontend/src/app/TeacherApp.tsx",
+      "lang": "typescript",
+      "delta": -1051,
+      "size_delta": -50325
+    },
+    {
+      "time": "2026-07-23T13:24:10.542091+05:30",
+      "op": "CREATE",
+      "path": "frontend/src/app/TeacherApp.tsx",
+      "lang": "typescript",
+      "lines": 1046,
+      "delta": 1046,
+      "size_delta": 50014,
+      "dirty": true
+    },
+    {
+      "time": "2026-07-23T13:24:20.54821+05:30",
+      "op": "REMOVE",
+      "path": "frontend/src/app/TeacherApp.tsx",
+      "lang": "typescript",
+      "delta": -1046,
+      "size_delta": -50014
+    },
+    {
+      "time": "2026-07-23T13:24:20.549156+05:30",
+      "op": "CREATE",
+      "path": "frontend/src/app/TeacherApp.tsx",
+      "lang": "typescript",
+      "lines": 1046,
+      "delta": 1046,
+      "size_delta": 49969,
+      "dirty": true
+    },
+    {
+      "time": "2026-07-23T13:24:30.203193+05:30",
+      "op": "REMOVE",
+      "path": "frontend/src/app/TeacherApp.tsx",
+      "lang": "typescript",
+      "delta": -1046,
+      "size_delta": -49969
+    },
+    {
+      "time": "2026-07-23T13:24:30.210815+05:30",
+      "op": "CREATE",
+      "path": "frontend/src/app/TeacherApp.tsx",
+      "lang": "typescript",
+      "lines": 1042,
+      "delta": 1042,
+      "size_delta": 49790,
+      "dirty": true
+    },
+    {
+      "time": "2026-07-23T13:24:46.784723+05:30",
+      "op": "REMOVE",
+      "path": "frontend/src/app/TeacherApp.tsx",
+      "lang": "typescript",
+      "delta": -1042,
+      "size_delta": -49790
+    },
+    {
+      "time": "2026-07-23T13:24:46.81224+05:30",
+      "op": "CREATE",
+      "path": "frontend/src/app/TeacherApp.tsx",
+      "lang": "typescript",
+      "lines": 1039,
+      "delta": 1039,
+      "size_delta": 49647,
+      "dirty": true
     }
   ],
   "working_set": {
     "files": {
       "backend/src/routes/admin.ts": {
         "path": "backend/src/routes/admin.ts",
-        "first_touch": "2026-07-23T13:07:41.174414+05:30",
-        "last_touch": "2026-07-23T13:07:41.174414+05:30",
+        "first_touch": "2026-07-23T13:07:41.174424+05:30",
+        "last_touch": "2026-07-23T13:07:41.174424+05:30",
         "edit_count": 1,
         "net_delta": 1033,
         "is_hub": false,
@@ -469,8 +469,8 @@
       },
       "backend/src/routes/teacher.ts": {
         "path": "backend/src/routes/teacher.ts",
-        "first_touch": "2026-07-23T13:08:17.845548+05:30",
-        "last_touch": "2026-07-23T13:08:17.845548+05:30",
+        "first_touch": "2026-07-23T13:08:17.845545+05:30",
+        "last_touch": "2026-07-23T13:08:17.845545+05:30",
         "edit_count": 1,
         "net_delta": 664,
         "is_hub": false,
@@ -478,8 +478,8 @@
       },
       "frontend/src/api/admin.ts": {
         "path": "frontend/src/api/admin.ts",
-        "first_touch": "2026-07-23T12:19:24.532494+05:30",
-        "last_touch": "2026-07-23T12:19:24.532494+05:30",
+        "first_touch": "2026-07-23T12:19:24.532489+05:30",
+        "last_touch": "2026-07-23T12:19:24.532489+05:30",
         "edit_count": 1,
         "net_delta": 383,
         "is_hub": false,
@@ -487,8 +487,8 @@
       },
       "frontend/src/api/teacher.ts": {
         "path": "frontend/src/api/teacher.ts",
-        "first_touch": "2026-07-23T13:08:44.80532+05:30",
-        "last_touch": "2026-07-23T13:08:44.80532+05:30",
+        "first_touch": "2026-07-23T13:08:44.804251+05:30",
+        "last_touch": "2026-07-23T13:08:44.804251+05:30",
         "edit_count": 1,
         "net_delta": 162,
         "is_hub": false,
@@ -496,8 +496,8 @@
       },
       "frontend/src/app/AdminApp.tsx": {
         "path": "frontend/src/app/AdminApp.tsx",
-        "first_touch": "2026-07-23T12:20:09.447129+05:30",
-        "last_touch": "2026-07-23T12:20:09.447129+05:30",
+        "first_touch": "2026-07-23T12:20:09.447133+05:30",
+        "last_touch": "2026-07-23T12:20:09.447133+05:30",
         "edit_count": 1,
         "net_delta": 3649,
         "is_hub": false,
@@ -505,8 +505,8 @@
       },
       "frontend/src/app/SharedScreens.tsx": {
         "path": "frontend/src/app/SharedScreens.tsx",
-        "first_touch": "2026-07-23T13:00:28.953494+05:30",
-        "last_touch": "2026-07-23T13:00:28.953494+05:30",
+        "first_touch": "2026-07-23T13:00:28.949175+05:30",
+        "last_touch": "2026-07-23T13:00:28.949175+05:30",
         "edit_count": 1,
         "net_delta": 294,
         "is_hub": false,
@@ -514,14 +514,14 @@
       },
       "frontend/src/app/TeacherApp.tsx": {
         "path": "frontend/src/app/TeacherApp.tsx",
-        "first_touch": "2026-07-23T13:10:26.676205+05:30",
-        "last_touch": "2026-07-23T13:10:26.676205+05:30",
+        "first_touch": "2026-07-23T13:24:46.834877+05:30",
+        "last_touch": "2026-07-23T13:24:46.834877+05:30",
         "edit_count": 1,
         "net_delta": 1039,
         "is_hub": false,
         "importers": 0
       }
     },
-    "started_at": "2026-07-23T12:03:52.379219+05:30"
+    "started_at": "2026-07-23T12:06:33.024111+05:30"
   }
 }
