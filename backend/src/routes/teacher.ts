@@ -331,12 +331,15 @@ teacherRouter.get('/classes', ah(async (req, res) => {
   );
 }));
 
-/** Roster for a class, with today's attendance status prefilled. */
+/** Roster for a class with the day's attendance prefilled — any teacher of the
+ *  class may view; `isClassTeacher` tells the client whether marking is allowed. */
 teacherRouter.get('/classes/:id/roster', ah(async (req, res) => {
+  const { userId } = req.auth!;
   const schoolId = requireSchoolId(req);
   const klassId = Number(req.params.id);
-  const klass = await prisma.klass.findFirst({ where: { id: klassId, schoolId } });
-  if (!klass) throw new HttpError(404, 'Class not found');
+
+  const access = await allowedSubjects(userId, schoolId, klassId);
+  if (!access) throw new HttpError(403, 'You do not teach this class');
 
   const date = String(req.query.date ?? new Date().toISOString().slice(0, 10));
   const day = new Date(date);
@@ -351,6 +354,7 @@ teacherRouter.get('/classes/:id/roster', ah(async (req, res) => {
   const byStudent = new Map(attendance.map((a) => [a.studentId, a.status]));
   res.json({
     date,
+    isClassTeacher: access.isClassTeacher,
     students: enrollments.map((e) => ({
       id: e.student.id,
       name: e.student.name,
@@ -434,11 +438,27 @@ const markSchema = z.object({
     }),
   ),
 });
-teacherRouter.post('/attendance', ah(async (req, res) => {
+/** Save a class register for a day — only the class teacher may mark. */
+teacherRouter.post('/classes/:id/attendance', ah(async (req, res) => {
   const { userId } = req.auth!;
   const schoolId = requireSchoolId(req);
+  const klassId = Number(req.params.id);
+
+  const access = await allowedSubjects(userId, schoolId, klassId);
+  if (!access) throw new HttpError(403, 'You do not teach this class');
+  if (!access.isClassTeacher) throw new HttpError(403, 'Only the class teacher can mark attendance');
+
   const { date, marks } = markSchema.parse(req.body);
   const day = new Date(date);
+
+  // Only students enrolled in this class may be marked here.
+  const enrolled = new Set(
+    (await prisma.enrollment.findMany({ where: { klassId }, select: { studentId: true } })).map((e) => e.studentId),
+  );
+  for (const m of marks) {
+    if (!enrolled.has(m.studentId)) throw new HttpError(400, `Student ${m.studentId} is not in this class`);
+  }
+
   await prisma.$transaction(
     marks.map((m) =>
       prisma.attendance.upsert({

@@ -136,6 +136,35 @@ export async function addClassStudent(
   await api.post(`/teacher/classes/${klassId}/students`, input);
 }
 
+export type AttendanceStatus = 'PRESENT' | 'ABSENT' | 'LATE' | 'HOLIDAY';
+
+export interface RosterStudent {
+  id: number;
+  name: string;
+  status: AttendanceStatus | null;
+}
+
+export interface ClassRoster {
+  date: string;
+  isClassTeacher: boolean;
+  students: RosterStudent[];
+}
+
+export async function getClassRoster(klassId: number, date?: string): Promise<ClassRoster> {
+  const { data } = await api.get<ClassRoster>(`/teacher/classes/${klassId}/roster`, {
+    params: date ? { date } : undefined,
+  });
+  return data;
+}
+
+export async function saveClassAttendance(
+  klassId: number,
+  date: string,
+  marks: { studentId: number; status: AttendanceStatus }[],
+): Promise<void> {
+  await api.post(`/teacher/classes/${klassId}/attendance`, { date, marks });
+}
+
 /** A school calendar event. date is 'YYYY-MM-DD'. */
 export interface TeacherEvent {
   id: number;

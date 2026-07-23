@@ -10,18 +10,19 @@ import {
   listClassExams, createClassExam, deleteClassExam,
   listClassResults, saveClassResults, listEvents,
   listClassStudents, addClassStudent,
+  getClassRoster, saveClassAttendance,
   type TeacherKlass, type DiaryEntry, type TeacherExam, type TeacherSubject, type ResultRow, type TeacherStudent,
+  type AttendanceStatus, type RosterStudent as RosterRow,
 } from '../api/teacher';
 import { CalendarScreen, NotificationsScreen } from './SharedScreens';
 import { AccountSheet } from './AccountSheet';
 import {
-  SCHOOL, GLYPH, TEACHER_CLASSES, ROSTERS, CT_NAME_OF, SEEDED_ABS,
+  SCHOOL, GLYPH, TEACHER_CLASSES,
   initialsOf, maskPhone,
-  type RosterStudent, type CalEvent,
+  type CalEvent,
 } from './data';
 
 type Screen = 'home' | 'attendance' | 'diary' | 'calendar' | 'results' | 'students' | 'notifs';
-type Rostered = { id: string; name: string; roll: number; guardian?: RosterStudent['guardian'] };
 const TOP_LEVEL: Screen[] = ['home', 'diary', 'calendar', 'results', 'students'];
 
 const MONTH_ABBR = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
@@ -36,12 +37,6 @@ function toCalEvent(e: { title: string; description: string | null; date: string
     accent: '#c2a04e',
   };
 }
-
-const seedRosters = (): Record<string, RosterStudent[]> => {
-  const out: Record<string, RosterStudent[]> = {};
-  Object.keys(ROSTERS).forEach((k) => { out[k] = ROSTERS[k].map((name) => ({ name })); });
-  return out;
-};
 
 export function TeacherApp() {
   const { user, logout } = useAuth();
@@ -81,15 +76,10 @@ export function TeacherApp() {
 
   const liveClass = classes.find((c) => c.id === selClassId) ?? null;
 
-  const [attAbs, setAttAbs] = useState<Record<string, Record<string, boolean>>>({ '5B': {}, '5A': {}, '6A': {} });
-  const [regSaved, setRegSaved] = useState(false);
-
   const [teExam, setTeExam] = useState('');
   const [teSubject, setTeSubject] = useState('');
   const [toast, setToast] = useState('');
 
-  // Editable rosters (class teacher can add/edit/remove students).
-  const [teRosters] = useState<Record<string, RosterStudent[]>>(seedRosters);
   // Live examination catalogue for the selected class.
   const [teExams, setTeExams] = useState<TeacherExam[]>([]);
 
@@ -108,11 +98,6 @@ export function TeacherApp() {
       }
     : mockClass;
   const name = user?.name ?? 'Ms. Anjali Rao';
-
-  const roster: Rostered[] = (teRosters[selClass] || []).map((s, i) => ({
-    id: `${selClass}-${i}`, name: s.name, roll: i + 1, guardian: s.guardian,
-  }));
-  const count = roster.length;
 
   // Live exams for the selected class; keep the selected exam valid as it loads.
   const reloadExams = useCallback(async () => {
@@ -186,7 +171,7 @@ export function TeacherApp() {
               <span className="text-[10px] font-semibold text-muted">{curClass.roleLabel}</span>
               <span className="text-muted"><Glyph d="M6 9l6 6 6-6" size={13} stroke={2.2} /></span>
             </button>
-            <span className="ml-auto text-[11px] text-muted font-semibold">{liveClass?.students ?? count} students</span>
+            <span className="ml-auto text-[11px] text-muted font-semibold">{liveClass?.students ?? 0} students</span>
           </div>
         ) : undefined
       }
@@ -203,7 +188,7 @@ export function TeacherApp() {
             {classes.map((c) => {
               const on = c.id === selClassId;
               return (
-                <div key={c.id} onClick={() => { setSelClassId(c.id); setPickerOpen(false); setRegSaved(false); }}
+                <div key={c.id} onClick={() => { setSelClassId(c.id); setPickerOpen(false); }}
                   className={cx('flex items-center gap-2.5 px-3.5 py-[13px] rounded-[15px] cursor-pointer mb-2 border-[1.5px]', on ? 'border-green bg-[#f3f8f4]' : 'border-line bg-white')}>
                   <div className="flex-1">
                     <b className={cx('text-[14px] font-bold block', on ? 'text-green' : 'text-ink')}>{c.label}</b>
@@ -225,7 +210,12 @@ export function TeacherApp() {
         />
       )}
       {screen === 'attendance' && (
-        <TeacherAttendance curClass={curClass} selClass={selClass} roster={roster} count={count} attAbs={attAbs} setAttAbs={setAttAbs} regSaved={regSaved} setRegSaved={setRegSaved} />
+        <TeacherAttendance
+          klassId={liveClass?.id ?? null}
+          label={curClass.label}
+          roleLabel={curClass.roleLabel}
+          isClassTeacher={liveClass?.isClassTeacher ?? false}
+        />
       )}
       {screen === 'students' && (
         <TeacherStudents
@@ -344,85 +334,137 @@ function TeacherHome({
 }
 
 // ---------- ATTENDANCE ----------
+const attStatusLabel = (s: AttendanceStatus | null) =>
+  s === 'ABSENT' ? 'Absent' : s === 'LATE' ? 'Late' : s === 'HOLIDAY' ? 'Holiday' : 'Present';
+const attStatusBadge = (s: AttendanceStatus | null) =>
+  s === 'ABSENT' ? 'bg-[#f6ecec] text-danger' : s === 'LATE' ? 'bg-gold-soft text-[#8a6d1f]' : 'bg-mist text-success';
+
 function TeacherAttendance({
-  curClass, selClass, roster, count, attAbs, setAttAbs, regSaved, setRegSaved,
+  klassId, label, roleLabel, isClassTeacher,
 }: {
-  curClass: typeof TEACHER_CLASSES[number];
-  selClass: string;
-  roster: Rostered[];
-  count: number;
-  attAbs: Record<string, Record<string, boolean>>;
-  setAttAbs: React.Dispatch<React.SetStateAction<Record<string, Record<string, boolean>>>>;
-  regSaved: boolean;
-  setRegSaved: (v: boolean) => void;
+  klassId: number | null;
+  label: string;
+  roleLabel: string;
+  isClassTeacher: boolean;
 }) {
-  const abs = attAbs[selClass] || {};
+  const [students, setStudents] = useState<RosterRow[]>([]);
+  const [date, setDate] = useState('');
+  const [absent, setAbsent] = useState<Set<number>>(new Set());
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [err, setErr] = useState('');
 
-  function toggle(sid: string, present: boolean) {
-    setAttAbs((a) => {
-      const c = { ...(a[selClass] || {}) };
-      if (present) delete c[sid];
-      else c[sid] = true;
-      return { ...a, [selClass]: c };
-    });
-    setRegSaved(false);
-  }
+  useEffect(() => {
+    if (klassId == null) { setStudents([]); return; }
+    let alive = true;
+    setLoading(true); setSaved(false);
+    getClassRoster(klassId)
+      .then((r) => {
+        if (!alive) return;
+        setStudents(r.students);
+        setDate(r.date);
+        setAbsent(new Set(r.students.filter((s) => s.status === 'ABSENT').map((s) => s.id)));
+      })
+      .catch(() => alive && setStudents([]))
+      .finally(() => alive && setLoading(false));
+    return () => { alive = false; };
+  }, [klassId]);
 
-  if (!curClass.ct) {
-    const roAbs = SEEDED_ABS[selClass] || [];
-    const classAbsent = roAbs.length;
+  const total = students.length;
+
+  // Subject teachers get a read-only register.
+  if (!isClassTeacher) {
+    const taken = students.some((s) => s.status != null);
+    const absentCount = students.filter((s) => s.status === 'ABSENT').length;
     return (
       <div className="px-[15px] py-4 pb-6">
         <div className="mb-3">
-          <InfoNote>
-            Marked by <b>{CT_NAME_OF[selClass]}</b> (class teacher) at 8:40 AM. You teach {curClass.roleLabel} here, so the register is view-only.
-          </InfoNote>
+          <InfoNote>The class teacher marks attendance for {label}. You teach {roleLabel} here, so the register is view-only.</InfoNote>
         </div>
-        <div className="flex gap-2.5 mb-3">
-          <StatCard value={count - classAbsent} label="Present" valueColor="text-success" />
-          <StatCard value={classAbsent} label="Absent" valueColor="text-danger" />
-        </div>
-        <Card className="px-3.5 py-1.5">
-          {roster.map((r) => {
-            const isAbs = roAbs.includes(r.id);
-            return (
-              <div key={r.id} className="flex items-center gap-[11px] py-2.5 border-t border-[#f0f2ee] first:border-t-0">
-                <span className="w-[22px] text-[11px] text-muted font-semibold flex-none">{r.roll}</span>
-                <span className="flex-1 text-[13px] font-semibold truncate">{r.name}</span>
-                <span className={cx('text-[11px] font-bold px-2.5 py-1 rounded-lg flex-none', isAbs ? 'bg-[#f6ecec] text-danger' : 'bg-mist text-success')}>{isAbs ? 'Absent' : 'Present'}</span>
-              </div>
-            );
-          })}
-        </Card>
+        {total === 0 ? (
+          <div className="text-center text-muted text-[12.5px] py-8">{loading ? 'Loading roster…' : 'No students in this class yet.'}</div>
+        ) : !taken ? (
+          <div className="text-center text-muted text-[12.5px] py-8">Attendance not marked yet for today.</div>
+        ) : (
+          <>
+            <div className="flex gap-2.5 mb-3">
+              <StatCard value={total - absentCount} label="Present" valueColor="text-success" />
+              <StatCard value={absentCount} label="Absent" valueColor="text-danger" />
+            </div>
+            <Card className="px-3.5 py-1.5">
+              {students.map((r, i) => (
+                <div key={r.id} className="flex items-center gap-[11px] py-2.5 border-t border-[#f0f2ee] first:border-t-0">
+                  <span className="w-[22px] text-[11px] text-muted font-semibold flex-none">{i + 1}</span>
+                  <span className="flex-1 text-[13px] font-semibold truncate">{r.name}</span>
+                  <span className={cx('text-[11px] font-bold px-2.5 py-1 rounded-lg flex-none', attStatusBadge(r.status))}>{attStatusLabel(r.status)}</span>
+                </div>
+              ))}
+            </Card>
+          </>
+        )}
       </div>
     );
   }
 
-  const regAbsent = Object.keys(abs).length;
-  const regPresent = count - regAbsent;
+  // Class teacher: markable register (default present, toggle absentees).
+  const absentCount = absent.size;
+  function toggle(sid: number, present: boolean) {
+    setAbsent((s) => {
+      const n = new Set(s);
+      if (present) n.delete(sid); else n.add(sid);
+      return n;
+    });
+    setSaved(false);
+  }
+  async function save() {
+    if (klassId == null || total === 0 || saving) return;
+    setSaving(true); setErr('');
+    try {
+      await saveClassAttendance(
+        klassId,
+        date,
+        students.map((s) => ({ studentId: s.id, status: absent.has(s.id) ? 'ABSENT' : 'PRESENT' as AttendanceStatus })),
+      );
+      setStudents((prev) => prev.map((s) => ({ ...s, status: (absent.has(s.id) ? 'ABSENT' : 'PRESENT') as AttendanceStatus })));
+      setSaved(true);
+    } catch {
+      setErr("Couldn't save the register. Please try again.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
   return (
     <div className="px-[15px] py-4 pb-6">
-      <div className="flex items-center gap-2.5 mb-3">
-        <StatCard value={regPresent} label="Present" valueColor="text-success" />
-        <StatCard value={regAbsent} label="Absent" valueColor="text-danger" />
-        <button onClick={() => { setAttAbs((a) => ({ ...a, [selClass]: {} })); setRegSaved(false); }} className="flex-1 bg-mist rounded-2xl px-2 py-3 text-green font-semibold text-[11.5px] leading-tight">Mark all present</button>
-      </div>
-      <Card className="px-3.5 py-1.5 mb-3">
-        {roster.map((r) => {
-          const isAbs = !!abs[r.id];
-          return (
-            <div key={r.id} className="flex items-center gap-[11px] py-2.5 border-t border-[#f0f2ee] first:border-t-0">
-              <span className="w-[22px] text-[11px] text-muted font-semibold flex-none">{r.roll}</span>
-              <span className="flex-1 text-[13px] font-semibold truncate">{r.name}</span>
-              <div className="flex gap-1 bg-[#f1f5f1] rounded-[10px] p-[3px]">
-                <button onClick={() => toggle(r.id, true)} className={cx('w-[30px] h-[26px] rounded-lg text-[12px] font-bold', !isAbs ? 'bg-success text-white' : 'text-[#9aa39b]')}>P</button>
-                <button onClick={() => toggle(r.id, false)} className={cx('w-[30px] h-[26px] rounded-lg text-[12px] font-bold', isAbs ? 'bg-danger text-white' : 'text-[#9aa39b]')}>A</button>
-              </div>
-            </div>
-          );
-        })}
-      </Card>
-      <PrimaryButton onClick={() => setRegSaved(true)}>{regSaved ? '✓ Register saved' : 'Save register'}</PrimaryButton>
+      {total === 0 ? (
+        <div className="text-center text-muted text-[12.5px] py-8">{loading ? 'Loading roster…' : 'No students in this class yet.'}</div>
+      ) : (
+        <>
+          <div className="flex items-center gap-2.5 mb-3">
+            <StatCard value={total - absentCount} label="Present" valueColor="text-success" />
+            <StatCard value={absentCount} label="Absent" valueColor="text-danger" />
+            <button onClick={() => { setAbsent(new Set()); setSaved(false); }} className="flex-1 bg-mist rounded-2xl px-2 py-3 text-green font-semibold text-[11.5px] leading-tight">Mark all present</button>
+          </div>
+          <Card className="px-3.5 py-1.5 mb-3">
+            {students.map((r, i) => {
+              const isAbs = absent.has(r.id);
+              return (
+                <div key={r.id} className="flex items-center gap-[11px] py-2.5 border-t border-[#f0f2ee] first:border-t-0">
+                  <span className="w-[22px] text-[11px] text-muted font-semibold flex-none">{i + 1}</span>
+                  <span className="flex-1 text-[13px] font-semibold truncate">{r.name}</span>
+                  <div className="flex gap-1 bg-[#f1f5f1] rounded-[10px] p-[3px]">
+                    <button onClick={() => toggle(r.id, true)} className={cx('w-[30px] h-[26px] rounded-lg text-[12px] font-bold', !isAbs ? 'bg-success text-white' : 'text-[#9aa39b]')}>P</button>
+                    <button onClick={() => toggle(r.id, false)} className={cx('w-[30px] h-[26px] rounded-lg text-[12px] font-bold', isAbs ? 'bg-danger text-white' : 'text-[#9aa39b]')}>A</button>
+                  </div>
+                </div>
+              );
+            })}
+          </Card>
+          {err && <div className="text-[11.5px] text-danger font-semibold mb-2">{err}</div>}
+          <PrimaryButton onClick={save} disabled={saving}>{saving ? 'Saving…' : saved ? '✓ Register saved' : 'Save register'}</PrimaryButton>
+        </>
+      )}
     </div>
   );
 }
