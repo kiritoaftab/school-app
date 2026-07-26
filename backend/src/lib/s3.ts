@@ -12,6 +12,10 @@ function s3(): S3Client {
         accessKeyId: config.s3.accessKeyId,
         secretAccessKey: config.s3.secretAccessKey,
       },
+      // The SDK otherwise signs a CRC32 of the *empty* body into every presigned
+      // PUT (x-amz-checksum-crc32=AAAAAA==), and S3 then rejects the real upload
+      // as a checksum mismatch. Presigned URLs need checksums left to the caller.
+      requestChecksumCalculation: 'WHEN_REQUIRED',
     });
   }
   return client;
