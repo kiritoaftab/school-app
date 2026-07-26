@@ -25,48 +25,6 @@ export function NotificationsScreen() {
   );
 }
 
-// ============ PHOTOS ============
-export function PhotosScreen({ canUpload }: { canUpload?: boolean }) {
-  return (
-    <div className="px-[15px] py-4 pb-6">
-      {canUpload && (
-        <button className="w-full mb-3.5 py-3 rounded-[14px] bg-green text-white font-semibold text-[13px] flex items-center justify-center gap-[7px]">
-          <Glyph d={GLYPH.upload} size={17} stroke={2} />
-          Upload photos to this album
-        </button>
-      )}
-      <div className="font-serif text-[22px] mb-[3px]">Annual Sports Day</div>
-      <div className="text-[11.5px] text-muted mb-3.5">25 June · 142 photos · shared by the school</div>
-      <div className="grid grid-cols-2 gap-[7px]">
-        <Tile span cover="linear-gradient(150deg,#3d6b4e,#7fae8c)" caption="100m Finals" />
-        <Tile cover="linear-gradient(150deg,#caa24f,#e7cd8e)" />
-        <Tile cover="linear-gradient(150deg,#8a5a3c,#caa07c)" />
-        <Tile cover="linear-gradient(150deg,#36505f,#7a98a6)" />
-        <Tile cover="linear-gradient(150deg,#4a6b4f,#9cbfa0)" />
-        <Tile span cover="linear-gradient(150deg,#8a5a3c,#caa07c)" caption="Prize Distribution" />
-        <Tile cover="linear-gradient(150deg,#caa24f,#e7cd8e)" />
-        <Tile cover="linear-gradient(150deg,#3d6b4e,#7fae8c)" />
-      </div>
-    </div>
-  );
-}
-
-function Tile({ cover, caption, span }: { cover: string; caption?: string; span?: boolean }) {
-  return (
-    <div
-      className={cx('rounded-[14px] relative overflow-hidden', span ? 'col-span-2 aspect-[2.1]' : 'aspect-square')}
-      style={{ background: cover }}
-    >
-      {caption && (
-        <>
-          <div className="absolute inset-0" style={{ background: 'linear-gradient(180deg,transparent 55%,rgba(0,0,0,.3))' }} />
-          <div className="absolute left-[11px] bottom-[9px] text-white text-[11px] font-semibold z-[2]">{caption}</div>
-        </>
-      )}
-    </div>
-  );
-}
-
 // ============ CALENDAR ============
 export function CalendarScreen({ admin, events: liveEvents }: { admin?: boolean; events?: CalEvent[] }) {
   // When `events` is passed the screen is data-driven (read-only); otherwise it

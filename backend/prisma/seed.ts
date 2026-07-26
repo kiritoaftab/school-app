@@ -194,7 +194,12 @@ async function main() {
 
   // --- Photo album ---
   const album = await prisma.photoAlbum.create({
-    data: { schoolId, title: 'Field Trip — Botanical Garden', klassId: klass.id },
+    data: {
+      schoolId,
+      title: 'Field Trip — Botanical Garden',
+      date: new Date('2026-03-02T00:00:00.000Z'),
+      klassId: klass.id,
+    },
   });
   await prisma.photo.createMany({
     data: Array.from({ length: 6 }).map((_, i) => ({

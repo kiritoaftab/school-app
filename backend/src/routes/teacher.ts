@@ -5,6 +5,7 @@ import { prisma } from '../db.js';
 import { ah, HttpError } from '../lib/http.js';
 import { requireAuth, requireRole, requireSchoolId } from '../middleware/auth.js';
 import { nextAdmissionNo } from './admin.js';
+import { mountGalleryRoutes } from './gallery.js';
 
 export const teacherRouter = Router();
 teacherRouter.use(requireAuth, requireRole('TEACHER'));
@@ -682,3 +683,6 @@ teacherRouter.patch('/leave/:id', ah(async (req, res) => {
   });
   res.json({ ok: true });
 }));
+
+// --- Photo albums (same surface the admin app uses) ---
+mountGalleryRoutes(teacherRouter);

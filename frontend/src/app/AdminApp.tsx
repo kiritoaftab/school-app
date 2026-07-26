@@ -113,7 +113,7 @@ export function AdminApp() {
   const [activeKlassId, setActiveKlassId] = useState<number | null>(null);
   const [attClassId, setAttClassId] = useState<number | null>(null);
 
-  const photos = useAlbums();
+  const photos = useAlbums("/admin");
 
   // Live notices & events.
   const [apiNotices, setApiNotices] = useState<AdminNotice[] | null>(null);
@@ -399,9 +399,10 @@ export function AdminApp() {
     title = schoolTab === "notices" ? "Notice Board" : "Calendar";
     sub = (user?.school?.name ?? SCHOOL).toUpperCase();
   } else if (screen === "album") {
-    title = photos.open?.title ?? "Album";
-    sub = photos.open
-      ? `${dayLabel(photos.open.date)} · ${photoCount(photos.open.photos.length)}`.toUpperCase()
+    const a = photos.detail ?? photos.openSummary;
+    title = a?.title ?? "Album";
+    sub = a
+      ? `${dayLabel(a.date)} · ${photoCount(photos.detail?.photos.length ?? a.count)}`.toUpperCase()
       : undefined;
   } else if (screen === "staffDetail") {
     title = "Teacher";
@@ -658,9 +659,7 @@ export function AdminApp() {
       )}
       {screen === "photos" && (
         <AlbumsScreen
-          albums={photos.albums}
-          onCreate={photos.create}
-          onDelete={photos.remove}
+          gallery={photos}
           onOpen={(id) => {
             photos.setOpenId(id);
             go("album");
@@ -668,13 +667,7 @@ export function AdminApp() {
         />
       )}
       {screen === "album" && (
-        <AlbumScreen
-          album={photos.open}
-          onAddPhotos={(list) => photos.addPhotos(photos.openId!, list)}
-          onDeletePhoto={(photoId) =>
-            photos.removePhoto(photos.openId!, photoId)
-          }
-        />
+        <AlbumScreen gallery={photos} />
       )}
       {screen === "notifs" && <NotificationsScreen />}
     </Shell>

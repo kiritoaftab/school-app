@@ -4,6 +4,7 @@ import { prisma } from '../db.js';
 import { ah, HttpError } from '../lib/http.js';
 import { requireAuth, requireRole, requireSchoolId } from '../middleware/auth.js';
 import { assertParentOwnsStudent, studentClassId } from '../lib/access.js';
+import { dayKey } from '../lib/day.js';
 
 export const parentRouter = Router();
 parentRouter.use(requireAuth, requireRole('PARENT'));
@@ -298,21 +299,25 @@ parentRouter.get('/events', ah(async (req, res) => {
   res.json(events.map((e) => ({ ...e, date: e.date.toISOString().slice(0, 10) })));
 }));
 
-// --- Photo albums ---
+// --- Photo albums (read-only; admins and teachers own the gallery) ---
 parentRouter.get('/albums', ah(async (req, res) => {
   const schoolId = requireSchoolId(req);
   const albums = await prisma.photoAlbum.findMany({
     where: { schoolId },
-    orderBy: { createdAt: 'desc' },
-    include: { _count: { select: { photos: true } } },
+    orderBy: [{ date: 'desc' }, { id: 'desc' }],
+    include: {
+      _count: { select: { photos: true } },
+      photos: { take: 1, orderBy: { id: 'asc' }, select: { url: true } },
+    },
   });
   res.json(
     albums.map((a) => ({
       id: a.id,
       title: a.title,
-      coverUrl: a.coverUrl,
+      date: dayKey(a.date),
+      coverUrl: a.coverUrl ?? a.photos[0]?.url ?? null,
+      klassId: a.klassId,
       count: a._count.photos,
-      createdAt: a.createdAt,
     })),
   );
 }));
@@ -321,10 +326,18 @@ parentRouter.get('/albums/:id', ah(async (req, res) => {
   const schoolId = requireSchoolId(req);
   const album = await prisma.photoAlbum.findFirst({
     where: { id: Number(req.params.id), schoolId },
-    include: { photos: true },
+    include: { photos: { orderBy: { id: 'asc' } } },
   });
   if (!album) throw new HttpError(404, 'Album not found');
-  res.json(album);
+  res.json({
+    id: album.id,
+    title: album.title,
+    date: dayKey(album.date),
+    coverUrl: album.coverUrl ?? album.photos[0]?.url ?? null,
+    klassId: album.klassId,
+    count: album.photos.length,
+    photos: album.photos.map((p) => ({ id: p.id, url: p.url, caption: p.caption })),
+  });
 }));
 
 // --- Leave ---

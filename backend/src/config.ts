@@ -14,7 +14,7 @@ export const config = {
     .filter(Boolean),
   isProd: process.env.NODE_ENV === 'production',
 
-  // --- S3 (school logo uploads) ---
+  // --- S3 (school logo + photo gallery uploads) ---
   s3: {
     region: process.env.AWS_REGION ?? '',
     bucket: process.env.AWS_S3_BUCKET ?? '',
@@ -22,6 +22,8 @@ export const config = {
     secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY ?? '',
     // Prefix (folder) uploaded logos are stored under.
     prefix: process.env.AWS_S3_PREFIX ?? 'school-logos',
+    // Prefix album photos are stored under — same bucket, different folder.
+    galleryPrefix: process.env.AWS_S3_GALLERY_PREFIX ?? 'school-gallery',
     // Public base URL for reading objects. Defaults to the standard S3 URL;
     // set to a CloudFront/custom domain if you serve logos through one.
     publicBaseUrl: process.env.AWS_S3_PUBLIC_BASE_URL ?? '',

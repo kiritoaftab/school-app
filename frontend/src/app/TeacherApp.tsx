@@ -50,7 +50,7 @@ export function TeacherApp() {
   const [myClassTab, setMyClassTab] = useState<MyClassTab>('students');
   const [pickerOpen, setPickerOpen] = useState(false);
   const [acctOpen, setAcctOpen] = useState(false);
-  const photos = useAlbums();
+  const photos = useAlbums('/teacher');
 
   // Live classes drive the switcher; the diary reads from them directly.
   const [classes, setClasses] = useState<TeacherKlass[]>([]);
@@ -154,9 +154,10 @@ export function TeacherApp() {
   else if (screen === 'results') { title = 'Marks'; sub = curClass.label.toUpperCase(); }
   else if (screen === 'photos') { title = 'Moments'; sub = 'SHARED BY THE SCHOOL'; }
   else if (screen === 'album') {
-    title = photos.open?.title ?? 'Album';
-    sub = photos.open
-      ? `${dayLabel(photos.open.date)} · ${photoCount(photos.open.photos.length)}`.toUpperCase()
+    const a = photos.detail ?? photos.openSummary;
+    title = a?.title ?? 'Album';
+    sub = a
+      ? `${dayLabel(a.date)} · ${photoCount(photos.detail?.photos.length ?? a.count)}`.toUpperCase()
       : undefined;
   }
   else if (screen === 'attendance') { title = 'Attendance'; sub = `${curClass.label} · 25 JUN`.toUpperCase(); }
@@ -284,18 +285,12 @@ export function TeacherApp() {
       )}
       {screen === 'photos' && (
         <AlbumsScreen
-          albums={photos.albums}
-          onCreate={photos.create}
-          onDelete={photos.remove}
+          gallery={photos}
           onOpen={(id) => { photos.setOpenId(id); go('album'); }}
         />
       )}
       {screen === 'album' && (
-        <AlbumScreen
-          album={photos.open}
-          onAddPhotos={(list) => photos.addPhotos(photos.openId!, list)}
-          onDeletePhoto={(photoId) => photos.removePhoto(photos.openId!, photoId)}
-        />
+        <AlbumScreen gallery={photos} />
       )}
       {screen === 'notifs' && <NotificationsScreen />}
     </Shell>

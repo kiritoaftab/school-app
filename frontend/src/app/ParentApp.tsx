@@ -6,8 +6,9 @@ import {
   type TabDef, AppHeader, BottomSheet, Shell,
 } from './kit';
 import {
-  CalendarScreen, NoticeBoardScreen, NoticeDetailScreen, NotificationsScreen, PhotosScreen,
+  CalendarScreen, NoticeBoardScreen, NoticeDetailScreen, NotificationsScreen,
 } from './SharedScreens';
+import { AlbumScreen, AlbumsScreen, dayLabel, photoCount, useAlbums } from './Albums';
 import { AccountSheet } from './AccountSheet';
 import { GLYPH, SCHOOL, gradeFor, ordinal, type CalEvent, type Notice } from './data';
 import {
@@ -23,7 +24,7 @@ import { getDone, setDone } from '../lib/diaryDone';
 
 type Screen =
   | 'home' | 'attendance' | 'leave' | 'diary' | 'calendar' | 'results' | 'photos'
-  | 'noticeBoard' | 'notice' | 'notifs';
+  | 'album' | 'noticeBoard' | 'notice' | 'notifs';
 
 const TOP_LEVEL: Screen[] = ['home', 'diary', 'calendar', 'results', 'photos'];
 
@@ -85,6 +86,8 @@ export function ParentApp() {
 
   const [screen, setScreen] = useState<Screen>('home');
   const [acctOpen, setAcctOpen] = useState(false);
+  // The school gallery, read-only for parents.
+  const photos = useAlbums('/parent');
   const [pickerOpen, setPickerOpen] = useState(false);
 
   // ---- children (switcher) ----
@@ -183,6 +186,13 @@ export function ParentApp() {
   else if (screen === 'calendar') { title = 'Calendar'; sub = (user?.school?.name ?? SCHOOL).toUpperCase(); }
   else if (screen === 'results') { title = 'Report Card'; sub = `${childName}${childKlass ? ` · ${childKlass}` : ''}`.toUpperCase(); }
   else if (screen === 'photos') { title = 'Moments'; sub = 'SHARED BY THE SCHOOL'; }
+  else if (screen === 'album') {
+    const a = photos.detail ?? photos.openSummary;
+    title = a?.title ?? 'Album';
+    sub = a
+      ? `${dayLabel(a.date)} · ${photoCount(photos.detail?.photos.length ?? a.count)}`.toUpperCase()
+      : undefined;
+  }
   else if (screen === 'attendance') { title = 'Attendance'; sub = `${childName}${childKlass ? ` · ${childKlass}` : ''}`.toUpperCase(); }
   else if (screen === 'leave') { title = 'Apply for Leave'; sub = `${childName}${childKlass ? ` · ${childKlass}` : ''}`.toUpperCase(); }
   else if (screen === 'noticeBoard') { title = 'Notice Board'; sub = schoolName.toUpperCase(); }
@@ -190,8 +200,10 @@ export function ParentApp() {
   else if (screen === 'notifs') { title = 'Notifications'; sub = schoolName.toUpperCase(); }
 
   const topLevel = TOP_LEVEL.includes(screen);
-  const onBack = topLevel ? undefined : () => go(screen === 'notice' ? 'noticeBoard' : 'home');
-  const activeKey = TOP_LEVEL.includes(screen) ? screen : 'home';
+  const onBack = topLevel
+    ? undefined
+    : () => go(screen === 'notice' ? 'noticeBoard' : screen === 'album' ? 'photos' : 'home');
+  const activeKey = screen === 'album' ? 'photos' : TOP_LEVEL.includes(screen) ? screen : 'home';
 
   const tabs: TabDef[] = [
     { key: 'home', label: 'Home', glyph: GLYPH.home },
@@ -281,7 +293,14 @@ export function ParentApp() {
       )}
       {screen === 'calendar' && <CalendarScreen events={calEvents} />}
       {screen === 'results' && <ResultsParent studentId={selStudentId} />}
-      {screen === 'photos' && <PhotosScreen />}
+      {screen === 'photos' && (
+        <AlbumsScreen
+          gallery={photos}
+          readOnly
+          onOpen={(id) => { photos.setOpenId(id); go('album'); }}
+        />
+      )}
+      {screen === 'album' && <AlbumScreen gallery={photos} readOnly />}
       {screen === 'noticeBoard' && <NoticeBoardScreen role="parent" notices={notices} acked={acked} onOpen={(id) => { setActiveNoticeId(id); go('notice'); }} />}
       {screen === 'notice' && activeNotice && (
         <NoticeDetailScreen

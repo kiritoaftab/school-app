@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { prisma } from '../db.js';
 import { ah, HttpError } from '../lib/http.js';
 import { requireAuth, requireRole, requireSchoolId } from '../middleware/auth.js';
+import { mountGalleryRoutes } from './gallery.js';
 
 export const adminRouter = Router();
 adminRouter.use(requireAuth, requireRole('ADMIN'));
@@ -1031,3 +1032,6 @@ adminRouter.delete('/events/:id', ah(async (req, res) => {
   await prisma.event.delete({ where: { id } });
   res.status(204).end();
 }));
+
+// --- Photo albums (shared with the teacher app) ---
+mountGalleryRoutes(adminRouter);

@@ -369,6 +369,8 @@ model PhotoAlbum {
   id        Int      @id @default(autoincrement())
   schoolId  Int
   title     String
+  // The day the album is about (sports day, field trip …), not when it was made.
+  date      DateTime @db.Date
   coverUrl  String?
   klassId   Int?
   createdAt DateTime @default(now())
@@ -377,14 +379,15 @@ model PhotoAlbum {
   klass  Klass?  @relation(fields: [klassId], references: [id])
   photos Photo[]
 
-  @@index([schoolId])
+  @@index([schoolId, date])
 }
 
 model Photo {
-  id      Int     @id @default(autoincrement())
-  albumId Int
-  url     String
-  caption String?
+  id        Int      @id @default(autoincrement())
+  albumId   Int
+  url       String   @db.Text
+  caption   String?
+  createdAt DateTime @default(now())
 
   album PhotoAlbum @relation(fields: [albumId], references: [id], onDelete: Cascade)
 }
