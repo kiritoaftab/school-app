@@ -8,7 +8,7 @@ import {
 import {
   CalendarScreen, NoticeBoardScreen, NoticeDetailScreen, NotificationsScreen,
 } from './SharedScreens';
-import { AlbumScreen, AlbumsScreen, dayLabel, photoCount, useAlbums } from './Albums';
+import { AlbumScreen, AlbumViewer, AlbumsScreen, dayLabel, photoCount, useAlbums } from './Albums';
 import { AccountSheet } from './AccountSheet';
 import { GLYPH, SCHOOL, gradeFor, ordinal, type CalEvent, type Notice } from './data';
 import {
@@ -266,6 +266,8 @@ export function ParentApp() {
               navigate('/login');
             }}
           />
+          {/* Sits above the frame so a tapped photo fills it edge to edge. */}
+          <AlbumViewer gallery={photos} />
         </>
       }
     >

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import {
   addAlbumPhotos,
   createAlbum,
@@ -10,6 +10,7 @@ import {
   type GalleryAlbum,
   type GalleryAlbumDetail,
   type GalleryBase,
+  type GalleryPhoto,
 } from '../api/gallery';
 import { ALBUM_TONES, GLYPH } from './data';
 import { Card, EmptyState, Glyph, SectionLabel, Spinner, cx } from './kit';
@@ -55,6 +56,9 @@ export function useAlbums(base: GalleryBase) {
   const [detail, setDetail] = useState<GalleryAlbumDetail | null>(null);
   const [detailError, setDetailError] = useState<string | null>(null);
 
+  /** Index of the photo open in the full-screen viewer; null when it's closed. */
+  const [viewerAt, setViewerAt] = useState<number | null>(null);
+
   // Mutation state, shared by both screens.
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
@@ -85,6 +89,7 @@ export function useAlbums(base: GalleryBase) {
 
   // Fetch the open album, and clear the previous one so its photos never flash.
   useEffect(() => {
+    setViewerAt(null);
     if (openId === null) {
       setDetail(null);
       return;
@@ -170,6 +175,9 @@ export function useAlbums(base: GalleryBase) {
     [base, run],
   );
 
+  const openViewer = useCallback((i: number) => setViewerAt(i), []);
+  const closeViewer = useCallback(() => setViewerAt(null), []);
+
   /** The open album's list row — drives the header while the detail loads. */
   const openSummary = albums?.find((a) => a.id === openId) ?? null;
 
@@ -184,6 +192,9 @@ export function useAlbums(base: GalleryBase) {
     detailError,
     reloadDetail,
     openSummary,
+    viewerAt,
+    openViewer,
+    closeViewer,
     busy,
     actionError,
     progress,
@@ -469,6 +480,8 @@ export function AlbumScreen({ gallery, readOnly }: { gallery: Gallery; readOnly?
               ? 'Photos from this album have not been shared yet.'
               : "Upload the first few — they appear on every parent's Moments tab."}
           </EmptyState>
+        ) : readOnly ? (
+          <BentoGrid photos={detail.photos} onOpen={gallery.openViewer} />
         ) : (
           <div className="grid grid-cols-3 gap-[7px]">
             {detail.photos.map((p, i) => (
@@ -483,13 +496,11 @@ export function AlbumScreen({ gallery, readOnly }: { gallery: Gallery; readOnly?
                   loading="lazy"
                   className="absolute inset-0 w-full h-full object-cover"
                 />
-                {!readOnly && (
-                  <RemoveButton
-                    label={p.caption ?? 'photo'}
-                    disabled={busy}
-                    onRemove={() => gallery.removePhoto(detail.id, p.id)}
-                  />
-                )}
+                <RemoveButton
+                  label={p.caption ?? 'photo'}
+                  disabled={busy}
+                  onRemove={() => gallery.removePhoto(detail.id, p.id)}
+                />
                 {p.caption && (
                   <>
                     <div
@@ -505,6 +516,202 @@ export function AlbumScreen({ gallery, readOnly }: { gallery: Gallery; readOnly?
             ))}
           </div>
         ))}
+    </div>
+  );
+}
+
+// ---------- BENTO GRID (parent view) ----------
+
+/**
+ * A repeating bento rhythm. Every row holds exactly two photos; the wider tile
+ * alternates sides and the row height varies, so the album reads as a mosaic
+ * rather than a uniform checkerboard. A lone trailing photo takes a full row.
+ */
+const BENTO_ROWS = [
+  { split: [1.55, 1], h: 148 },
+  { split: [1, 1.7], h: 188 },
+  { split: [1.25, 1], h: 156 },
+  { split: [1, 1.4], h: 174 },
+];
+
+/** Split a flat photo list into the pairs each bento row draws. */
+function inPairs<T>(items: T[]): T[][] {
+  const rows: T[][] = [];
+  for (let i = 0; i < items.length; i += 2) rows.push(items.slice(i, i + 2));
+  return rows;
+}
+
+function BentoGrid({
+  photos,
+  onOpen,
+}: {
+  photos: GalleryPhoto[];
+  onOpen: (index: number) => void;
+}) {
+  return (
+    <div>
+      {inPairs(photos).map((pair, r) => {
+        const spec = BENTO_ROWS[r % BENTO_ROWS.length];
+        return (
+          <div key={r} className="flex gap-[7px] mb-[7px]" style={{ height: spec.h }}>
+            {pair.map((p, i) => {
+              // The flat index the viewer opens at.
+              const at = r * 2 + i;
+              return (
+                <button
+                  key={p.id}
+                  onClick={() => onOpen(at)}
+                  aria-label={p.caption ?? `Photo ${at + 1}`}
+                  className="relative overflow-hidden rounded-[14px] min-w-0 h-full"
+                  style={{ flex: spec.split[i] ?? 1, background: toneFor(at) }}
+                >
+                  <img
+                    src={p.url}
+                    alt={p.caption ?? ''}
+                    loading="lazy"
+                    className="absolute inset-0 w-full h-full object-cover"
+                  />
+                  {p.caption && (
+                    <>
+                      <div
+                        className="absolute inset-0"
+                        style={{ background: 'linear-gradient(180deg,transparent 55%,rgba(0,0,0,.45))' }}
+                      />
+                      <div className="absolute left-2.5 right-2.5 bottom-2 z-[2] text-white text-[11px] font-semibold leading-[1.2] text-left">
+                        {p.caption}
+                      </div>
+                    </>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+// ---------- FULL-SCREEN VIEWER ----------
+
+/**
+ * The expanded photo view: one photo per screen in a scroll-snapped track, so
+ * swiping left/right is native touch scrolling rather than a gesture library.
+ * Render it in the Shell's `overlays` slot so it fills the phone frame.
+ */
+export function AlbumViewer({ gallery }: { gallery: Gallery }) {
+  const { detail, viewerAt, closeViewer } = gallery;
+  const photos = detail?.photos ?? [];
+  const trackRef = useRef<HTMLDivElement | null>(null);
+  const [at, setAt] = useState(viewerAt ?? 0);
+  const open = viewerAt !== null && photos.length > 0;
+
+  // Jump to the tapped photo before the first paint, so it never flashes
+  // photo 1 first. The overlay unmounts when closed, so this runs per opening.
+  useLayoutEffect(() => {
+    const el = trackRef.current;
+    if (!open || !el || viewerAt === null) return;
+    el.scrollLeft = el.clientWidth * viewerAt;
+    setAt(viewerAt);
+  }, [open, viewerAt]);
+
+  const go = useCallback((i: number) => {
+    const el = trackRef.current;
+    if (!el) return;
+    el.scrollTo({ left: el.clientWidth * i, behavior: 'smooth' });
+  }, []);
+
+  // Arrow keys and Escape, for the desktop view.
+  useEffect(() => {
+    if (!open) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') closeViewer();
+      if (e.key === 'ArrowRight') go(Math.min(at + 1, photos.length - 1));
+      if (e.key === 'ArrowLeft') go(Math.max(at - 1, 0));
+    }
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, at, photos.length, go, closeViewer]);
+
+  if (!open) return null;
+  const current = photos[at];
+
+  return (
+    <div className="absolute inset-0 z-50 bg-[#0b0f0c] flex flex-col">
+      {/* top bar */}
+      <div className="flex items-center gap-3 px-4 pt-[calc(0.75rem+env(safe-area-inset-top))] pb-3 flex-none">
+        <span className="text-white/70 text-[12px] font-semibold tabular-nums">
+          {at + 1} / {photos.length}
+        </span>
+        <button
+          onClick={closeViewer}
+          aria-label="Close"
+          className="ml-auto w-9 h-9 rounded-full bg-white/12 text-white grid place-items-center"
+        >
+          <Glyph d={GLYPH.close} size={18} stroke={2.2} />
+        </button>
+      </div>
+
+      {/* swipeable track */}
+      <div
+        ref={trackRef}
+        onScroll={(e) => {
+          const el = e.currentTarget;
+          if (el.clientWidth > 0) setAt(Math.round(el.scrollLeft / el.clientWidth));
+        }}
+        className="gw-scroll flex-1 min-h-0 flex overflow-x-auto overflow-y-hidden snap-x snap-mandatory overscroll-contain"
+      >
+        {photos.map((p) => (
+          <div key={p.id} className="w-full flex-none snap-center grid place-items-center px-3">
+            <img
+              src={p.url}
+              alt={p.caption ?? ''}
+              className="max-w-full max-h-full object-contain rounded-[10px]"
+            />
+          </div>
+        ))}
+      </div>
+
+      {/* caption + paging */}
+      <div className="flex-none px-4 pt-3 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+        {current?.caption && (
+          <div className="text-white text-[13px] font-medium leading-[1.35] text-center mb-2.5">
+            {current.caption}
+          </div>
+        )}
+        <div className="flex items-center justify-center gap-4">
+          <button
+            onClick={() => go(Math.max(at - 1, 0))}
+            disabled={at === 0}
+            aria-label="Previous photo"
+            className="w-9 h-9 rounded-full bg-white/12 text-white grid place-items-center disabled:opacity-30"
+          >
+            <Glyph d={GLYPH.chevronLeft} size={18} stroke={2.2} />
+          </button>
+          {/* Dots stay readable for small albums; bigger ones lean on the counter. */}
+          {photos.length <= 12 && (
+            <div className="flex items-center gap-1.5">
+              {photos.map((p, i) => (
+                <span
+                  key={p.id}
+                  className={cx(
+                    'rounded-full transition-all',
+                    i === at ? 'w-[7px] h-[7px] bg-white' : 'w-[5px] h-[5px] bg-white/35',
+                  )}
+                />
+              ))}
+            </div>
+          )}
+          <button
+            onClick={() => go(Math.min(at + 1, photos.length - 1))}
+            disabled={at >= photos.length - 1}
+            aria-label="Next photo"
+            className="w-9 h-9 rounded-full bg-white/12 text-white grid place-items-center disabled:opacity-30"
+          >
+            <Glyph d={GLYPH.chevronRight} size={18} stroke={2.2} />
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
