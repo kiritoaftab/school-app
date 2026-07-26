@@ -15,6 +15,7 @@ import {
   type AttendanceStatus, type RosterStudent as RosterRow,
 } from '../api/teacher';
 import { CalendarScreen, NotificationsScreen } from './SharedScreens';
+import { AlbumScreen, AlbumsScreen, dayLabel, photoCount, useAlbums } from './Albums';
 import { AccountSheet } from './AccountSheet';
 import {
   SCHOOL, GLYPH, TEACHER_CLASSES,
@@ -22,8 +23,11 @@ import {
   type CalEvent,
 } from './data';
 
-type Screen = 'home' | 'attendance' | 'diary' | 'calendar' | 'results' | 'students' | 'notifs';
-const TOP_LEVEL: Screen[] = ['home', 'diary', 'calendar', 'results', 'students'];
+type Screen = 'home' | 'attendance' | 'diary' | 'myClass' | 'results' | 'photos' | 'album' | 'notifs';
+const TOP_LEVEL: Screen[] = ['home', 'diary', 'results', 'myClass', 'photos'];
+
+/** The two halves of the My Class tab (calendar + roster live together). */
+type MyClassTab = 'calendar' | 'students';
 
 const MONTH_ABBR = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
 /** Map a backend event ('YYYY-MM-DD' + title/description) to the calendar's shape. */
@@ -43,8 +47,10 @@ export function TeacherApp() {
   const navigate = useNavigate();
 
   const [screen, setScreen] = useState<Screen>('home');
+  const [myClassTab, setMyClassTab] = useState<MyClassTab>('students');
   const [pickerOpen, setPickerOpen] = useState(false);
   const [acctOpen, setAcctOpen] = useState(false);
+  const photos = useAlbums();
 
   // Live classes drive the switcher; the diary reads from them directly.
   const [classes, setClasses] = useState<TeacherKlass[]>([]);
@@ -141,23 +147,35 @@ export function TeacherApp() {
   let title = user?.school?.name ?? 'Greenwood';
   let sub: string | undefined = `${name.toUpperCase()} · TEACHER`;
   if (screen === 'diary') { title = 'Class Diary'; sub = curClass.label.toUpperCase(); }
-  else if (screen === 'calendar') { title = 'Calendar'; sub = SCHOOL.toUpperCase(); }
+  else if (screen === 'myClass') {
+    title = myClassTab === 'calendar' ? 'Calendar' : 'Students';
+    sub = myClassTab === 'calendar' ? SCHOOL.toUpperCase() : `${curClass.label} · CLASS ROSTER`.toUpperCase();
+  }
   else if (screen === 'results') { title = 'Marks'; sub = curClass.label.toUpperCase(); }
-  else if (screen === 'students') { title = 'Students'; sub = `${curClass.label} · CLASS ROSTER`.toUpperCase(); }
+  else if (screen === 'photos') { title = 'Moments'; sub = 'SHARED BY THE SCHOOL'; }
+  else if (screen === 'album') {
+    title = photos.open?.title ?? 'Album';
+    sub = photos.open
+      ? `${dayLabel(photos.open.date)} · ${photoCount(photos.open.photos.length)}`.toUpperCase()
+      : undefined;
+  }
   else if (screen === 'attendance') { title = 'Attendance'; sub = `${curClass.label} · 25 JUN`.toUpperCase(); }
   else if (screen === 'notifs') { title = 'Notifications'; sub = SCHOOL.toUpperCase(); }
 
   const topLevel = TOP_LEVEL.includes(screen);
-  const onBack = topLevel ? undefined : () => go('home');
-  const activeKey = topLevel ? screen : 'home';
-  const showClassBar = ['home', 'attendance', 'diary', 'results', 'students'].includes(screen);
+  const onBack = topLevel ? undefined : () => go(screen === 'album' ? 'photos' : 'home');
+  const activeKey = screen === 'album' ? 'photos' : topLevel ? screen : 'home';
+  // The roster is class-scoped, so it keeps the switcher; the calendar is school-wide.
+  const showClassBar =
+    ['home', 'attendance', 'diary', 'results'].includes(screen) ||
+    (screen === 'myClass' && myClassTab === 'students');
 
   const tabs: TabDef[] = [
     { key: 'home', label: 'Home', glyph: GLYPH.home },
     { key: 'diary', label: 'Diary', glyph: GLYPH.diary },
-    { key: 'calendar', label: 'Calendar', glyph: GLYPH.calendar },
     { key: 'results', label: 'Marks', glyph: GLYPH.results },
-    { key: 'students', label: 'Students', glyph: GLYPH.students },
+    { key: 'myClass', label: 'My Class', glyph: GLYPH.students },
+    { key: 'photos', label: 'Photos', glyph: GLYPH.photos },
   ].map((t) => ({ ...t, active: activeKey === t.key, onClick: () => go(t.key as Screen) }));
 
   return (
@@ -206,7 +224,9 @@ export function TeacherApp() {
       {screen === 'home' && (
         <TeacherHome
           name={name} klass={liveClass} classCount={classes.length}
-          go={go} openAcct={() => setAcctOpen(true)}
+          go={go}
+          openRoster={() => { setMyClassTab('students'); go('myClass'); }}
+          openAcct={() => setAcctOpen(true)}
         />
       )}
       {screen === 'attendance' && (
@@ -217,13 +237,38 @@ export function TeacherApp() {
           isClassTeacher={liveClass?.isClassTeacher ?? false}
         />
       )}
-      {screen === 'students' && (
-        <TeacherStudents
-          klassId={liveClass?.id ?? null}
-          label={curClass.label}
-          roleLabel={curClass.roleLabel}
-          isClassTeacher={liveClass?.isClassTeacher ?? false}
-        />
+      {screen === 'myClass' && (
+        <>
+          <div className="px-[15px] pt-4">
+            <div className="flex gap-[3px] bg-[#eef1ec] rounded-[13px] p-1">
+              {([
+                { key: 'calendar', label: 'Calendar' },
+                { key: 'students', label: 'Students' },
+              ] as { key: MyClassTab; label: string }[]).map((h) => (
+                <button
+                  key={h.key}
+                  onClick={() => setMyClassTab(h.key)}
+                  className={cx(
+                    'flex-1 py-2.25 rounded-[10px] text-[12.5px] font-bold',
+                    myClassTab === h.key ? 'bg-green text-white' : 'text-muted',
+                  )}
+                >
+                  {h.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          {myClassTab === 'calendar' ? (
+            <CalendarScreen events={calEvents} />
+          ) : (
+            <TeacherStudents
+              klassId={liveClass?.id ?? null}
+              label={curClass.label}
+              roleLabel={curClass.roleLabel}
+              isClassTeacher={liveClass?.isClassTeacher ?? false}
+            />
+          )}
+        </>
       )}
       {screen === 'diary' && (
         <TeacherDiary klass={liveClass} loading={loadingClasses} error={classesErr} />
@@ -237,7 +282,21 @@ export function TeacherApp() {
           toast={toast} setToast={setToast}
         />
       )}
-      {screen === 'calendar' && <CalendarScreen events={calEvents} />}
+      {screen === 'photos' && (
+        <AlbumsScreen
+          albums={photos.albums}
+          onCreate={photos.create}
+          onDelete={photos.remove}
+          onOpen={(id) => { photos.setOpenId(id); go('album'); }}
+        />
+      )}
+      {screen === 'album' && (
+        <AlbumScreen
+          album={photos.open}
+          onAddPhotos={(list) => photos.addPhotos(photos.openId!, list)}
+          onDeletePhoto={(photoId) => photos.removePhoto(photos.openId!, photoId)}
+        />
+      )}
       {screen === 'notifs' && <NotificationsScreen />}
     </Shell>
   );
@@ -245,12 +304,14 @@ export function TeacherApp() {
 
 // ---------- HOME ----------
 function TeacherHome({
-  name, klass, classCount, go, openAcct,
+  name, klass, classCount, go, openRoster, openAcct,
 }: {
   name: string;
   klass: TeacherKlass | null;
   classCount: number;
   go: (s: Screen) => void;
+  /** Jumps to My Class with the roster half showing. */
+  openRoster: () => void;
   openAcct: () => void;
 }) {
   const [hwCount, setHwCount] = useState(0);
@@ -325,7 +386,7 @@ function TeacherHome({
         </Card>
       ))}
       <div className="flex gap-2.5 mt-1.5">
-        <div onClick={() => go('students')} className="flex-1 cursor-pointer"><StatCard value={studentCount} label="Students" /></div>
+        <div onClick={openRoster} className="flex-1 cursor-pointer"><StatCard value={studentCount} label="Students" /></div>
         <div onClick={() => go('diary')} className="flex-1 cursor-pointer"><StatCard value={hwCount} label="Homework" /></div>
         <div onClick={() => go('results')} className="flex-1 cursor-pointer"><StatCard value={exams.length} label="Exams" /></div>
       </div>

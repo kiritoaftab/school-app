@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import {
@@ -66,6 +66,13 @@ import {
   type TabDef,
 } from "./kit";
 import { NotificationsScreen } from "./SharedScreens";
+import {
+  AlbumScreen,
+  AlbumsScreen,
+  dayLabel,
+  photoCount,
+  useAlbums,
+} from "./Albums";
 import { AccountSheet } from "./AccountSheet";
 import {
   SCHOOL,
@@ -85,21 +92,28 @@ type Screen =
   | "classAdd"
   | "adminAtt"
   | "adminAttClass"
-  | "noticeBoard"
+  | "school"
   | "notice"
   | "noticeCompose"
-  | "calendar"
+  | "photos"
+  | "album"
   | "notifs";
+
+/** The two halves of the School tab (notices + calendar live together). */
+type SchoolTab = "notices" | "calendar";
 
 export function AdminApp() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
   const [screen, setScreen] = useState<Screen>("home");
+  const [schoolTab, setSchoolTab] = useState<SchoolTab>("notices");
   const [acctOpen, setAcctOpen] = useState(false);
   const [activeTeacherId, setActiveTeacherId] = useState<number | null>(null);
   const [activeKlassId, setActiveKlassId] = useState<number | null>(null);
   const [attClassId, setAttClassId] = useState<number | null>(null);
+
+  const photos = useAlbums();
 
   // Live notices & events.
   const [apiNotices, setApiNotices] = useState<AdminNotice[] | null>(null);
@@ -304,14 +318,18 @@ export function AdminApp() {
     if (needsClasses.includes(screen) && apiClasses === null) loadClasses();
     if (needsSubjects.includes(screen) && apiSubjects === null) loadSubjects();
     if (needsTeachers.includes(screen) && apiTeachers === null) loadTeachers();
-    if (screen === "noticeBoard" && apiNotices === null) loadNotices();
+    // The School tab loads only the half that's on screen.
+    if (screen === "school" && schoolTab === "notices" && apiNotices === null)
+      loadNotices();
+    if (screen === "school" && schoolTab === "calendar" && apiEvents === null)
+      loadEvents();
     // Compose needs classes for its audience picker.
     if (screen === "noticeCompose" && apiClasses === null) loadClasses();
-    if (screen === "calendar" && apiEvents === null) loadEvents();
     if (screen === "home" && dashboard === null) loadDashboard();
     if (screen === "adminAtt" && attOverview === null) loadAttOverview();
   }, [
     screen,
+    schoolTab,
     dashboard,
     loadDashboard,
     attOverview,
@@ -369,15 +387,22 @@ export function AdminApp() {
     classes: ["Classes", "ALL CLASSES"],
     classAdd: ["Add", "CLASS OR SUBJECT"],
     adminAtt: ["Attendance", "TODAY · ALL CLASSES"],
-    noticeBoard: ["Notice Board", SCHOOL.toUpperCase()],
     noticeCompose: editingNotice
       ? ["Edit Notice", "UPDATE AND REPUBLISH"]
       : ["New Notice", "TO PARENTS"],
-    calendar: ["Calendar", SCHOOL.toUpperCase()],
+    photos: ["Moments", "SHARED BY THE SCHOOL"],
     notifs: ["Notifications", SCHOOL.toUpperCase()],
   };
   if (M[screen]) {
     [title, sub] = M[screen];
+  } else if (screen === "school") {
+    title = schoolTab === "notices" ? "Notice Board" : "Calendar";
+    sub = (user?.school?.name ?? SCHOOL).toUpperCase();
+  } else if (screen === "album") {
+    title = photos.open?.title ?? "Album";
+    sub = photos.open
+      ? `${dayLabel(photos.open.date)} · ${photoCount(photos.open.photos.length)}`.toUpperCase()
+      : undefined;
   } else if (screen === "staffDetail") {
     title = "Teacher";
     sub = (primarySubjectOf(teacherDetail) ?? activeApiTeacher?.name ?? "")
@@ -406,7 +431,7 @@ export function AdminApp() {
     ).toUpperCase();
   }
 
-  const TOP: Screen[] = ["home", "staff", "classes", "noticeBoard", "calendar"];
+  const TOP: Screen[] = ["home", "staff", "classes", "school", "photos"];
   const topLevel = TOP.includes(screen);
   const backTo: Record<string, Screen> = {
     staffDetail: "staff",
@@ -415,8 +440,9 @@ export function AdminApp() {
     classAdd: "classes",
     adminAtt: "home",
     adminAttClass: "adminAtt",
-    noticeCompose: "noticeBoard",
-    notice: "noticeBoard",
+    noticeCompose: "school",
+    notice: "school",
+    album: "photos",
     notifs: "home",
   };
   const onBack = topLevel ? undefined : () => go(backTo[screen] || "home");
@@ -425,28 +451,18 @@ export function AdminApp() {
     ? "staff"
     : ["classes", "classDetail", "classAdd"].includes(screen)
       ? "classes"
-      : ["noticeBoard", "notice", "noticeCompose"].includes(screen)
-        ? "notices"
-        : screen === "calendar"
-          ? "calendar"
+      : ["school", "notice", "noticeCompose"].includes(screen)
+        ? "school"
+        : ["photos", "album"].includes(screen)
+          ? "photos"
           : "home";
 
   const tabs: TabDef[] = [
     { key: "home", label: "Home", glyph: GLYPH.home, to: "home" },
     { key: "staff", label: "Staff", glyph: GLYPH.staff, to: "staff" },
     { key: "classes", label: "Classes", glyph: GLYPH.classes, to: "classes" },
-    {
-      key: "notices",
-      label: "Notices",
-      glyph: GLYPH.notices,
-      to: "noticeBoard",
-    },
-    {
-      key: "calendar",
-      label: "Calendar",
-      glyph: GLYPH.calendar,
-      to: "calendar",
-    },
+    { key: "school", label: "School", glyph: GLYPH.notices, to: "school" },
+    { key: "photos", label: "Photos", glyph: GLYPH.photos, to: "photos" },
   ].map((t) => ({
     key: t.key,
     label: t.label,
@@ -491,6 +507,10 @@ export function AdminApp() {
           error={dashError}
           onRetry={loadDashboard}
           go={go}
+          openSchool={(t) => {
+            setSchoolTab(t);
+            go("school");
+          }}
           openAcct={() => setAcctOpen(true)}
         />
       )}
@@ -581,13 +601,15 @@ export function AdminApp() {
           onSubjectsChanged={loadSubjects}
         />
       )}
-      {screen === "noticeBoard" && (
-        <AdminNoticeBoard
+      {screen === "school" && (
+        <AdminSchoolTab
+          tab={schoolTab}
+          onTab={setSchoolTab}
           notices={apiNotices}
-          loading={noticesLoading}
-          error={noticesError}
-          onRetry={loadNotices}
-          onOpen={(id) => {
+          noticesLoading={noticesLoading}
+          noticesError={noticesError}
+          onRetryNotices={loadNotices}
+          onOpenNotice={(id) => {
             setActiveNoticeId(id);
             go("notice");
           }}
@@ -595,6 +617,11 @@ export function AdminApp() {
             setEditingNotice(null);
             go("noticeCompose");
           }}
+          events={apiEvents}
+          eventsLoading={eventsLoading}
+          eventsError={eventsError}
+          onRetryEvents={loadEvents}
+          onEventsChanged={loadEvents}
         />
       )}
       {screen === "notice" && (
@@ -614,7 +641,7 @@ export function AdminApp() {
           }}
           onDeleted={async () => {
             await loadNotices();
-            go("noticeBoard");
+            go("school");
           }}
         />
       )}
@@ -625,17 +652,28 @@ export function AdminApp() {
           onDone={async () => {
             setEditingNotice(null);
             await loadNotices();
-            go("noticeBoard");
+            go("school");
           }}
         />
       )}
-      {screen === "calendar" && (
-        <AdminCalendar
-          events={apiEvents}
-          loading={eventsLoading}
-          error={eventsError}
-          onRetry={loadEvents}
-          onChanged={loadEvents}
+      {screen === "photos" && (
+        <AlbumsScreen
+          albums={photos.albums}
+          onCreate={photos.create}
+          onDelete={photos.remove}
+          onOpen={(id) => {
+            photos.setOpenId(id);
+            go("album");
+          }}
+        />
+      )}
+      {screen === "album" && (
+        <AlbumScreen
+          album={photos.open}
+          onAddPhotos={(list) => photos.addPhotos(photos.openId!, list)}
+          onDeletePhoto={(photoId) =>
+            photos.removePhoto(photos.openId!, photoId)
+          }
         />
       )}
       {screen === "notifs" && <NotificationsScreen />}
@@ -796,6 +834,7 @@ function AdminHome({
   error,
   onRetry,
   go,
+  openSchool,
   openAcct,
 }: {
   name: string;
@@ -804,6 +843,8 @@ function AdminHome({
   error: string | null;
   onRetry: () => void;
   go: (s: Screen) => void;
+  /** Jumps to the School tab, opening the half the card belongs to. */
+  openSchool: (tab: SchoolTab) => void;
   openAcct: () => void;
 }) {
   const att = data?.attendance;
@@ -982,7 +1023,7 @@ function AdminHome({
         </span>
       </Card>
       {data && data.upcomingEvents.length > 0 && (
-        <Card onClick={() => go("calendar")} className="p-[15px] mb-3">
+        <Card onClick={() => openSchool("calendar")} className="p-[15px] mb-3">
           <SectionLabel>Coming up</SectionLabel>
           {data.upcomingEvents.map((e) => (
             <div
@@ -1009,7 +1050,7 @@ function AdminHome({
       )}
 
       {data && data.recentNotices.length > 0 && (
-        <Card onClick={() => go("noticeBoard")} className="p-[15px]">
+        <Card onClick={() => openSchool("notices")} className="p-[15px]">
           <SectionLabel>Latest notices</SectionLabel>
           {data.recentNotices.map((n) => {
             const pct = n.totalParents
@@ -3060,6 +3101,85 @@ function SubjectManager({
 }
 
 // ---------- NOTICE COMPOSE ----------
+// ---------- SCHOOL TAB (notices + calendar in one tab) ----------
+/**
+ * Notices and Calendar are two halves of one tab, switched by a segmented
+ * control. Each half keeps its own screen component and its own live fetch.
+ */
+function AdminSchoolTab({
+  tab,
+  onTab,
+  notices,
+  noticesLoading,
+  noticesError,
+  onRetryNotices,
+  onOpenNotice,
+  onCompose,
+  events,
+  eventsLoading,
+  eventsError,
+  onRetryEvents,
+  onEventsChanged,
+}: {
+  tab: SchoolTab;
+  onTab: (t: SchoolTab) => void;
+  notices: AdminNotice[] | null;
+  noticesLoading: boolean;
+  noticesError: string | null;
+  onRetryNotices: () => void;
+  onOpenNotice: (id: number) => void;
+  onCompose: () => void;
+  events: AdminEvent[] | null;
+  eventsLoading: boolean;
+  eventsError: string | null;
+  onRetryEvents: () => void;
+  onEventsChanged: () => void | Promise<void>;
+}) {
+  const halves: { key: SchoolTab; label: string }[] = [
+    { key: "notices", label: "Notices" },
+    { key: "calendar", label: "Calendar" },
+  ];
+  return (
+    <>
+      <div className="px-[15px] pt-4">
+        <div className="flex gap-[3px] bg-[#eef1ec] rounded-[13px] p-1">
+          {halves.map((h) => (
+            <button
+              key={h.key}
+              onClick={() => onTab(h.key)}
+              className={cx(
+                "flex-1 py-2.25 rounded-[10px] text-[12.5px] font-bold",
+                tab === h.key ? "bg-green text-white" : "text-muted",
+              )}
+            >
+              {h.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {tab === "notices" ? (
+        <AdminNoticeBoard
+          notices={notices}
+          loading={noticesLoading}
+          error={noticesError}
+          onRetry={onRetryNotices}
+          onOpen={onOpenNotice}
+          onCompose={onCompose}
+        />
+      ) : (
+        <AdminCalendar
+          events={events}
+          loading={eventsLoading}
+          error={eventsError}
+          onRetry={onRetryEvents}
+          onChanged={onEventsChanged}
+        />
+      )}
+    </>
+  );
+}
+
 // ---------- NOTICES (live) ----------
 const MONTH_ABBR = [
   "Jan",

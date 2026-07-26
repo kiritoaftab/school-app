@@ -373,6 +373,46 @@ export const DEFAULT_CLASS_EXAMS: ClassExam[] = [
   { id: 'ut3', name: 'Unit Test 3' },
 ];
 
+// ---- photo albums (mock; the admin Photos tab edits this shape locally) ----
+/** Placeholder covers, used until a photo carries a real `url`. */
+export const ALBUM_TONES = [
+  'linear-gradient(150deg,#4a6b4f,#9cbfa0)',
+  'linear-gradient(150deg,#36505f,#7a98a6)',
+  'linear-gradient(150deg,#6a5a86,#a99cc2)',
+  'linear-gradient(150deg,#caa24f,#e7cd8e)',
+  'linear-gradient(150deg,#8a5a3c,#caa07c)',
+];
+export interface AlbumPhoto {
+  id: string;
+  /** Object URL of an uploaded file; absent photos fall back to `tone`. */
+  url?: string;
+  caption?: string;
+  tone: string;
+}
+export interface Album {
+  id: string;
+  title: string;
+  /** Plain day key, "2026-01-26". */
+  date: string;
+  photos: AlbumPhoto[];
+}
+
+/** n placeholder photos, cycling the tone palette so albums look distinct. */
+function seedPhotos(id: string, n: number, offset = 0, caption?: string): AlbumPhoto[] {
+  return Array.from({ length: n }, (_, i) => ({
+    id: `${id}-p${i + 1}`,
+    tone: ALBUM_TONES[(i + offset) % ALBUM_TONES.length],
+    caption: i === 0 ? caption : undefined,
+  }));
+}
+
+export const ALBUMS: Album[] = [
+  { id: 'sports', title: 'Annual Sports Day', date: '2026-06-25', photos: seedPhotos('sports', 8, 0, '100m Finals') },
+  { id: 'republic', title: 'Republic Day', date: '2026-01-26', photos: seedPhotos('republic', 5, 1, 'Flag Hoisting') },
+  { id: 'science', title: 'Science Fair', date: '2026-05-10', photos: seedPhotos('science', 4, 2) },
+  { id: 'trip', title: 'Grade 5-B · Field Trip', date: '2026-03-02', photos: seedPhotos('trip', 3, 3) },
+];
+
 export const ADMIN_ACTIVITY = [
   { dot: '#1f8a5b', title: 'Ms. Rao marked 5-B register', sub: '30 present · 2 absent', tm: '9:12' },
   { dot: '#c2a04e', title: 'Unit Test 2 results published', sub: 'Grade 5-B · Ms. Kapoor', tm: '1d' },

@@ -470,3 +470,151 @@
 2026-07-23 18:30:44 | REMOVE | frontend/src/pages/LoginPage.tsx         |    0 |   -212 | 
 2026-07-23 18:30:44 | CREATE | frontend/src/pages/LoginPage.tsx         |  247 |   +247 | dirty
 2026-07-23 18:30:44 | CREATE | frontend/src/pages/LoginPage.tsx         |  247 |   +247 | dirty
+2026-07-26 11:00:14 | REMOVE | frontend/src/app/data.ts                 |    0 |   -387 | 
+2026-07-26 11:00:14 | REMOVE | frontend/src/app/data.ts                 |    0 |   -387 | 
+2026-07-26 11:00:14 | CREATE | frontend/src/app/data.ts                 |  427 |   +427 | dirty
+2026-07-26 11:00:14 | CREATE | frontend/src/app/data.ts                 |  427 |   +427 | dirty
+2026-07-26 11:00:19 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3649 | 
+2026-07-26 11:00:19 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3649 | 
+2026-07-26 11:00:19 | CREATE | frontend/src/app/AdminApp.tsx            | 3653 |  +3653 | dirty
+2026-07-26 11:00:19 | CREATE | frontend/src/app/AdminApp.tsx            | 3653 |  +3653 | dirty
+2026-07-26 11:00:26 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3653 | 
+2026-07-26 11:00:26 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3653 | 
+2026-07-26 11:00:26 | CREATE | frontend/src/app/AdminApp.tsx            | 3654 |  +3654 | dirty
+2026-07-26 11:00:26 | CREATE | frontend/src/app/AdminApp.tsx            | 3654 |  +3654 | dirty
+2026-07-26 11:00:33 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3654 | 
+2026-07-26 11:00:33 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3654 | 
+2026-07-26 11:00:33 | CREATE | frontend/src/app/AdminApp.tsx            | 3658 |  +3658 | dirty
+2026-07-26 11:00:33 | CREATE | frontend/src/app/AdminApp.tsx            | 3658 |  +3658 | dirty
+2026-07-26 11:00:40 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3658 | 
+2026-07-26 11:00:40 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3658 | 
+2026-07-26 11:00:40 | CREATE | frontend/src/app/AdminApp.tsx            | 3662 |  +3662 | dirty
+2026-07-26 11:00:40 | CREATE | frontend/src/app/AdminApp.tsx            | 3662 |  +3662 | dirty
+2026-07-26 11:00:48 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3662 | 
+2026-07-26 11:00:48 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3662 | 
+2026-07-26 11:00:48 | CREATE | frontend/src/app/AdminApp.tsx            | 3665 |  +3665 | dirty
+2026-07-26 11:00:48 | CREATE | frontend/src/app/AdminApp.tsx            | 3665 |  +3665 | dirty
+2026-07-26 11:00:53 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3665 | 
+2026-07-26 11:00:53 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3665 | 
+2026-07-26 11:00:53 | CREATE | frontend/src/app/AdminApp.tsx            | 3666 |  +3666 | dirty
+2026-07-26 11:00:53 | CREATE | frontend/src/app/AdminApp.tsx            | 3666 |  +3666 | dirty
+2026-07-26 11:01:09 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3666 | 
+2026-07-26 11:01:09 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3666 | 
+2026-07-26 11:01:09 | CREATE | frontend/src/app/AdminApp.tsx            | 3666 |  +3666 | dirty
+2026-07-26 11:01:09 | CREATE | frontend/src/app/AdminApp.tsx            | 3666 |  +3666 | dirty
+2026-07-26 11:01:15 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3666 | 
+2026-07-26 11:01:15 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3666 | 
+2026-07-26 11:01:15 | CREATE | frontend/src/app/AdminApp.tsx            | 3674 |  +3674 | dirty
+2026-07-26 11:01:15 | CREATE | frontend/src/app/AdminApp.tsx            | 3674 |  +3674 | dirty
+2026-07-26 11:01:21 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3674 | 
+2026-07-26 11:01:21 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3674 | 
+2026-07-26 11:01:21 | CREATE | frontend/src/app/AdminApp.tsx            | 3674 |  +3674 | dirty
+2026-07-26 11:01:21 | CREATE | frontend/src/app/AdminApp.tsx            | 3674 |  +3674 | dirty
+2026-07-26 11:01:28 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3674 | 
+2026-07-26 11:01:28 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3674 | 
+2026-07-26 11:01:28 | CREATE | frontend/src/app/AdminApp.tsx            | 3675 |  +3675 | dirty
+2026-07-26 11:01:28 | CREATE | frontend/src/app/AdminApp.tsx            | 3675 |  +3675 | dirty
+2026-07-26 11:01:39 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3675 | 
+2026-07-26 11:01:39 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3675 | 
+2026-07-26 11:01:39 | CREATE | frontend/src/app/AdminApp.tsx            | 3665 |  +3665 | dirty
+2026-07-26 11:01:39 | CREATE | frontend/src/app/AdminApp.tsx            | 3665 |  +3665 | dirty
+2026-07-26 11:01:50 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3665 | 
+2026-07-26 11:01:50 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3665 | 
+2026-07-26 11:01:50 | CREATE | frontend/src/app/AdminApp.tsx            | 3672 |  +3672 | dirty
+2026-07-26 11:01:50 | CREATE | frontend/src/app/AdminApp.tsx            | 3672 |  +3672 | dirty
+2026-07-26 11:02:01 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3672 | 
+2026-07-26 11:02:01 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3672 | 
+2026-07-26 11:02:01 | CREATE | frontend/src/app/AdminApp.tsx            | 3702 |  +3702 | dirty
+2026-07-26 11:02:01 | CREATE | frontend/src/app/AdminApp.tsx            | 3702 |  +3702 | dirty
+2026-07-26 11:02:19 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3702 | 
+2026-07-26 11:02:19 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3702 | 
+2026-07-26 11:02:19 | CREATE | frontend/src/app/AdminApp.tsx            | 3704 |  +3704 | dirty
+2026-07-26 11:02:19 | CREATE | frontend/src/app/AdminApp.tsx            | 3704 |  +3704 | dirty
+2026-07-26 11:02:27 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3704 | 
+2026-07-26 11:02:27 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3704 | 
+2026-07-26 11:02:27 | CREATE | frontend/src/app/AdminApp.tsx            | 3705 |  +3705 | dirty
+2026-07-26 11:02:27 | CREATE | frontend/src/app/AdminApp.tsx            | 3705 |  +3705 | dirty
+2026-07-26 11:02:33 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3705 | 
+2026-07-26 11:02:33 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3705 | 
+2026-07-26 11:02:33 | CREATE | frontend/src/app/AdminApp.tsx            | 3705 |  +3705 | dirty
+2026-07-26 11:02:33 | CREATE | frontend/src/app/AdminApp.tsx            | 3705 |  +3705 | dirty
+2026-07-26 11:02:38 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3705 | 
+2026-07-26 11:02:38 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3705 | 
+2026-07-26 11:02:38 | CREATE | frontend/src/app/AdminApp.tsx            | 3705 |  +3705 | dirty
+2026-07-26 11:02:38 | CREATE | frontend/src/app/AdminApp.tsx            | 3705 |  +3705 | dirty
+2026-07-26 11:02:43 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3705 | 
+2026-07-26 11:02:43 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3705 | 
+2026-07-26 11:02:43 | CREATE | frontend/src/app/AdminApp.tsx            | 3709 |  +3709 | dirty
+2026-07-26 11:02:43 | CREATE | frontend/src/app/AdminApp.tsx            | 3709 |  +3709 | dirty
+2026-07-26 11:03:03 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3709 | 
+2026-07-26 11:03:03 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3709 | 
+2026-07-26 11:03:03 | CREATE | frontend/src/app/AdminApp.tsx            | 3788 |  +3788 | dirty
+2026-07-26 11:03:03 | CREATE | frontend/src/app/AdminApp.tsx            | 3788 |  +3788 | dirty
+2026-07-26 11:03:50 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3788 | 
+2026-07-26 11:03:50 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3788 | 
+2026-07-26 11:03:50 | CREATE | frontend/src/app/AdminApp.tsx            | 4064 |  +4064 | dirty
+2026-07-26 11:03:50 | CREATE | frontend/src/app/AdminApp.tsx            | 4064 |  +4064 | dirty
+2026-07-26 11:03:57 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -4064 | 
+2026-07-26 11:03:57 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -4064 | 
+2026-07-26 11:03:57 | CREATE | frontend/src/app/AdminApp.tsx            | 4064 |  +4064 | dirty
+2026-07-26 11:03:57 | CREATE | frontend/src/app/AdminApp.tsx            | 4064 |  +4064 | dirty
+2026-07-26 11:22:08 | CREATE | frontend/src/app/Albums.tsx              |  289 |   +289 | 
+2026-07-26 11:22:08 | CREATE | frontend/src/app/Albums.tsx              |  289 |   +289 | 
+2026-07-26 11:22:25 | WRITE  | frontend/src/app/AdminApp.tsx            | 3788 |   -276 | dirty
+2026-07-26 11:22:25 | WRITE  | frontend/src/app/AdminApp.tsx            | 3788 |   -276 | dirty
+2026-07-26 11:22:34 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3788 | 
+2026-07-26 11:22:34 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3788 | 
+2026-07-26 11:22:34 | CREATE | frontend/src/app/AdminApp.tsx            | 3791 |  +3791 | dirty
+2026-07-26 11:22:34 | CREATE | frontend/src/app/AdminApp.tsx            | 3791 |  +3791 | dirty
+2026-07-26 11:22:42 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3791 | 
+2026-07-26 11:22:42 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3791 | 
+2026-07-26 11:22:42 | CREATE | frontend/src/app/AdminApp.tsx            | 3789 |  +3789 | dirty
+2026-07-26 11:22:42 | CREATE | frontend/src/app/AdminApp.tsx            | 3789 |  +3789 | dirty
+2026-07-26 11:22:51 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3789 | 
+2026-07-26 11:22:51 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3789 | 
+2026-07-26 11:22:51 | CREATE | frontend/src/app/AdminApp.tsx            | 3788 |  +3788 | dirty
+2026-07-26 11:22:51 | CREATE | frontend/src/app/AdminApp.tsx            | 3788 |  +3788 | dirty
+2026-07-26 11:22:57 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3788 | 
+2026-07-26 11:22:57 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3788 | 
+2026-07-26 11:22:57 | CREATE | frontend/src/app/AdminApp.tsx            | 3788 |  +3788 | dirty
+2026-07-26 11:22:57 | CREATE | frontend/src/app/AdminApp.tsx            | 3788 |  +3788 | dirty
+2026-07-26 11:23:10 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3788 | 
+2026-07-26 11:23:10 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3788 | 
+2026-07-26 11:23:10 | CREATE | frontend/src/app/AdminApp.tsx            | 3769 |  +3769 | dirty
+2026-07-26 11:23:10 | CREATE | frontend/src/app/AdminApp.tsx            | 3769 |  +3769 | dirty
+2026-07-26 11:23:34 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1081 | 
+2026-07-26 11:23:34 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1081 | 
+2026-07-26 11:23:34 | CREATE | frontend/src/app/TeacherApp.tsx          | 1084 |  +1084 | dirty
+2026-07-26 11:23:34 | CREATE | frontend/src/app/TeacherApp.tsx          | 1084 |  +1084 | dirty
+2026-07-26 11:23:40 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1084 | 
+2026-07-26 11:23:40 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1084 | 
+2026-07-26 11:23:40 | CREATE | frontend/src/app/TeacherApp.tsx          | 1086 |  +1086 | dirty
+2026-07-26 11:23:40 | CREATE | frontend/src/app/TeacherApp.tsx          | 1086 |  +1086 | dirty
+2026-07-26 11:23:47 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1086 | 
+2026-07-26 11:23:47 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1086 | 
+2026-07-26 11:23:47 | CREATE | frontend/src/app/TeacherApp.tsx          | 1087 |  +1087 | dirty
+2026-07-26 11:23:47 | CREATE | frontend/src/app/TeacherApp.tsx          | 1087 |  +1087 | dirty
+2026-07-26 11:24:03 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1087 | 
+2026-07-26 11:24:03 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1087 | 
+2026-07-26 11:24:03 | CREATE | frontend/src/app/TeacherApp.tsx          | 1099 |  +1099 | dirty
+2026-07-26 11:24:03 | CREATE | frontend/src/app/TeacherApp.tsx          | 1099 |  +1099 | dirty
+2026-07-26 11:24:14 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1099 | 
+2026-07-26 11:24:14 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1099 | 
+2026-07-26 11:24:14 | CREATE | frontend/src/app/TeacherApp.tsx          | 1124 |  +1124 | dirty
+2026-07-26 11:24:14 | CREATE | frontend/src/app/TeacherApp.tsx          | 1124 |  +1124 | dirty
+2026-07-26 11:24:21 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1124 | 
+2026-07-26 11:24:21 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1124 | 
+2026-07-26 11:24:21 | CREATE | frontend/src/app/TeacherApp.tsx          | 1138 |  +1138 | dirty
+2026-07-26 11:24:21 | CREATE | frontend/src/app/TeacherApp.tsx          | 1138 |  +1138 | dirty
+2026-07-26 11:24:26 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1138 | 
+2026-07-26 11:24:26 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1138 | 
+2026-07-26 11:24:26 | CREATE | frontend/src/app/TeacherApp.tsx          | 1138 |  +1138 | dirty
+2026-07-26 11:24:26 | CREATE | frontend/src/app/TeacherApp.tsx          | 1138 |  +1138 | dirty
+2026-07-26 11:24:36 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1138 | 
+2026-07-26 11:24:36 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1138 | 
+2026-07-26 11:24:36 | CREATE | frontend/src/app/TeacherApp.tsx          | 1140 |  +1140 | dirty
+2026-07-26 11:24:36 | CREATE | frontend/src/app/TeacherApp.tsx          | 1140 |  +1140 | dirty
+2026-07-26 11:24:42 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1140 | 
+2026-07-26 11:24:42 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1140 | 
+2026-07-26 11:24:42 | CREATE | frontend/src/app/TeacherApp.tsx          | 1142 |  +1142 | dirty
+2026-07-26 11:24:42 | CREATE | frontend/src/app/TeacherApp.tsx          | 1142 |  +1142 | dirty
