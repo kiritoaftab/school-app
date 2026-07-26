@@ -213,6 +213,9 @@ export function AlbumScreen({
     );
   }
 
+  // `album` is a parameter, so its non-null narrowing doesn't reach into `pick`.
+  const albumId = album.id;
+
   // Picked files are previewed straight from object URLs — nothing is uploaded
   // until the photos API exists.
   function pick(files: FileList | null) {
@@ -220,7 +223,7 @@ export function AlbumScreen({
     const now = Date.now();
     onAddPhotos(
       Array.from(files).map((f, i) => ({
-        id: `${album.id}-u${now}-${i}`,
+        id: `${albumId}-u${now}-${i}`,
         url: URL.createObjectURL(f),
         tone: ALBUM_TONES[i % ALBUM_TONES.length],
       })),
