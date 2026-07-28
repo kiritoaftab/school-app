@@ -101,6 +101,29 @@ export async function submitLeave(input: {
   await api.post('/parent/leave', input);
 }
 
+/**
+ * A leave this parent has already sent. `status` is SUBMITTED until the class
+ * teacher acknowledges it; there is no approve/decline flow.
+ */
+export interface ParentLeave {
+  id: number;
+  studentId: number;
+  studentName: string;
+  type: LeaveType;
+  fromDate: string;
+  toDate: string;
+  reason: string;
+  status: 'SUBMITTED' | 'APPROVED' | 'DECLINED';
+  createdAt: string;
+  /** When the teacher acknowledged. Absent until the backend stores it. */
+  acknowledgedAt?: string | null;
+}
+
+export async function listMyLeaves(): Promise<ParentLeave[]> {
+  const { data } = await api.get<ParentLeave[]>('/parent/leave');
+  return data;
+}
+
 /** A school calendar event. date is 'YYYY-MM-DD'. */
 export interface ParentEvent {
   id: number;

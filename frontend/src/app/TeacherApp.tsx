@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import {
-  AppHeader, BottomSheet, Card, Chip, Glyph, InfoNote, PrimaryButton,
+  AppHeader, BottomSheet, Card, Chip, EmptyState, Glyph, InfoNote, PrimaryButton,
   Shell, StatCard, cx, type TabDef,
 } from './kit';
 import {
@@ -11,9 +11,11 @@ import {
   listClassResults, saveClassResults, listEvents,
   listClassStudents, addClassStudent,
   getClassRoster, saveClassAttendance,
+  listLeaves, acknowledgeLeave,
   type TeacherKlass, type DiaryEntry, type TeacherExam, type TeacherSubject, type ResultRow, type TeacherStudent,
-  type AttendanceStatus, type RosterStudent as RosterRow,
+  type AttendanceStatus, type RosterStudent as RosterRow, type TeacherLeave,
 } from '../api/teacher';
+import { LEAVE_BADGE, daysLabel, leaveDays, leaveRange, seenLabel, sentLabel } from './leave';
 import { CalendarScreen, NotificationsScreen } from './SharedScreens';
 import { AlbumScreen, AlbumViewer, AlbumsScreen, dayLabel, photoCount, useAlbums } from './Albums';
 import { AccountSheet } from './AccountSheet';
@@ -23,7 +25,7 @@ import {
   type CalEvent,
 } from './data';
 
-type Screen = 'home' | 'attendance' | 'diary' | 'myClass' | 'results' | 'photos' | 'album' | 'notifs';
+type Screen = 'home' | 'attendance' | 'leaveNotes' | 'diary' | 'myClass' | 'results' | 'photos' | 'album' | 'notifs';
 const TOP_LEVEL: Screen[] = ['home', 'diary', 'results', 'myClass', 'photos'];
 
 /** The two halves of the My Class tab (calendar + roster live together). */
@@ -81,6 +83,33 @@ export function TeacherApp() {
   }, []);
 
   const liveClass = classes.find((c) => c.id === selClassId) ?? null;
+  // Leave notes only reach the class teacher, so they hang off that class —
+  // not the one picked in the switcher.
+  const ctClass = classes.find((c) => c.isClassTeacher) ?? null;
+
+  // ---- leave notes (class teacher only) ----
+  const [leaves, setLeaves] = useState<TeacherLeave[]>([]);
+  const [leavesLoading, setLeavesLoading] = useState(true);
+
+  useEffect(() => {
+    let alive = true;
+    listLeaves()
+      .then((l) => alive && setLeaves(l))
+      .catch(() => alive && setLeaves([]))
+      .finally(() => alive && setLeavesLoading(false));
+    return () => { alive = false; };
+  }, []);
+
+  async function ackLeave(id: number) {
+    const at = new Date().toISOString();
+    setLeaves((cur) => cur.map((l) => (l.id === id ? { ...l, status: 'APPROVED', acknowledgedAt: at } : l)));
+    try {
+      await acknowledgeLeave(id);
+    } catch {
+      // Put the note back in the "to acknowledge" pile so it isn't silently lost.
+      setLeaves((cur) => cur.map((l) => (l.id === id ? { ...l, status: 'SUBMITTED', acknowledgedAt: null } : l)));
+    }
+  }
 
   const [teExam, setTeExam] = useState('');
   const [teSubject, setTeSubject] = useState('');
@@ -161,6 +190,7 @@ export function TeacherApp() {
       : undefined;
   }
   else if (screen === 'attendance') { title = 'Attendance'; sub = `${curClass.label} · 25 JUN`.toUpperCase(); }
+  else if (screen === 'leaveNotes') { title = 'Leave Notes'; sub = `${ctClass?.label ?? curClass.label} · CLASS TEACHER`.toUpperCase(); }
   else if (screen === 'notifs') { title = 'Notifications'; sub = SCHOOL.toUpperCase(); }
 
   const topLevel = TOP_LEVEL.includes(screen);
@@ -227,10 +257,14 @@ export function TeacherApp() {
       {screen === 'home' && (
         <TeacherHome
           name={name} klass={liveClass} classCount={classes.length}
+          leaves={leaves} showLeaves={ctClass != null}
           go={go}
           openRoster={() => { setMyClassTab('students'); go('myClass'); }}
           openAcct={() => setAcctOpen(true)}
         />
+      )}
+      {screen === 'leaveNotes' && (
+        <TeacherLeaveNotes leaves={leaves} loading={leavesLoading} onAcknowledge={ackLeave} />
       )}
       {screen === 'attendance' && (
         <TeacherAttendance
@@ -301,11 +335,14 @@ export function TeacherApp() {
 
 // ---------- HOME ----------
 function TeacherHome({
-  name, klass, classCount, go, openRoster, openAcct,
+  name, klass, classCount, leaves, showLeaves, go, openRoster, openAcct,
 }: {
   name: string;
   klass: TeacherKlass | null;
   classCount: number;
+  leaves: TeacherLeave[];
+  /** Only a class teacher gets the leave-notes row. */
+  showLeaves: boolean;
   go: (s: Screen) => void;
   /** Jumps to My Class with the roster half showing. */
   openRoster: () => void;
@@ -334,6 +371,11 @@ function TeacherHome({
   const studentCount = klass?.students ?? 0;
   const latestExam = exams[0] ?? null;
 
+  const newLeaves = leaves.filter((l) => l.status === 'SUBMITTED');
+  // "Kabir, Meera" — first names of the students still waiting, +N beyond two.
+  const leaveNames = newLeaves.slice(0, 2).map((l) => l.studentName.split(' ')[0]).join(', ')
+    + (newLeaves.length > 2 ? ` +${newLeaves.length - 2}` : '');
+
   const actions: {
     title: string; sub: string; icon: string; gold?: boolean; badge?: string; onClick: () => void;
   }[] = [
@@ -344,6 +386,13 @@ function TeacherHome({
       badge: isCT ? '' : 'VIEW',
       onClick: () => go('attendance'),
     },
+    ...(showLeaves ? [{
+      title: 'New leave notes',
+      sub: newLeaves.length > 0 ? `${leaveNames} · tap to acknowledge` : 'All acknowledged · view the record',
+      icon: GLYPH.calendar,
+      badge: newLeaves.length > 0 ? `${newLeaves.length} NEW` : '',
+      onClick: () => go('leaveNotes'),
+    }] : []),
     {
       title: 'Post homework',
       sub: `${hwCount} posted for today · ${label}`,
@@ -387,6 +436,131 @@ function TeacherHome({
         <div onClick={() => go('diary')} className="flex-1 cursor-pointer"><StatCard value={hwCount} label="Homework" /></div>
         <div onClick={() => go('results')} className="flex-1 cursor-pointer"><StatCard value={exams.length} label="Exams" /></div>
       </div>
+    </div>
+  );
+}
+
+// ---------- LEAVE NOTES ----------
+/** The small uppercase divider used between the two halves of this screen. */
+function LeaveSection({ children, right }: { children: string; right?: string }) {
+  return (
+    <div className="flex items-center text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-2.5">
+      {children}
+      {right && <span className="ml-auto tracking-[0.04em]">{right}</span>}
+    </div>
+  );
+}
+
+function LeaveAvatar({ name, size = 38 }: { name: string; size?: number }) {
+  return (
+    <div
+      className="rounded-full grid place-items-center text-green font-bold flex-none"
+      style={{
+        width: size, height: size,
+        fontSize: size > 32 ? 12.5 : 10.5,
+        background: 'linear-gradient(140deg,#d7e4da,#a7c4b4)',
+      }}
+    >
+      {initialsOf(name)}
+    </div>
+  );
+}
+
+function LeaveTypeBadge({ type }: { type: TeacherLeave['type'] }) {
+  return (
+    <span className={cx('text-[9.5px] font-bold px-2 py-[3px] rounded-[6px] tracking-[0.04em] flex-none', LEAVE_BADGE[type])}>
+      {type}
+    </span>
+  );
+}
+
+/**
+ * The class teacher's leave inbox: notes still to acknowledge on top, then the
+ * full record. Acknowledging is the only action — there is no approve/decline.
+ */
+function TeacherLeaveNotes({
+  leaves, loading, onAcknowledge,
+}: {
+  leaves: TeacherLeave[];
+  loading: boolean;
+  onAcknowledge: (id: number) => void;
+}) {
+  const pending = leaves.filter((l) => l.status === 'SUBMITTED');
+  const record = leaves.filter((l) => l.status !== 'SUBMITTED');
+
+  if (loading) {
+    return <div className="px-[15px] py-10 text-center text-muted text-[12.5px]">Loading leave notes…</div>;
+  }
+  if (leaves.length === 0) {
+    return (
+      <EmptyState icon={GLYPH.calendar} title="No leave notes yet">
+        When a parent sends a leave note for your class, it lands here for you to acknowledge.
+      </EmptyState>
+    );
+  }
+
+  return (
+    <div className="px-[15px] pt-4 pb-6">
+      {pending.length > 0 ? (
+        <>
+          <LeaveSection>{`New · ${pending.length} to acknowledge`}</LeaveSection>
+          {pending.map((l) => (
+            <Card key={l.id} className="p-[15px] mb-3">
+              <div className="flex items-center gap-2.5 mb-3">
+                <LeaveAvatar name={l.studentName} />
+                <div className="flex-1 min-w-0">
+                  <b className="text-[14px] font-bold block truncate">{l.studentName}</b>
+                  <small className="text-[11px] text-muted">
+                    {l.admissionNo ? `Adm ${l.admissionNo} · ` : ''}{sentLabel(l.createdAt)}
+                  </small>
+                </div>
+                <LeaveTypeBadge type={l.type} />
+              </div>
+              <div className="flex items-center gap-2 rounded-[13px] bg-[#f4f7f4] border border-line px-3 py-2.5 mb-2.5">
+                <span className="text-green flex-none"><Glyph d={GLYPH.calendar} size={16} stroke={1.9} /></span>
+                <b className="text-[12.5px] font-bold">{leaveRange(l.fromDate, l.toDate)}</b>
+                <span className="ml-auto text-[11px] text-muted font-semibold">{daysLabel(leaveDays(l.fromDate, l.toDate))}</span>
+              </div>
+              <p className="text-[12.5px] text-muted leading-[1.55] mb-3.5">“{l.reason}”</p>
+              <PrimaryButton onClick={() => onAcknowledge(l.id)} className="flex items-center justify-center gap-2">
+                <Glyph d={GLYPH.check} size={17} stroke={2.4} />Acknowledge
+              </PrimaryButton>
+            </Card>
+          ))}
+        </>
+      ) : (
+        <Card className="p-6 mb-4 text-center">
+          <div className="w-[54px] h-[54px] rounded-full bg-mist grid place-items-center mx-auto mb-3 text-green">
+            <Glyph d={GLYPH.check} size={26} stroke={2.4} />
+          </div>
+          <div className="font-serif text-[20px] mb-1.5">All caught up</div>
+          <p className="text-[12px] text-muted leading-[1.5] max-w-[250px] mx-auto">
+            Every leave note has been acknowledged. The full record stays below.
+          </p>
+        </Card>
+      )}
+
+      {record.length > 0 && (
+        <div className="mt-5">
+          <LeaveSection>Leave record · This term</LeaveSection>
+          {record.map((l) => (
+            <Card key={l.id} className="p-[13px] mb-2.5 flex items-start gap-2.5">
+              <LeaveAvatar name={l.studentName} size={30} />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2">
+                  <b className="text-[13px] font-bold truncate">{l.studentName}</b>
+                  <LeaveTypeBadge type={l.type} />
+                  <span className="ml-auto text-[10px] text-muted font-semibold flex-none">{seenLabel(l.acknowledgedAt)}</span>
+                </div>
+                <div className="text-[11px] text-muted font-semibold mt-[3px]">
+                  {leaveRange(l.fromDate, l.toDate)} · {daysLabel(leaveDays(l.fromDate, l.toDate))}
+                </div>
+                <p className="text-[12px] text-muted leading-[1.5] mt-1">{l.reason}</p>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

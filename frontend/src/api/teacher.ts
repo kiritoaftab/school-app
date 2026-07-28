@@ -165,6 +165,35 @@ export async function saveClassAttendance(
   await api.post(`/teacher/classes/${klassId}/attendance`, { date, marks });
 }
 
+export type LeaveType = 'SICK' | 'CASUAL' | 'OTHER';
+
+/** A leave note from a parent, for a student in a class this teacher owns. */
+export interface TeacherLeave {
+  id: number;
+  studentId: number;
+  studentName: string;
+  admissionNo: string | null;
+  type: LeaveType;
+  fromDate: string;
+  toDate: string;
+  reason: string;
+  status: 'SUBMITTED' | 'APPROVED' | 'DECLINED';
+  /** When the parent sent the note. */
+  createdAt: string;
+  /** When this teacher acknowledged. Absent until the backend stores it. */
+  acknowledgedAt?: string | null;
+}
+
+export async function listLeaves(): Promise<TeacherLeave[]> {
+  const { data } = await api.get<TeacherLeave[]>('/teacher/leave');
+  return data;
+}
+
+/** Acknowledge-only: the teacher never approves or declines a leave note. */
+export async function acknowledgeLeave(id: number): Promise<void> {
+  await api.patch(`/teacher/leave/${id}`, { status: 'APPROVED' });
+}
+
 /** A school calendar event. date is 'YYYY-MM-DD'. */
 export interface TeacherEvent {
   id: number;

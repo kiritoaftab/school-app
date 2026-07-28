@@ -13,10 +13,11 @@ import { AccountSheet } from './AccountSheet';
 import { GLYPH, SCHOOL, gradeFor, ordinal, type CalEvent, type Notice } from './data';
 import {
   listMyStudents, listStudentDiary, getStudentAttendance, listStudentTerms, getStudentResults,
-  listEvents, listNotices, ackNotice, submitLeave,
+  listEvents, listNotices, ackNotice, submitLeave, listMyLeaves,
   type ParentStudent, type ParentDiaryEntry, type AttendanceStatus, type StudentResults,
-  type ParentNotice, type LeaveType,
+  type ParentNotice, type LeaveType, type ParentLeave,
 } from '../api/parent';
+import { LEAVE_BADGE, daysLabel, leaveDays, leaveRange, seenLabel } from './leave';
 import {
   MONTHS, MONTH_ABBR, DAY_SHORT, DAY_FULL, ymd, ym, addDays, startOfWeek,
 } from '../lib/date';
@@ -282,7 +283,7 @@ export function ParentApp() {
       )}
       {screen === 'attendance' && <AttendanceParent studentId={selStudentId} go={go} />}
       {screen === 'leave' && (leaveSent ? (
-        <SuccessScreen title="Request sent" body="The class teacher will see this right away. You'll get a notification once it's approved." buttonLabel="Back to home" onButton={() => { setLeaveSent(false); go('home'); }} />
+        <SuccessScreen title="Request sent" body="The class teacher will see this right away. You'll get a notification once they've acknowledged it." buttonLabel="Back to home" onButton={() => { setLeaveSent(false); go('home'); }} />
       ) : (
         <LeaveParent student={selStudent} onSuccess={() => setLeaveSent(true)} />
       ))}
@@ -730,6 +731,52 @@ function LeaveParent({ student, onSuccess }: { student: ParentStudent | null; on
       </div>
       {err && <div className="text-[11.5px] text-danger font-semibold mb-2">{err}</div>}
       <PrimaryButton onClick={submit} disabled={!ready || busy}>{busy ? 'Sending…' : 'Send request'}</PrimaryButton>
+      <PastLeaves studentId={student?.id ?? null} />
+    </div>
+  );
+}
+
+/** This year's leaves for the selected child, newest first. Hidden when empty. */
+function PastLeaves({ studentId }: { studentId: number | null }) {
+  const [leaves, setLeaves] = useState<ParentLeave[]>([]);
+
+  useEffect(() => {
+    if (studentId == null) { setLeaves([]); return; }
+    let alive = true;
+    listMyLeaves()
+      .then((all) => alive && setLeaves(all.filter((l) => l.studentId === studentId)))
+      .catch(() => alive && setLeaves([]));
+    return () => { alive = false; };
+  }, [studentId]);
+
+  const year = String(new Date().getFullYear());
+  const thisYear = leaves.filter((l) => l.fromDate.slice(0, 4) === year);
+  if (thisYear.length === 0) return null;
+
+  const total = thisYear.reduce((n, l) => n + leaveDays(l.fromDate, l.toDate), 0);
+
+  return (
+    <div className="mt-6">
+      <div className="flex items-center text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-2.5">
+        Past leaves · This year
+        <span className="ml-auto tracking-[0.04em]">{daysLabel(total)} total</span>
+      </div>
+      {thisYear.map((l) => {
+        const pending = l.status === 'SUBMITTED';
+        return (
+          <Card key={l.id} className="p-[13px] mb-2.5">
+            <div className="flex items-center gap-2 mb-1.5">
+              <span className={cx('text-[9.5px] font-bold px-[7px] py-[3px] rounded-[6px] tracking-[0.04em] flex-none', LEAVE_BADGE[l.type])}>{l.type}</span>
+              <b className="text-[13px] font-bold">{leaveRange(l.fromDate, l.toDate)}</b>
+              <small className="text-[11px] text-muted">{daysLabel(leaveDays(l.fromDate, l.toDate))}</small>
+              <span className={cx('ml-auto text-[10.5px] font-semibold flex-none', pending ? 'text-[#8a6d1f]' : 'text-muted')}>
+                {pending ? 'Awaiting' : seenLabel(l.acknowledgedAt)}
+              </span>
+            </div>
+            <p className="text-[12px] text-muted leading-[1.5]">{l.reason}</p>
+          </Card>
+        );
+      })}
     </div>
   );
 }

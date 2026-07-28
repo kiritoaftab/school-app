@@ -653,12 +653,15 @@ teacherRouter.get('/leave', ah(async (req, res) => {
   res.json(
     leaves.map((l) => ({
       id: l.id,
+      studentId: l.studentId,
       studentName: l.student.name,
+      admissionNo: l.student.admissionNo,
       type: l.type,
       fromDate: l.fromDate.toISOString().slice(0, 10),
       toDate: l.toDate.toISOString().slice(0, 10),
       reason: l.reason,
       status: l.status,
+      createdAt: l.createdAt,
     })),
   );
 }));
@@ -676,8 +679,10 @@ teacherRouter.patch('/leave/:id', ah(async (req, res) => {
     data: {
       userId: leave.createdByParentId,
       type: 'LEAVE',
-      title: `Leave ${status.toLowerCase()}`,
-      body: `Your leave request has been ${status.toLowerCase()}.`,
+      // The teacher flow is acknowledge-only, so the parent hears "seen", not
+      // "approved" — the status column keeps APPROVED as its stored value.
+      title: 'Leave note seen',
+      body: 'The class teacher has acknowledged your leave note.',
       deeplink: '/app/leave',
     },
   });
