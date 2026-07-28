@@ -15,7 +15,7 @@ import {
   type AttendanceStatus, type RosterStudent as RosterRow,
 } from '../api/teacher';
 import { CalendarScreen, NotificationsScreen } from './SharedScreens';
-import { AlbumScreen, AlbumsScreen, dayLabel, photoCount, useAlbums } from './Albums';
+import { AlbumScreen, AlbumViewer, AlbumsScreen, dayLabel, photoCount, useAlbums } from './Albums';
 import { AccountSheet } from './AccountSheet';
 import {
   SCHOOL, GLYPH, TEACHER_CLASSES,
@@ -219,6 +219,8 @@ export function TeacherApp() {
             })}
           </BottomSheet>
           <AccountSheet open={acctOpen} onClose={() => setAcctOpen(false)} name={name} phone={user?.phone ?? '9811122233'} roleLabel="Teacher" onSignOut={() => { logout(); navigate('/login'); }} />
+          {/* Sits above the frame so a tapped photo fills it edge to edge. */}
+          <AlbumViewer gallery={photos} />
         </>
       }
     >

@@ -485,9 +485,11 @@ export function AlbumScreen({ gallery, readOnly }: { gallery: Gallery; readOnly?
         ) : (
           <div className="grid grid-cols-3 gap-[7px]">
             {detail.photos.map((p, i) => (
+              // A div, not a button — the remove × is a button and can't nest.
               <div
                 key={p.id}
-                className="rounded-[12px] relative overflow-hidden aspect-square"
+                onClick={() => gallery.openViewer(i)}
+                className="rounded-[12px] relative overflow-hidden aspect-square cursor-pointer"
                 style={{ background: toneFor(i) }}
               >
                 <img

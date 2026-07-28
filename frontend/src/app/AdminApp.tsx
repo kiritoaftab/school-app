@@ -68,6 +68,7 @@ import {
 import { NotificationsScreen } from "./SharedScreens";
 import {
   AlbumScreen,
+  AlbumViewer,
   AlbumsScreen,
   dayLabel,
   photoCount,
@@ -487,17 +488,21 @@ export function AdminApp() {
       }
       tabs={tabs}
       overlays={
-        <AccountSheet
-          open={acctOpen}
-          onClose={() => setAcctOpen(false)}
-          name={name}
-          phone={user?.phone ?? "9800011122"}
-          roleLabel="Admin"
-          onSignOut={() => {
-            logout();
-            navigate("/login");
-          }}
-        />
+        <>
+          <AccountSheet
+            open={acctOpen}
+            onClose={() => setAcctOpen(false)}
+            name={name}
+            phone={user?.phone ?? "9800011122"}
+            roleLabel="Admin"
+            onSignOut={() => {
+              logout();
+              navigate("/login");
+            }}
+          />
+          {/* Sits above the frame so a tapped photo fills it edge to edge. */}
+          <AlbumViewer gallery={photos} />
+        </>
       }
     >
       {screen === "home" && (

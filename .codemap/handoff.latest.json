@@ -1,11 +1,11 @@
 {
   "schema_version": 1,
-  "generated_at": "2026-07-26T10:54:58.177099+05:30",
+  "generated_at": "2026-07-28T20:11:06.565411+05:30",
   "root": "/Users/aftab.ahmed/school-app",
   "branch": "main",
   "base_ref": "main",
   "prefix": {
-    "file_count": 100,
+    "file_count": 105,
     "hubs": []
   },
   "delta": {
@@ -19,16 +19,16 @@
       "No recent timeline events matched the lookback window."
     ]
   },
-  "prefix_hash": "d6a92f48b556bd3700245702a3acf6f2447e0e8bdfc6a2e9128adc09a25116ed",
+  "prefix_hash": "8620c976adb3c7d7041deb70203047cab18a5d96b2a92141905a0db31f8f6f1d",
   "delta_hash": "91142ebbbe4ae63645c4eae73c777a29ad26659514ef0b453512aaafaf6a49d6",
-  "combined_hash": "a42224a00d6484a5713bdcc00bcfa829813344fd85e9e8d872e000ee89852d1c",
+  "combined_hash": "be6b2b3a04f3fd1f36570a8400217fa05d7be439f061ab7edb61ee954251e838",
   "metrics": {
     "prefix_bytes": 28,
     "delta_bytes": 291,
     "total_bytes": 319,
-    "unchanged_bytes": 319,
-    "reuse_ratio": 1,
-    "prefix_reused": true,
+    "unchanged_bytes": 291,
+    "reuse_ratio": 0.9122257053291536,
+    "prefix_reused": false,
     "delta_reused": true,
     "previous_combined_hash": "a42224a00d6484a5713bdcc00bcfa829813344fd85e9e8d872e000ee89852d1c"
   },
@@ -74,6 +74,11 @@
       "agent_id": "claude-code",
       "started_at": "2026-07-26T10:54:59.23428+05:30",
       "ended_at": "2026-07-26T10:54:59.23428+05:30"
+    },
+    {
+      "agent_id": "claude-code",
+      "started_at": "2026-07-28T20:11:06.565412+05:30",
+      "ended_at": "2026-07-28T20:11:06.565412+05:30"
     }
   ],
   "changed_files": [],
