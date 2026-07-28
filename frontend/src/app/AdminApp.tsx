@@ -139,7 +139,9 @@ export function AdminApp() {
   );
   const [attOverviewLoading, setAttOverviewLoading] = useState(false);
   const [attOverviewError, setAttOverviewError] = useState<string | null>(null);
-  const [attClassData, setAttClassData] = useState<ClassAttendance | null>(null);
+  const [attClassData, setAttClassData] = useState<ClassAttendance | null>(
+    null,
+  );
   const [attClassLoading, setAttClassLoading] = useState(false);
   const [attClassError, setAttClassError] = useState<string | null>(null);
 
@@ -380,7 +382,7 @@ export function AdminApp() {
   }
 
   // header
-  let title = user?.school?.name ?? "Greenwood";
+  let title = user?.school?.name ?? "My School Space";
   let sub: string | undefined = `${name.toUpperCase()} · ADMIN`;
   const M: Record<string, [string, string]> = {
     staff: ["Staff", "MANAGE TEACHERS"],
@@ -407,8 +409,11 @@ export function AdminApp() {
       : undefined;
   } else if (screen === "staffDetail") {
     title = "Teacher";
-    sub = (primarySubjectOf(teacherDetail) ?? activeApiTeacher?.name ?? "")
-      .toUpperCase();
+    sub = (
+      primarySubjectOf(teacherDetail) ??
+      activeApiTeacher?.name ??
+      ""
+    ).toUpperCase();
   } else if (screen === "classDetail") {
     title = activeApiKlass?.label ?? "Class";
     sub = activeApiKlass?.teacher
@@ -671,9 +676,7 @@ export function AdminApp() {
           }}
         />
       )}
-      {screen === "album" && (
-        <AlbumScreen gallery={photos} />
-      )}
+      {screen === "album" && <AlbumScreen gallery={photos} />}
       {screen === "notifs" && <NotificationsScreen />}
     </Shell>
   );
@@ -699,7 +702,10 @@ function greetingFor(d: Date) {
 /** "2026-07-18" → "Fri 18". Dates are plain day keys, so parse them as UTC. */
 function weekdayLabel(key: string) {
   const d = new Date(`${key}T00:00:00.000Z`);
-  const wd = d.toLocaleDateString("en-GB", { weekday: "short", timeZone: "UTC" });
+  const wd = d.toLocaleDateString("en-GB", {
+    weekday: "short",
+    timeZone: "UTC",
+  });
   return `${wd} ${d.getUTCDate()}`;
 }
 
@@ -847,7 +853,11 @@ function AdminHome({
 }) {
   const att = data?.attendance;
   const stats: { n: string; label: string; to: Screen }[] = [
-    { n: String(data?.counts.students ?? "—"), label: "Students", to: "classes" },
+    {
+      n: String(data?.counts.students ?? "—"),
+      label: "Students",
+      to: "classes",
+    },
     { n: String(data?.counts.teachers ?? "—"), label: "Teachers", to: "staff" },
     { n: String(data?.counts.classes ?? "—"), label: "Classes", to: "classes" },
     {
@@ -992,8 +1002,8 @@ function AdminHome({
             Manage staff
           </b>
           <small className="text-[#cfe0d6] text-[11.5px]">
-            {data?.counts.teachers ?? 0} teachers ·{" "}
-            {data?.counts.subjects ?? 0} subjects
+            {data?.counts.teachers ?? 0} teachers · {data?.counts.subjects ?? 0}{" "}
+            subjects
           </small>
         </div>
         <span className="text-[#9fc0ad]">
@@ -3563,7 +3573,8 @@ function AdminCalendar({
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const ready = form.title.trim().length > 0 && form.date.length === 10 && !busy;
+  const ready =
+    form.title.trim().length > 0 && form.date.length === 10 && !busy;
 
   function openAdd() {
     setForm({ date: "", title: "", description: "" });

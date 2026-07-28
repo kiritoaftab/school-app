@@ -822,3 +822,11 @@
 2026-07-28 20:32:32 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |   -886 | 
 2026-07-28 20:32:32 | CREATE | frontend/src/app/ParentApp.tsx           |  886 |   +886 | dirty
 2026-07-28 20:32:32 | CREATE | frontend/src/app/ParentApp.tsx           |  886 |   +886 | dirty
+2026-07-28 20:58:59 | WRITE  | frontend/src/app/AdminApp.tsx            | 3778 |    +11 | dirty
+2026-07-28 20:58:59 | WRITE  | frontend/src/app/AdminApp.tsx            | 3778 |    +11 | dirty
+2026-07-28 20:59:16 | WRITE  | frontend/src/app/data.ts                 | 1038 |   +641 | dirty
+2026-07-28 20:59:16 | WRITE  | frontend/src/app/data.ts                 | 1038 |   +641 | dirty
+2026-07-28 20:59:28 | WRITE  | frontend/src/app/ParentApp.tsx           | 1493 |   +607 | dirty
+2026-07-28 20:59:28 | WRITE  | frontend/src/app/ParentApp.tsx           | 1493 |   +607 | dirty
+2026-07-28 20:59:37 | WRITE  | frontend/src/pages/LoginPage.tsx         |  276 |    +29 | dirty
+2026-07-28 20:59:37 | WRITE  | frontend/src/pages/LoginPage.tsx         |  276 |    +29 | dirty
