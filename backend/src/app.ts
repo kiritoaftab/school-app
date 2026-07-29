@@ -1,6 +1,7 @@
 import express, { type NextFunction, type Request, type Response } from 'express';
 import cors from 'cors';
 import { ZodError } from 'zod';
+import { Prisma } from '@prisma/client';
 import { config } from './config.js';
 import { prisma } from './db.js';
 import { HttpError } from './lib/http.js';
@@ -47,7 +48,17 @@ export function createApp() {
       return res.status(400).json({ error: 'Validation failed', details: err.flatten() });
     }
     if (err instanceof HttpError) {
-      return res.status(err.status).json({ error: err.message });
+      return res.status(err.status).json({ error: err.message, ...(err.details ?? {}) });
+    }
+    // Backstop for the RESTRICT foreign keys that protect school history. The
+    // destructive endpoints all pre-check and raise a 409 that names what is in
+    // the way; this catches any path that forgot to, so the client still sees a
+    // refusal rather than a 500.
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2003') {
+      return res.status(409).json({
+        error: 'This record is referenced by school history and cannot be deleted.',
+        code: 'IN_USE',
+      });
     }
     console.error(err);
     return res.status(500).json({ error: 'Internal server error' });

@@ -69,7 +69,10 @@ export interface TeacherExam {
   id: number;
   name: string;
   schoolWide: boolean;
-  subject: { id: number; name: string } | null;
+  /** 'ALL' = graded per subject; 'SINGLE' = one subject only. */
+  subjectScope: "ALL" | "SINGLE";
+  /** Null if and only if `subjectScope` is 'ALL'. */
+  subject: { id: number; name: string; archived: boolean } | null;
 }
 
 export async function listClassExams(klassId: number): Promise<TeacherExam[]> {
@@ -102,7 +105,37 @@ export interface ResultRow {
 
 export interface ClassResults {
   maxScore: number;
+  /**
+   * True when the subject is archived or no longer taught by this teacher.
+   * The marks stay visible so the history is reachable, but saving is refused.
+   */
+  readOnly: boolean;
   students: ResultRow[];
+}
+
+/**
+ * Subjects the marks screen may offer for an exam: what this teacher can grade
+ * now, plus anything that already has marks stored — including archived
+ * subjects, whose marks would otherwise be unreachable from the app.
+ */
+export interface GradableSubject {
+  /** Null only if the subject row is gone entirely; the name still reads. */
+  id: number | null;
+  name: string;
+  archived: boolean;
+  hasMarks: boolean;
+  readOnly: boolean;
+}
+
+export async function listGradableSubjects(
+  klassId: number,
+  termId: number,
+): Promise<GradableSubject[]> {
+  const { data } = await api.get<GradableSubject[]>(
+    `/teacher/classes/${klassId}/results/subjects`,
+    { params: { termId } },
+  );
+  return data;
 }
 
 export async function listClassResults(

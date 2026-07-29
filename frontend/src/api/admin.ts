@@ -8,6 +8,8 @@ export interface AdminKlass {
   classTeacherId: number | null;
   teacher: string | null;
   students: number;
+  /** Set once the class is retired; its history stays readable. */
+  archivedAt: string | null;
 }
 
 export interface AdminTeacher {
@@ -15,6 +17,8 @@ export interface AdminTeacher {
   name: string;
   phone: string;
   role: 'PARENT' | 'TEACHER' | 'ADMIN';
+  /** Set once they have left; their diary entries and notices keep their name. */
+  archivedAt: string | null;
 }
 
 // A teacher's class × subject assignments, grouped by class.
@@ -29,13 +33,17 @@ export interface AdminTeacherDetail extends AdminTeacher {
   assignments: AdminTeacherAssignment[];
 }
 
-export async function listClasses(): Promise<AdminKlass[]> {
-  const { data } = await api.get<AdminKlass[]>('/admin/classes');
+export async function listClasses(includeArchived = false): Promise<AdminKlass[]> {
+  const { data } = await api.get<AdminKlass[]>('/admin/classes', {
+    params: includeArchived ? { includeArchived: 1 } : undefined,
+  });
   return data;
 }
 
-export async function listTeachers(): Promise<AdminTeacher[]> {
-  const { data } = await api.get<AdminTeacher[]>('/admin/users', { params: { role: 'TEACHER' } });
+export async function listTeachers(includeArchived = false): Promise<AdminTeacher[]> {
+  const { data } = await api.get<AdminTeacher[]>('/admin/users', {
+    params: { role: 'TEACHER', ...(includeArchived ? { includeArchived: 1 } : {}) },
+  });
   return data;
 }
 
@@ -108,12 +116,21 @@ export interface ClassTeacher {
   subjects: { id: number; name: string }[];
 }
 
+export interface ExamSubject {
+  id: number;
+  name: string;
+  /** Retired from the catalogue: still named on old exams, no longer offered. */
+  archived: boolean;
+}
+
 export interface ClassExam {
   id: number;
   name: string;
   schoolWide: boolean;
-  // null = exam covers all subjects; set = single-subject test.
-  subject: { id: number; name: string } | null;
+  /** 'ALL' = graded per subject; 'SINGLE' = one subject only. */
+  subjectScope: "ALL" | "SINGLE";
+  /** Null if and only if `subjectScope` is 'ALL'. */
+  subject: ExamSubject | null;
 }
 
 export interface StudentInput {
@@ -141,6 +158,50 @@ export async function updateStudent(
 
 export async function deleteStudent(studentId: number): Promise<void> {
   await api.delete(`/admin/students/${studentId}`);
+}
+
+// --- Archive / restore ---
+// Anything with history behind it can't be deleted at all — the database
+// refuses. These retire the row instead: it stays readable, and stops being
+// offered for new work.
+export async function archiveStudent(studentId: number): Promise<void> {
+  await api.post(`/admin/students/${studentId}/archive`);
+}
+
+export async function restoreStudent(studentId: number): Promise<void> {
+  await api.post(`/admin/students/${studentId}/restore`);
+}
+
+export async function archiveSubject(id: number): Promise<void> {
+  await api.post(`/admin/subjects/${id}/archive`);
+}
+
+export async function restoreSubject(id: number): Promise<void> {
+  await api.post(`/admin/subjects/${id}/restore`);
+}
+
+export async function archiveExam(id: number): Promise<void> {
+  await api.post(`/admin/exams/${id}/archive`);
+}
+
+export async function restoreExam(id: number): Promise<void> {
+  await api.post(`/admin/exams/${id}/restore`);
+}
+
+export async function archiveTeacher(id: number): Promise<void> {
+  await api.post(`/admin/teachers/${id}/archive`);
+}
+
+export async function restoreTeacher(id: number): Promise<void> {
+  await api.post(`/admin/teachers/${id}/restore`);
+}
+
+export async function archiveClass(id: number): Promise<void> {
+  await api.post(`/admin/classes/${id}/archive`);
+}
+
+export async function restoreClass(id: number): Promise<void> {
+  await api.post(`/admin/classes/${id}/restore`);
 }
 
 export async function listClassTeachers(klassId: number): Promise<ClassTeacher[]> {
@@ -361,10 +422,14 @@ export async function getClassAttendance(
 export interface AdminSubject {
   id: number;
   name: string;
+  /** Retired: still named on old marks and exams, no longer offered. */
+  archivedAt: string | null;
 }
 
-export async function listSubjects(): Promise<AdminSubject[]> {
-  const { data } = await api.get<AdminSubject[]>('/admin/subjects');
+export async function listSubjects(includeArchived = false): Promise<AdminSubject[]> {
+  const { data } = await api.get<AdminSubject[]>('/admin/subjects', {
+    params: includeArchived ? { includeArchived: 1 } : undefined,
+  });
   return data;
 }
 

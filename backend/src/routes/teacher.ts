@@ -4,6 +4,10 @@ import { Prisma } from '@prisma/client';
 import { prisma } from '../db.js';
 import { ah, HttpError } from '../lib/http.js';
 import { requireAuth, requireRole, requireSchoolId } from '../middleware/auth.js';
+import { examUsage, throwIfInUse } from '../lib/usage.js';
+import { shapeExam } from '../lib/exam.js';
+import { audit, actorFrom } from '../lib/audit.js';
+import { LIVE } from '../lib/archive.js';
 import { nextAdmissionNo } from './admin.js';
 import { mountGalleryRoutes } from './gallery.js';
 
@@ -15,16 +19,6 @@ teacherRouter.get('/terms', ah(async (req, res) => {
   const schoolId = requireSchoolId(req);
   res.json(await prisma.term.findMany({ where: { schoolId }, orderBy: { id: 'asc' } }));
 }));
-
-/** Shape a Term row for the exam list. */
-function shapeExam(t: { id: number; name: string; klassId: number | null; subject: { id: number; name: string } | null }) {
-  return {
-    id: t.id,
-    name: t.name,
-    schoolWide: t.klassId === null,
-    subject: t.subject ? { id: t.subject.id, name: t.subject.name } : null,
-  };
-}
 
 /** Exams a teacher can grade in a class (its own + legacy school-wide terms).
  *  A subject teacher only sees all-subjects exams and tests for a subject they
@@ -72,12 +66,14 @@ teacherRouter.post('/classes/:id/exams', ah(async (req, res) => {
     throw new HttpError(403, 'You do not teach that subject in this class');
   }
 
+  // klassKey/subjectKey mirror the nullable columns so the unique index
+  // actually fires — without them `skipDuplicates` silently does nothing.
   await prisma.term.createMany({
-    data: [{ schoolId, klassId, name, subjectId: subjectId ?? null }],
+    data: [{ schoolId, klassId, klassKey: klassId, name, subjectId: subjectId ?? null, subjectKey: subjectId ?? 0 }],
     skipDuplicates: true,
   });
   const created = await prisma.term.findFirst({
-    where: { schoolId, klassId, name, subjectId: subjectId ?? null },
+    where: { schoolId, klassId, name, subjectId: subjectId ?? null, archivedAt: null },
     include: { subject: true },
   });
   res.status(201).json(created ? shapeExam(created) : null);
@@ -95,8 +91,26 @@ teacherRouter.delete('/exams/:id', ah(async (req, res) => {
   if (term.klassId === null) throw new HttpError(403, 'You cannot delete a school-wide exam');
   const access = await allowedSubjects(userId, schoolId, term.klassId);
   if (!access) throw new HttpError(403, 'You do not teach this class');
+  // Teaching *something* in the class isn't enough: without this a Maths
+  // teacher could delete a Science-only test. Mirrors the create path above.
+  if (term.subjectId != null && !access.subjects.some((s) => s.id === term.subjectId)) {
+    throw new HttpError(403, 'You do not teach that subject in this class');
+  }
+  // No archive escape hatch here. A teacher may bin an exam they mistyped;
+  // removing a graded one is an admin decision.
+  throwIfInUse(await examUsage(id), 'exam', 'NONE');
 
-  await prisma.term.delete({ where: { id } });
+  await prisma.$transaction(async (tx) => {
+    await tx.term.delete({ where: { id } });
+    await audit(tx, actorFrom(req), {
+      action: 'DELETE',
+      entity: 'Term',
+      entityId: id,
+      label: term.name,
+      summary: 'Deleted by the class teacher while ungraded.',
+      before: { name: term.name, klassId: term.klassId, subjectId: term.subjectId },
+    });
+  });
   res.status(204).end();
 }));
 
@@ -117,6 +131,7 @@ async function loadGradingTerm(
   termId: number,
   subject: string,
   access: { isClassTeacher: boolean; subjects: { id: number; name: string }[] },
+  mode: 'read' | 'write',
 ) {
   const term = await prisma.term.findFirst({ where: { id: termId, schoolId }, include: { subject: true } });
   if (!term) throw new HttpError(404, 'Exam not found');
@@ -125,10 +140,22 @@ async function loadGradingTerm(
   if (term.subject && term.subject.name !== subject) {
     throw new HttpError(400, `This test only grades ${term.subject.name}`);
   }
-  if (!access.subjects.some((s) => s.name === subject)) {
-    throw new HttpError(403, `You do not teach ${subject} in this class`);
+
+  const teaches = access.subjects.some((s) => s.name === subject);
+  if (teaches) return { term, readOnly: false };
+
+  // Reading is deliberately more permissive than writing. Once a subject is
+  // archived it drops out of `access.subjects`, and marks already entered
+  // under it would otherwise become unreachable — visible on the parent's
+  // report card but impossible to open from the app that recorded them.
+  if (mode === 'read') {
+    const existing = await prisma.result.findFirst({
+      where: { termId, subject, student: { enrollments: { some: { klassId } } } },
+      select: { id: true },
+    });
+    if (existing) return { term, readOnly: true };
   }
-  return term;
+  throw new HttpError(403, `You do not teach ${subject} in this class`);
 }
 
 /** Roster for a class with each student's saved mark for an exam + subject. */
@@ -142,10 +169,10 @@ teacherRouter.get('/classes/:id/results', ah(async (req, res) => {
   const access = await allowedSubjects(userId, schoolId, klassId);
   if (!access) throw new HttpError(403, 'You do not teach this class');
   if (!termId || !subject) throw new HttpError(400, 'termId and subject are required');
-  await loadGradingTerm(schoolId, klassId, termId, subject, access);
+  const { readOnly } = await loadGradingTerm(schoolId, klassId, termId, subject, access, 'read');
 
   const enrollments = await prisma.enrollment.findMany({
-    where: { klassId },
+    where: { klassId, student: { ...LIVE } },
     include: { student: true },
     orderBy: { student: { name: 'asc' } },
   });
@@ -157,12 +184,77 @@ teacherRouter.get('/classes/:id/results', ah(async (req, res) => {
   const maxScore = results[0]?.maxScore ?? 100;
   res.json({
     maxScore,
+    // True when the subject is archived or no longer taught by this teacher:
+    // the marks are visible so the history stays reachable, but not editable.
+    readOnly,
     students: enrollments.map((e) => ({
       studentId: e.student.id,
       name: e.student.name,
       score: byStudent.get(e.student.id)?.score ?? null,
     })),
   });
+}));
+
+/**
+ * Subjects the marks screen should offer for an exam.
+ *
+ * The union of what this teacher may grade now and what already has marks
+ * stored for this exam. Without the second half, archiving a subject would hide
+ * marks that are still printed on the parent's report card — visible to the
+ * family, unreachable in the app that recorded them.
+ */
+teacherRouter.get('/classes/:id/results/subjects', ah(async (req, res) => {
+  const { userId } = req.auth!;
+  const schoolId = requireSchoolId(req);
+  const klassId = Number(req.params.id);
+  const termId = Number(req.query.termId);
+
+  const access = await allowedSubjects(userId, schoolId, klassId);
+  if (!access) throw new HttpError(403, 'You do not teach this class');
+  if (!termId) throw new HttpError(400, 'termId is required');
+
+  const term = await prisma.term.findFirst({
+    where: { id: termId, schoolId },
+    include: { subject: true },
+  });
+  if (!term) throw new HttpError(404, 'Exam not found');
+
+  // A single-subject test only ever grades its own subject.
+  const gradable = term.subject
+    ? access.subjects.filter((s) => s.id === term.subject!.id)
+    : access.subjects;
+
+  const graded = await prisma.result.findMany({
+    where: { termId, student: { enrollments: { some: { klassId } } } },
+    select: { subject: true },
+    distinct: ['subject'],
+  });
+
+  const live = new Set(gradable.map((s) => s.name));
+  const names = [...new Set([...live, ...graded.map((g) => g.subject)])].sort((a, b) => a.localeCompare(b));
+
+  // Resolve ids/archived state for every name, including retired subjects.
+  const rows = await prisma.subject.findMany({
+    where: { schoolId, name: { in: names } },
+    select: { id: true, name: true, archivedAt: true },
+  });
+  const byName = new Map(rows.map((r) => [r.name, r]));
+  const withMarks = new Set(graded.map((g) => g.subject));
+
+  res.json(
+    names.map((name) => {
+      const row = byName.get(name);
+      return {
+        // Null id means the subject row is gone entirely — only possible for
+        // marks written before deletes were guarded. Still readable by name.
+        id: row?.id ?? null,
+        name,
+        archived: row?.archivedAt != null,
+        hasMarks: withMarks.has(name),
+        readOnly: !live.has(name),
+      };
+    }),
+  );
 }));
 
 const saveResultsSchema = z.object({
@@ -180,11 +272,13 @@ teacherRouter.post('/classes/:id/results', ah(async (req, res) => {
 
   const access = await allowedSubjects(userId, schoolId, klassId);
   if (!access) throw new HttpError(403, 'You do not teach this class');
-  await loadGradingTerm(schoolId, klassId, termId, subject, access);
+  // 'write': unlike the read path, an archived or unassigned subject is refused
+  // outright. History stays readable; it does not become editable.
+  await loadGradingTerm(schoolId, klassId, termId, subject, access, 'write');
 
   // Only students actually enrolled in this class may be graded here.
   const enrolled = new Set(
-    (await prisma.enrollment.findMany({ where: { klassId }, select: { studentId: true } })).map((e) => e.studentId),
+    (await prisma.enrollment.findMany({ where: { klassId, student: { ...LIVE } }, select: { studentId: true } })).map((e) => e.studentId),
   );
   for (const e of entries) {
     if (!enrolled.has(e.studentId)) throw new HttpError(400, `Student ${e.studentId} is not in this class`);
@@ -257,11 +351,17 @@ async function allowedSubjects(
   schoolId: number,
   klassId: number,
 ): Promise<{ klass: { id: number; grade: string; section: string; classTeacherId: number | null }; isClassTeacher: boolean; subjects: { id: number; name: string }[] } | null> {
-  const klass = await prisma.klass.findFirst({ where: { id: klassId, schoolId } });
+  // An archived class is read-only history — nobody may post new work to it.
+  const klass = await prisma.klass.findFirst({ where: { id: klassId, schoolId, ...LIVE } });
   if (!klass) return null;
 
   if (klass.classTeacherId === userId) {
-    const subjects = await prisma.subject.findMany({ where: { schoolId }, orderBy: { name: 'asc' } });
+    // Only live subjects: a class teacher can post against anything the school
+    // currently teaches, but not against one it has retired.
+    const subjects = await prisma.subject.findMany({
+      where: { schoolId, ...LIVE },
+      orderBy: { name: 'asc' },
+    });
     return { klass, isClassTeacher: true, subjects: subjects.map((s) => ({ id: s.id, name: s.name })) };
   }
 
@@ -288,9 +388,9 @@ teacherRouter.get('/classes', ah(async (req, res) => {
   const schoolId = requireSchoolId(req);
 
   const [owned, assignments] = await Promise.all([
-    prisma.klass.findMany({ where: { schoolId, classTeacherId: userId } }),
+    prisma.klass.findMany({ where: { schoolId, classTeacherId: userId, ...LIVE } }),
     prisma.teachingAssignment.findMany({
-      where: { schoolId, teacherId: userId },
+      where: { schoolId, teacherId: userId, klass: { ...LIVE } },
       include: { klass: true, subject: true },
     }),
   ]);
@@ -303,8 +403,12 @@ teacherRouter.get('/classes', ah(async (req, res) => {
       where: { id: { in: klassIds } },
       orderBy: [{ grade: 'asc' }, { section: 'asc' }],
     }),
-    prisma.enrollment.groupBy({ by: ['klassId'], where: { klassId: { in: klassIds } }, _count: true }),
-    prisma.subject.findMany({ where: { schoolId }, orderBy: { name: 'asc' } }),
+    prisma.enrollment.groupBy({
+      by: ['klassId'],
+      where: { klassId: { in: klassIds }, student: { ...LIVE } },
+      _count: true,
+    }),
+    prisma.subject.findMany({ where: { schoolId, ...LIVE }, orderBy: { name: 'asc' } }),
   ]);
   const countOf = new Map(counts.map((c) => [c.klassId, c._count]));
 
@@ -345,7 +449,7 @@ teacherRouter.get('/classes/:id/roster', ah(async (req, res) => {
   const date = String(req.query.date ?? new Date().toISOString().slice(0, 10));
   const day = new Date(date);
   const enrollments = await prisma.enrollment.findMany({
-    where: { klassId },
+    where: { klassId, student: { ...LIVE } },
     include: { student: true },
     orderBy: { student: { name: 'asc' } },
   });
@@ -374,7 +478,7 @@ teacherRouter.get('/classes/:id/students', ah(async (req, res) => {
   if (!access) throw new HttpError(403, 'You do not teach this class');
 
   const enrollments = await prisma.enrollment.findMany({
-    where: { klassId },
+    where: { klassId, student: { ...LIVE } },
     include: { student: { include: { parentLinks: { include: { parent: true } } } } },
     orderBy: { student: { name: 'asc' } },
   });
@@ -454,7 +558,7 @@ teacherRouter.post('/classes/:id/attendance', ah(async (req, res) => {
 
   // Only students enrolled in this class may be marked here.
   const enrolled = new Set(
-    (await prisma.enrollment.findMany({ where: { klassId }, select: { studentId: true } })).map((e) => e.studentId),
+    (await prisma.enrollment.findMany({ where: { klassId, student: { ...LIVE } }, select: { studentId: true } })).map((e) => e.studentId),
   );
   for (const m of marks) {
     if (!enrolled.has(m.studentId)) throw new HttpError(400, `Student ${m.studentId} is not in this class`);
@@ -596,7 +700,16 @@ teacherRouter.delete('/diary/:id', ah(async (req, res) => {
     throw new HttpError(403, 'You can only remove entries you posted');
   }
 
-  await prisma.diaryEntry.delete({ where: { id: entry.id } });
+  await prisma.$transaction(async (tx) => {
+    await tx.diaryEntry.delete({ where: { id: entry.id } });
+    await audit(tx, actorFrom(req), {
+      action: 'DELETE',
+      entity: 'DiaryEntry',
+      entityId: entry.id,
+      label: entry.subject ?? 'Note',
+      before: { subject: entry.subject, task: entry.task, date: entry.date, klassId: entry.klassId },
+    });
+  });
   res.json({ ok: true });
 }));
 

@@ -2,13 +2,15 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import {
-  AppHeader, BottomSheet, Card, Chip, EmptyState, Glyph, InfoNote, PrimaryButton,
+  AppHeader, BottomSheet, Card, Chip, ConfirmIconButton, EmptyState, Glyph, InfoNote, PrimaryButton,
   Shell, StatCard, cx, type TabDef,
 } from './kit';
+import { apiErrorText } from '../api/client';
 import {
   listMyClasses, listDiary, createDiaryEntry, deleteDiaryEntry,
   listClassExams, createClassExam, deleteClassExam,
-  listClassResults, saveClassResults, listEvents,
+  listClassResults, saveClassResults, listEvents, listGradableSubjects,
+  type GradableSubject,
   listClassStudents, addClassStudent,
   getClassRoster, saveClassAttendance,
   listLeaves, acknowledgeLeave,
@@ -114,6 +116,7 @@ export function TeacherApp() {
   const [teExam, setTeExam] = useState('');
   const [teSubject, setTeSubject] = useState('');
   const [toast, setToast] = useState('');
+  const [examErr, setExamErr] = useState('');
 
   // Live examination catalogue for the selected class.
   const [teExams, setTeExams] = useState<TeacherExam[]>([]);
@@ -168,8 +171,15 @@ export function TeacherApp() {
     if (created) setTeExam(String(created.id));
   }
   async function teRemoveExam(id: number) {
-    await deleteClassExam(id);
-    await reloadExams();
+    setExamErr('');
+    try {
+      await deleteClassExam(id);
+      await reloadExams();
+    } catch (e) {
+      // A graded exam is refused outright — say what it holds rather than
+      // failing silently, which is what this did before.
+      setExamErr(apiErrorText(e, 'Could not remove that exam.'));
+    }
   }
 
   // header
@@ -315,7 +325,7 @@ export function TeacherApp() {
           curClass={curClass} klassId={liveClass?.id ?? null}
           classSubjects={liveClass?.subjects ?? []}
           teExam={teExam} setTeExam={setTeExam} teSubject={teSubject} setTeSubject={setTeSubject}
-          teExams={teExams} onAddExam={teAddExam} onRemoveExam={teRemoveExam}
+          teExams={teExams} onAddExam={teAddExam} onRemoveExam={teRemoveExam} examErr={examErr}
           toast={toast} setToast={setToast}
         />
       )}
@@ -907,9 +917,9 @@ function TeacherDiary({ klass, loading, error }: { klass: TeacherKlass | null; l
                 )}
               </div>
               {e.canDelete && isToday && (
-                <button onClick={() => remove(e.id)} className="w-6 h-6 rounded-lg bg-[#f6ecec] grid place-items-center flex-none text-danger" aria-label="Delete">
+                <ConfirmIconButton label={e.subject ?? 'this note'} onConfirm={() => remove(e.id)} className="w-6 h-6 rounded-lg bg-[#f6ecec] flex-none text-danger">
                   <Glyph d="M6 6l12 12M18 6L6 18" size={13} stroke={2} />
-                </button>
+                </ConfirmIconButton>
               )}
             </div>
           ))
@@ -969,7 +979,7 @@ function TeacherDiary({ klass, loading, error }: { klass: TeacherKlass | null; l
 // ---------- MARKS (results teacher) ----------
 function TeacherMarks({
   curClass, klassId, classSubjects, teExam, setTeExam, teSubject, setTeSubject,
-  teExams, onAddExam, onRemoveExam, toast, setToast,
+  teExams, onAddExam, onRemoveExam, examErr, toast, setToast,
 }: {
   curClass: typeof TEACHER_CLASSES[number];
   klassId: number | null;
@@ -981,6 +991,7 @@ function TeacherMarks({
   teExams: TeacherExam[];
   onAddExam: (name: string, subjectId: number | null) => void;
   onRemoveExam: (id: number) => void;
+  examErr: string;
   toast: string;
   setToast: (v: string) => void;
 }) {
@@ -994,7 +1005,23 @@ function TeacherMarks({
 
   // A single-subject exam locks grading to its subject; an all-subjects exam
   // opens every subject the teacher may grade in this class.
-  const subjectChoices: TeacherSubject[] = selectedExam?.subject ? [selectedExam.subject] : classSubjects;
+  //
+  // The server also reports subjects that merely *have* marks under this exam —
+  // an archived subject drops out of `classSubjects`, and without this its marks
+  // would be printed on the parent's report card but unreachable here.
+  const [gradable, setGradable] = useState<GradableSubject[]>([]);
+  useEffect(() => {
+    if (klassId == null || termId == null) { setGradable([]); return; }
+    let alive = true;
+    listGradableSubjects(klassId, termId)
+      .then((d) => { if (alive) setGradable(d); })
+      .catch(() => { if (alive) setGradable([]); });
+    return () => { alive = false; };
+  }, [klassId, termId]);
+
+  const fallbackChoices: TeacherSubject[] = selectedExam?.subject ? [selectedExam.subject] : classSubjects;
+  const subjectChoices: { id: number | null; name: string; archived?: boolean }[] =
+    gradable.length ? gradable : fallbackChoices;
   const choiceKey = subjectChoices.map((s) => s.name).join('|');
   useEffect(() => {
     if (subjectChoices.length && !subjectChoices.some((s) => s.name === teSubject)) {
@@ -1009,6 +1036,9 @@ function TeacherMarks({
   const [maxScore, setMaxScore] = useState('100');
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  // Set when the subject is archived or no longer taught: marks stay visible,
+  // editing is off.
+  const [readOnly, setReadOnly] = useState(false);
 
   useEffect(() => {
     if (klassId == null || termId == null || !teSubject) { setRows([]); setDraft({}); return; }
@@ -1018,12 +1048,13 @@ function TeacherMarks({
       .then((data) => {
         if (!alive) return;
         setRows(data.students);
+        setReadOnly(data.readOnly);
         setMaxScore(String(data.maxScore));
         const d: Record<number, string> = {};
         data.students.forEach((s) => { d[s.studentId] = s.score == null ? '' : String(s.score); });
         setDraft(d);
       })
-      .catch(() => { if (alive) { setRows([]); setDraft({}); } })
+      .catch(() => { if (alive) { setRows([]); setDraft({}); setReadOnly(false); } })
       .finally(() => { if (alive) setLoading(false); });
     return () => { alive = false; };
   }, [klassId, termId, teSubject]);
@@ -1079,7 +1110,7 @@ function TeacherMarks({
           return (
             <button key={e.id} onClick={() => setTeExam(eid)} className={cx('flex-none min-w-[100px] text-left px-[13px] py-2.5 rounded-[14px] border', on ? 'bg-green border-green' : 'bg-white border-line')}>
               <span className={cx('block text-[12px] font-bold', on ? 'text-white' : 'text-ink')}>{e.name}</span>
-              <span className={cx('block text-[10px] font-semibold', on ? 'text-white/80' : 'text-muted')}>{e.subject ? e.subject.name : 'All subjects'}</span>
+              <span className={cx('block text-[10px] font-semibold', on ? 'text-white/80' : 'text-muted')}>{e.subject ? e.subject.name : 'All subjects'}{e.subject?.archived && ' · archived'}</span>
               {e.schoolWide && <span className={cx('block text-[10px] font-semibold mt-[3px]', on ? 'text-gold' : 'text-muted')}>School-wide</span>}
             </button>
           );
@@ -1111,13 +1142,18 @@ function TeacherMarks({
             <div className="text-[11px] text-muted leading-[1.5] mb-1">
               {newExamSubjectId === null ? 'An all-subjects exam, graded per subject.' : 'A single-subject test.'}
             </div>
+            {examErr && (
+              <div className="text-[11.5px] leading-[1.5] text-danger bg-[#f6ecec] border border-[#eccfcf] rounded-[11px] px-3 py-2.5 mt-2">
+                {examErr}
+              </div>
+            )}
             {teExams.filter((e) => !e.schoolWide).map((e) => (
               <div key={e.id} className="flex items-center gap-2.5 py-2.25 px-1 border-t border-[#f0f3ef]">
                 <div className="flex-1 min-w-0">
                   <b className="text-[13px] font-semibold block truncate">{e.name}</b>
-                  <small className="text-[10.5px] text-muted">{e.subject ? e.subject.name : 'All subjects'}</small>
+                  <small className="text-[10.5px] text-muted">{e.subject ? e.subject.name : 'All subjects'}{e.subject?.archived && ' · archived'}</small>
                 </div>
-                <button onClick={() => onRemoveExam(e.id)} className="w-[26px] h-[26px] rounded-lg bg-[#f6ecec] text-danger text-[15px] font-bold flex-none">×</button>
+                <ConfirmIconButton label={e.name} onConfirm={() => onRemoveExam(e.id)} className="w-[26px] h-[26px] rounded-lg bg-[#f6ecec] text-danger text-[15px] flex-none" />
               </div>
             ))}
           </Card>
@@ -1135,8 +1171,9 @@ function TeacherMarks({
             {subjectChoices.map((s) => {
               const on = teSubject === s.name;
               return (
-                <button key={s.id} onClick={() => setTeSubject(s.name)} className={cx('flex-none flex items-center gap-1.5 px-3 py-2.5 rounded-xl border-[1.5px]', on ? 'border-green bg-mist' : 'border-line bg-white')}>
+                <button key={s.name} onClick={() => setTeSubject(s.name)} className={cx('flex-none flex items-center gap-1.5 px-3 py-2.5 rounded-xl border-[1.5px]', on ? 'border-green bg-mist' : 'border-line bg-white')}>
                   <span className={cx('text-[12px] font-bold', on ? 'text-green' : 'text-muted')}>{s.name}</span>
+                  {s.archived && <span className="text-[9.5px] uppercase tracking-wide text-muted font-semibold">archived</span>}
                   {on && allEntered && <span className="text-success"><Glyph d={GLYPH.check} size={12} stroke={3} /></span>}
                 </button>
               );
@@ -1147,7 +1184,7 @@ function TeacherMarks({
             <StatCard value={marksAvg} label="Class avg" dark />
             <StatCard value={entered} label={`of ${rows.length} in`} />
             <div className="flex-1 bg-white border-[1.5px] border-line rounded-[16px] px-2 py-2.5 text-center">
-              <input inputMode="numeric" value={maxScore} onChange={(e) => setMaxScore(e.target.value.replace(/[^0-9]/g, '').slice(0, 3))} className="w-full text-center font-serif text-[22px] leading-none text-green bg-transparent outline-none" />
+              <input inputMode="numeric" disabled={readOnly} value={maxScore} onChange={(e) => setMaxScore(e.target.value.replace(/[^0-9]/g, '').slice(0, 3))} className="w-full text-center font-serif text-[22px] leading-none text-green bg-transparent outline-none disabled:opacity-60" />
               <div className="text-[10px] uppercase text-muted font-semibold mt-1">Max</div>
             </div>
           </div>
@@ -1162,7 +1199,7 @@ function TeacherMarks({
                 <div key={r.studentId} className="flex items-center gap-2.5 py-2 border-t border-[#f0f2ee] first:border-t-0">
                   <span className="w-5 text-[11px] text-muted font-semibold flex-none">{i + 1}</span>
                   <span className="flex-1 text-[13px] font-semibold truncate">{r.name}</span>
-                  <input type="number" value={draft[r.studentId] ?? ''} onChange={(e) => setMark(r.studentId, e.target.value)} placeholder="—" className="w-[50px] text-center px-1 py-2 border-[1.5px] border-line rounded-[10px] text-[13px] font-semibold bg-white box-border" />
+                  <input type="number" disabled={readOnly} value={draft[r.studentId] ?? ''} onChange={(e) => setMark(r.studentId, e.target.value)} placeholder="—" className="w-[50px] text-center px-1 py-2 border-[1.5px] border-line rounded-[10px] text-[13px] font-semibold bg-white box-border disabled:bg-mist disabled:text-muted" />
                   <span className="text-[11px] text-[#b7bfb6] flex-none w-6">/{maxNum}</span>
                 </div>
               ))}
@@ -1172,10 +1209,19 @@ function TeacherMarks({
           {toast === 'saved' && <MarksToast tone="green" icon={GLYPH.check}>Marks saved · parents see the updated results</MarksToast>}
           {toast === 'error' && <MarksToast tone="amber" icon={GLYPH.bell}>Couldn’t save marks — please try again</MarksToast>}
 
-          <PrimaryButton onClick={save} disabled={saving || rows.length === 0}>
-            {saving ? 'Saving…' : 'Save marks'}
-          </PrimaryButton>
-          <div className="text-center text-[11px] text-muted mt-2.5 leading-[1.4]">Saved marks are visible to parents in each student's report card. Leave a box blank to clear that mark.</div>
+          {readOnly ? (
+            <div className="text-[11.5px] leading-[1.55] text-muted bg-mist rounded-xl px-3.5 py-3 text-center">
+              <b className="font-semibold">{teSubject}</b> is archived, or is no longer assigned to you.
+              These marks stay on the report card — they just can't be changed here.
+            </div>
+          ) : (
+            <>
+              <PrimaryButton onClick={save} disabled={saving || rows.length === 0}>
+                {saving ? 'Saving…' : 'Save marks'}
+              </PrimaryButton>
+              <div className="text-center text-[11px] text-muted mt-2.5 leading-[1.4]">Saved marks are visible to parents in each student's report card. Leave a box blank to clear that mark.</div>
+            </>
+          )}
         </>
       )}
     </div>

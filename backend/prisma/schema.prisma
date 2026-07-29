@@ -73,6 +73,13 @@ model User {
   role      Role
   createdAt DateTime @default(now())
 
+  archivedAt   DateTime?
+  archivedById Int?
+  /// 0 while live; set to `id` on archive, so an archived teacher's mobile is
+  /// free to reuse while live accounts still collide. See the note on
+  /// Subject.archiveKey for why a nullable timestamp cannot do this job.
+  archiveKey   Int @default(0)
+
   school School? @relation(fields: [schoolId], references: [id], onDelete: Cascade)
 
   // relations by role
@@ -88,7 +95,7 @@ model User {
   notifications   Notification[]
   teachingAssignments TeachingAssignment[] @relation("TeacherAssignments")
 
-  @@unique([schoolId, phone, role])
+  @@unique([schoolId, phone, role, archiveKey])
   @@index([phone])
 }
 
@@ -111,6 +118,12 @@ model Student {
   dob         DateTime?
   createdAt   DateTime @default(now())
 
+  /// A pupil who has left. Their marks, register and leave history stay exactly
+  /// as they were; they simply stop appearing in rosters and pickers.
+  /// No archiveKey: Student has no unique constraint to work around.
+  archivedAt   DateTime?
+  archivedById Int?
+
   school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
 
   enrollments   Enrollment[]
@@ -131,6 +144,11 @@ model Klass {
   section        String
   classTeacherId Int?
 
+  archivedAt   DateTime?
+  archivedById Int?
+  /// 0 while live, `id` once archived — see Subject.archiveKey.
+  archiveKey   Int @default(0)
+
   school       School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   classTeacher User?  @relation("ClassTeacher", fields: [classTeacherId], references: [id])
 
@@ -141,7 +159,7 @@ model Klass {
   teachingAssignments TeachingAssignment[]
   terms        Term[]
 
-  @@unique([schoolId, grade, section])
+  @@unique([schoolId, grade, section, archiveKey])
 }
 
 model Subject {
@@ -150,11 +168,27 @@ model Subject {
   name      String
   createdAt DateTime @default(now())
 
+  /// Retired from the catalogue. The row stays forever — exams and marks point
+  /// at it — but it is no longer offered when setting up new work.
+  archivedAt   DateTime?
+  archivedById Int?
+  /// 0 while live; set to `id` on archive.
+  ///
+  /// MySQL has no partial unique indexes, and it treats NULLs in a unique index
+  /// as distinct from each other. So adding the nullable `archivedAt` to the
+  /// tuple below would stop it enforcing anything at all among live rows — two
+  /// live subjects could both be called "Maths". A non-null integer is the only
+  /// shape that works: 0 for every live row so they still collide with each
+  /// other, and `id` (never 0, never repeated) for archived rows so they
+  /// collide with nothing. Name-mangling the archived row instead would corrupt
+  /// the very history we are preserving, since marks join on the name.
+  archiveKey   Int @default(0)
+
   school School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
   teachingAssignments TeachingAssignment[]
   terms  Term[]
 
-  @@unique([schoolId, name])
+  @@unique([schoolId, name, archiveKey])
   @@index([schoolId])
 }
 
@@ -166,9 +200,11 @@ model TeachingAssignment {
   subjectId Int
 
   school  School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  teacher User    @relation("TeacherAssignments", fields: [teacherId], references: [id], onDelete: Cascade)
-  klass   Klass   @relation(fields: [klassId], references: [id], onDelete: Cascade)
-  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  // Restrict: the timetable is not collateral damage of a catalogue tidy-up.
+  // Retiring a teacher or subject archives it; the assignment is unpicked first.
+  teacher User    @relation("TeacherAssignments", fields: [teacherId], references: [id], onDelete: Restrict)
+  klass   Klass   @relation(fields: [klassId], references: [id], onDelete: Restrict)
+  subject Subject @relation(fields: [subjectId], references: [id], onDelete: Restrict)
 
   @@unique([teacherId, klassId, subjectId])
   @@index([schoolId])
@@ -182,8 +218,9 @@ model Enrollment {
   klassId      Int
   academicYear String
 
-  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  klass   Klass   @relation(fields: [klassId], references: [id], onDelete: Cascade)
+  // Restrict on both: which class a child sat in, in which year, is history.
+  student Student @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  klass   Klass   @relation(fields: [klassId], references: [id], onDelete: Restrict)
 
   @@unique([studentId, academicYear])
 }
@@ -209,7 +246,10 @@ model Attendance {
   markedById Int?
 
   school   School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  student  Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  // Restrict: a pupil leaving is not a reason to unwrite their register.
+  student  Student @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  // markedBy stays SetNull: no code path deletes a User (teachers are archived),
+  // and the AuditLog snapshots the actor's name with no FK of its own.
   markedBy User?   @relation("AttendanceMarkedBy", fields: [markedById], references: [id])
 
   @@unique([studentId, date])
@@ -260,7 +300,8 @@ model DiaryEntry {
   createdById Int?
 
   school    School @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  klass     Klass  @relation(fields: [klassId], references: [id], onDelete: Cascade)
+  // Restrict: homework set, and the parents who ticked it done, is history.
+  klass     Klass  @relation(fields: [klassId], references: [id], onDelete: Restrict)
   createdBy User?  @relation("DiaryCreatedBy", fields: [createdById], references: [id])
 
   done DiaryDone[]
@@ -296,7 +337,8 @@ model LeaveRequest {
   createdAt      DateTime    @default(now())
 
   school    School  @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+  // Restrict: leave applied for and approved is a record of what happened.
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Restrict)
   createdBy User    @relation("LeaveCreatedBy", fields: [createdByParentId], references: [id])
   reviewedBy User?  @relation("LeaveReviewedBy", fields: [reviewedById], references: [id])
 
@@ -325,13 +367,34 @@ model Term {
   subjectId Int?
   name     String
 
+  /// Non-null mirrors of klassId/subjectId (NULL becomes 0).
+  ///
+  /// The unique below used to name the nullable columns directly, and MySQL
+  /// treats NULLs in an index as distinct — so it never actually fired for the
+  /// common shape (a school-wide, all-subjects exam), and `skipDuplicates` on
+  /// the two create paths silently did nothing. Two exams with the same name
+  /// could exist in one class, splitting that exam's marks across both.
+  /// Both write sites set these alongside the real columns.
+  klassKey   Int @default(0)
+  subjectKey Int @default(0)
+
+  archivedAt   DateTime?
+  archivedById Int?
+  /// 0 while live, `id` once archived — see Subject.archiveKey.
+  archiveKey   Int @default(0)
+
   school     School       @relation(fields: [schoolId], references: [id], onDelete: Cascade)
-  klass      Klass?       @relation(fields: [klassId], references: [id], onDelete: Cascade)
-  subject    Subject?     @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  // Restrict, NOT SetNull. These two used to Cascade, which made deleting a
+  // subject or class silently destroy every mark under it (Term -> Result).
+  // SetNull would be just as wrong: a null subjectId already means "covers all
+  // subjects", so nulling it would relabel a historic single-subject test as an
+  // all-subjects exam on the report card, and unlock grading of every subject.
+  klass      Klass?       @relation(fields: [klassId], references: [id], onDelete: Restrict)
+  subject    Subject?     @relation(fields: [subjectId], references: [id], onDelete: Restrict)
   results    Result[]
   resultMeta ResultMeta[]
 
-  @@unique([schoolId, klassId, name, subjectId])
+  @@unique([schoolId, klassKey, name, subjectKey, archiveKey])
   @@index([klassId])
   @@index([subjectId])
 }
@@ -345,8 +408,9 @@ model Result {
   maxScore  Float  @default(100)
   grade     String
 
-  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  term    Term    @relation(fields: [termId], references: [id], onDelete: Cascade)
+  // Restrict on both: a mark is the record the whole platform exists to hold.
+  student Student @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  term    Term    @relation(fields: [termId], references: [id], onDelete: Restrict)
 
   @@unique([studentId, termId, subject])
 }
@@ -359,8 +423,9 @@ model ResultMeta {
   rank           Int?
   teacherComment String? @db.Text
 
-  student Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
-  term    Term    @relation(fields: [termId], references: [id], onDelete: Cascade)
+  // Restrict on both: overall %, rank and the teacher's comment are history too.
+  student Student @relation(fields: [studentId], references: [id], onDelete: Restrict)
+  term    Term    @relation(fields: [termId], references: [id], onDelete: Restrict)
 
   @@unique([studentId, termId])
 }
@@ -405,4 +470,44 @@ model Notification {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, readAt])
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  ARCHIVE
+  RESTORE
+  DELETE
+  PURGE
+  LOGIN
+}
+
+/// Append-only record of who changed what.
+///
+/// Deliberately carries no foreign keys: an audit trail that becomes unreadable
+/// when its subject is purged is not an audit trail. The actor's name and the
+/// target's label are snapshotted as text at write time, so a row still reads
+/// correctly long after the user or subject it describes is gone.
+model AuditLog {
+  id        Int         @id @default(autoincrement())
+  schoolId  Int?
+  actorId   Int?
+  actorName String      @db.VarChar(191)
+  actorRole Role
+  action    AuditAction
+  /// Model name, e.g. "Subject", "Term", "Student".
+  entity    String      @db.VarChar(40)
+  entityId  Int
+  /// The target's human name at the time, e.g. "Mathematics".
+  label     String      @db.VarChar(191)
+  /// What was preserved or affected, e.g. "312 marks across 4 exams retained".
+  summary   String?     @db.Text
+  before    Json?
+  after     Json?
+  ip        String?     @db.VarChar(45)
+  createdAt DateTime    @default(now())
+
+  @@index([schoolId, createdAt])
+  @@index([entity, entityId, createdAt])
+  @@index([actorId, createdAt])
 }

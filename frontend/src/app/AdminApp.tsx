@@ -46,6 +46,11 @@ import {
   createSubject,
   updateSubject,
   deleteSubject,
+  archiveSubject,
+  restoreSubject,
+  archiveTeacher,
+  restoreTeacher,
+  archiveStudent,
   type AdminKlass,
   type AdminTeacher,
   type AdminSubject,
@@ -55,6 +60,8 @@ import {
   AppHeader,
   Card,
   Chip,
+  ConfirmIconButton,
+  ConfirmTextButton,
   EmptyState,
   Glyph,
   PrimaryButton,
@@ -65,6 +72,7 @@ import {
   cx,
   type TabDef,
 } from "./kit";
+import { apiError, apiErrorText, describeUsage } from "../api/client";
 import { NotificationsScreen } from "./SharedScreens";
 import {
   AlbumScreen,
@@ -178,7 +186,9 @@ export function AdminApp() {
     setStaffLoading(true);
     setStaffError(null);
     try {
-      setApiTeachers(await listTeachers());
+      // Archived teachers are fetched too: the staff list keeps them behind a
+      // disclosure, and every picker filters them out itself.
+      setApiTeachers(await listTeachers(true));
     } catch {
       setStaffError("Couldn't load staff. Pull to retry.");
     } finally {
@@ -247,9 +257,13 @@ export function AdminApp() {
     }
   }, [attClassId]);
 
+  // Archived subjects are loaded too. The catalogue screen lists them so they
+  // can be restored, and the assignment chips need them to render a subject an
+  // assignment still holds — without that the chip would vanish and the
+  // assignment could never be edited again. Pickers filter to live themselves.
   const loadSubjects = useCallback(async () => {
     try {
-      setApiSubjects(await listSubjects());
+      setApiSubjects(await listSubjects(true));
     } catch {
       /* surfaced inline in the subject manager */
     }
@@ -603,7 +617,8 @@ export function AdminApp() {
       )}
       {screen === "classAdd" && (
         <ClassOrSubjectAdd
-          teachers={apiTeachers ?? []}
+          // Only current staff can be picked as a new class's class teacher.
+          teachers={(apiTeachers ?? []).filter((t) => !t.archivedAt)}
           onClassCreated={async () => {
             await loadClasses();
             go("classes");
@@ -1096,6 +1111,27 @@ function AdminHome({
   );
 }
 
+/**
+ * Chips for a subject picker: everything the school currently teaches, plus any
+ * archived subject this assignment still holds.
+ *
+ * The second half matters — the catalogue list is filtered to live subjects, so
+ * without it an archived subject would simply vanish from the row, leaving an
+ * assignment showing fewer subjects than it has and no way to clear the one
+ * that disappeared.
+ */
+function chipSubjects(
+  all: AdminSubject[] | null,
+  onIds: number[],
+): AdminSubject[] {
+  return (all ?? []).filter((s) => !s.archivedAt || onIds.includes(s.id));
+}
+
+/** Subjects that may be added to something new. Never an archived one. */
+function liveSubjects(all: AdminSubject[] | null): AdminSubject[] {
+  return (all ?? []).filter((s) => !s.archivedAt);
+}
+
 // ---------- STAFF LIST (live) ----------
 function StaffList({
   teachers,
@@ -1112,6 +1148,13 @@ function StaffList({
   onAdd: () => void;
   onOpen: (id: number) => void;
 }) {
+  // Teachers who have left stay reachable — their history is still theirs —
+  // but they sit behind a disclosure so the list reads as the current staff.
+  const [showArchived, setShowArchived] = useState(false);
+  const live = (teachers ?? []).filter((t) => !t.archivedAt);
+  const archived = (teachers ?? []).filter((t) => t.archivedAt);
+  const shown = showArchived ? [...live, ...archived] : live;
+
   return (
     <div className="px-[15px] py-4 pb-6">
       <button
@@ -1143,7 +1186,8 @@ function StaffList({
       {teachers !== null && (
         <>
           <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-2.5">
-            {teachers.length} {teachers.length === 1 ? "teacher" : "teachers"}
+            {live.length} {live.length === 1 ? "teacher" : "teachers"}
+            {archived.length > 0 && ` · ${archived.length} archived`}
           </div>
           {teachers.length === 0 ? (
             <EmptyState icon={GLYPH.staff} title="No teachers yet">
@@ -1151,7 +1195,7 @@ function StaffList({
               one-time code.
             </EmptyState>
           ) : (
-            teachers.map((t) => (
+            shown.map((t) => (
               <Card
                 key={t.id}
                 onClick={() => onOpen(t.id)}
@@ -1166,9 +1210,18 @@ function StaffList({
                   {initialsOf(t.name)}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <b className="text-[13.5px] font-semibold block">{t.name}</b>
+                  <b
+                    className={cx(
+                      "text-[13.5px] font-semibold block",
+                      t.archivedAt && "text-muted",
+                    )}
+                  >
+                    {t.name}
+                  </b>
                   <small className="text-[11px] text-muted">
-                    {t.phone} · login mobile
+                    {t.archivedAt
+                      ? "Archived · history kept"
+                      : `${t.phone} · login mobile`}
                   </small>
                 </div>
                 <span className="text-[#c3ccc5] flex-none">
@@ -1176,6 +1229,16 @@ function StaffList({
                 </span>
               </Card>
             ))
+          )}
+          {archived.length > 0 && (
+            <button
+              onClick={() => setShowArchived((v) => !v)}
+              className="w-full mt-2 py-2.5 text-[12px] font-semibold text-muted"
+            >
+              {showArchived
+                ? "Hide archived"
+                : `Show ${archived.length} archived`}
+            </button>
           )}
         </>
       )}
@@ -1227,8 +1290,7 @@ function StaffDetail({
       await onRefresh();
     } catch (e) {
       setActionError(
-        (e as { response?: { data?: { error?: string } } }).response?.data
-          ?.error ?? "That didn't save. Please try again.",
+        apiErrorText(e, "That didn't save. Please try again."),
       );
     } finally {
       setBusyKlassId(null);
@@ -1236,6 +1298,20 @@ function StaffDetail({
   }
 
   const teacherId = teacher.id;
+  const archived = !!(detail?.archivedAt ?? teacher.archivedAt);
+
+  // `run` keys its busy flag by class id; -1 stands for the whole-teacher
+  // actions below, which aren't tied to any one class.
+  const archiveNow = () =>
+    run(-1, async () => {
+      await archiveTeacher(teacherId);
+      await onRefresh();
+    });
+  const unarchive = () =>
+    run(-1, async () => {
+      await restoreTeacher(teacherId);
+      await onRefresh();
+    });
 
   return (
     <div className="px-[15px] py-4 pb-6">
@@ -1248,11 +1324,30 @@ function StaffDetail({
         </div>
         <h3 className="font-serif text-[23px] mb-[3px]">{teacher.name}</h3>
         <div className="text-[12px] text-muted font-semibold">
-          {primarySubjectOf(detail) ?? "Teacher"} · Active
+          {primarySubjectOf(detail) ?? "Teacher"} ·{" "}
+          {archived ? "Archived" : "Active"}
         </div>
         <div className="text-[11.5px] text-muted mt-1.5">
           {maskPhone(teacher.phone)} · login mobile
         </div>
+        {archived && (
+          <div className="mt-3 text-[11.5px] leading-[1.55] text-muted bg-mist rounded-[11px] px-3 py-2.5 text-left">
+            They can no longer sign in. Their diary entries, notices and
+            attendance records keep their name.
+          </div>
+        )}
+        <button
+          disabled={busyKlassId !== null}
+          onClick={() => (archived ? unarchive() : archiveNow())}
+          className={cx(
+            "mt-3 w-full h-10 rounded-xl text-[12.5px] font-semibold disabled:opacity-60",
+            archived
+              ? "border-[1.5px] border-line bg-white text-green"
+              : "bg-[#f6ecec] text-danger",
+          )}
+        >
+          {archived ? "Restore teacher" : "Archive teacher"}
+        </button>
       </Card>
 
       {(detailError || actionError) && (
@@ -1309,29 +1404,30 @@ function StaffDetail({
                       >
                         {isCT ? "Class teacher ✓" : "Make CT"}
                       </button>
-                      <button
+                      <ConfirmIconButton
                         disabled={busy}
-                        aria-label={`Remove ${a.label}`}
-                        onClick={() =>
+                        label={a.label}
+                        onConfirm={() =>
                           run(a.klassId, () =>
                             unassignClass(teacherId, a.klassId),
                           )
                         }
-                        className="w-9 h-9 rounded-[11px] grid place-items-center bg-[#f6ecec] text-danger flex-none"
+                        className="w-9 h-9 rounded-[11px] bg-[#f6ecec] text-danger flex-none"
                       >
                         <Glyph d={GLYPH.close} size={15} stroke={2.4} />
-                      </button>
+                      </ConfirmIconButton>
                     </div>
 
                     <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mt-3 mb-2">
                       Subjects in this class
                     </div>
                     <div className="flex gap-1.5 flex-wrap">
-                      {(subjects ?? []).map((s) => {
+                      {chipSubjects(subjects, onIds).map((s) => {
                         const on = onIds.includes(s.id);
                         // Turning off the last subject would leave an empty
                         // class, which is the same as unassigning it — use ×.
                         const locked = on && onIds.length === 1;
+                        const archived = !!s.archivedAt;
                         return (
                           <button
                             key={s.id}
@@ -1339,7 +1435,9 @@ function StaffDetail({
                             title={
                               locked
                                 ? "A class needs at least one subject — use × to remove it"
-                                : undefined
+                                : archived
+                                  ? "Archived subject — you can remove it, but not add it back"
+                                  : undefined
                             }
                             onClick={() =>
                               run(a.klassId, () =>
@@ -1354,9 +1452,11 @@ function StaffDetail({
                             }
                             className={cx(
                               "px-2.5 py-1.5 rounded-lg text-[11.5px] font-semibold border-[1.5px] transition",
-                              on
-                                ? "border-green bg-green text-white"
-                                : "border-line bg-white text-green",
+                              archived
+                                ? "border-line bg-mist text-muted line-through"
+                                : on
+                                  ? "border-green bg-green text-white"
+                                  : "border-line bg-white text-green",
                               locked && "opacity-70",
                             )}
                           >
@@ -1566,14 +1666,14 @@ function StaffAdd({
           <div className="py-3">
             <Spinner />
           </div>
-        ) : subjects.length === 0 ? (
+        ) : liveSubjects(subjects).length === 0 ? (
           <div className="text-[12px] text-[#8a6d1f] bg-[#fbf3e2] border border-[#ecd8ab] rounded-[11px] px-3 py-2.5">
             No subjects yet — add your school's subjects from Classes → Add
             first.
           </div>
         ) : (
           <div className="flex gap-1.5 flex-wrap">
-            {subjects.map((s) => (
+            {liveSubjects(subjects).map((s) => (
               <Chip
                 key={s.id}
                 active={selSubjects.includes(s.id)}
@@ -1764,11 +1864,20 @@ function ClassesList({
                   <Glyph d={GLYPH.classes} size={20} stroke={1.9} />
                 </div>
                 <div className="flex-1 min-w-0">
-                  <b className="text-[14px] font-bold block">{c.label}</b>
+                  <b
+                    className={cx(
+                      "text-[14px] font-bold block",
+                      c.archivedAt && "text-muted",
+                    )}
+                  >
+                    {c.label}
+                  </b>
                   <small className="text-[11px] text-muted">
-                    {c.teacher
-                      ? "Class teacher · " + c.teacher
-                      : "No class teacher yet"}
+                    {c.archivedAt
+                      ? "Archived · history kept"
+                      : c.teacher
+                        ? "Class teacher · " + c.teacher
+                        : "No class teacher yet"}
                   </small>
                 </div>
                 <span className="text-[12px] font-bold text-green bg-[#f1f5f1] rounded-[9px] px-2.5 py-1.5 flex-none">
@@ -1784,20 +1893,20 @@ function ClassesList({
           <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-2.5 mt-5">
             {subjects === null
               ? "Subjects"
-              : `${subjects.length} ${subjects.length === 1 ? "subject" : "subjects"}`}
+              : `${liveSubjects(subjects).length} ${liveSubjects(subjects).length === 1 ? "subject" : "subjects"}`}
           </div>
           {subjects === null ? (
             <div className="py-4">
               <Spinner />
             </div>
-          ) : subjects.length === 0 ? (
+          ) : liveSubjects(subjects).length === 0 ? (
             <EmptyState icon={GLYPH.results} title="No subjects yet">
               Add your school's subjects from the Add screen — they'll apply
               across every class.
             </EmptyState>
           ) : (
             <div className="flex gap-1.5 flex-wrap">
-              {subjects.map((s) => (
+              {liveSubjects(subjects).map((s) => (
                 <span
                   key={s.id}
                   className="text-[12px] font-semibold text-green bg-mist rounded-[10px] px-3 py-1.5 flex items-center gap-1.5"
@@ -1886,10 +1995,31 @@ function ClassDetail({
 
   const ctName =
     clsTeachers?.find((t) => t.isClassTeacher)?.name ?? klass.teacher ?? null;
+  /**
+   * Remove a student from the school.
+   *
+   * A child with marks, a register or a leave history can't be deleted — the
+   * server refuses — so fall back to archiving them, which is what the admin
+   * means anyway when a pupil leaves. Only a row added by mistake, with nothing
+   * written against it yet, is actually deleted.
+   */
+  async function removeStudent(id: number) {
+    try {
+      await deleteStudent(id);
+    } catch (e) {
+      if (apiError(e, "").code !== "IN_USE") throw e;
+      await archiveStudent(id);
+    }
+  }
+
   const inClassIds = new Set((clsTeachers ?? []).map((t) => t.id));
+  // A teacher who has left must never be addable to a class.
   const availableTeachers = (allTeachers ?? []).filter(
-    (t) => !inClassIds.has(t.id),
+    (t) => !inClassIds.has(t.id) && !t.archivedAt,
   );
+  // Joining a class means teaching something in it, so a live subject has to
+  // exist to seed the assignment with. Archived ones cannot be assigned.
+  const firstLiveSubject = liveSubjects(subjects)[0] ?? null;
   const phoneDigits = gPhone.replace(/\D/g, "");
   const ready =
     newStudent.trim().length > 0 &&
@@ -1907,8 +2037,7 @@ function ClassDetail({
       if (alsoClasses) await onClassesChanged();
     } catch (e) {
       setError(
-        (e as { response?: { data?: { error?: string } } }).response?.data
-          ?.error ?? "That didn't save. Please try again.",
+        apiErrorText(e, "That didn't save. Please try again."),
       );
     } finally {
       setBusy(false);
@@ -2203,14 +2332,12 @@ function ClassDetail({
                       >
                         <Glyph d={GLYPH.edit} size={14} stroke={2} />
                       </button>
-                      <button
+                      <ConfirmIconButton
                         disabled={busy}
-                        onClick={() => run(() => deleteStudent(s.id))}
-                        aria-label={`Remove ${s.name}`}
-                        className="w-7 h-7 rounded-[9px] bg-[#f6ecec] text-danger text-[16px] font-bold flex-none"
-                      >
-                        ×
-                      </button>
+                        onConfirm={() => run(() => removeStudent(s.id))}
+                        label={s.name}
+                        className="w-7 h-7 rounded-[9px] bg-[#f6ecec] text-danger text-[16px] flex-none"
+                      />
                     </div>
                   )}
                 </Card>
@@ -2245,7 +2372,7 @@ function ClassDetail({
                     ×
                   </button>
                 </div>
-                {(subjects ?? []).length === 0 ? (
+                {firstLiveSubject == null ? (
                   <div className="text-[12px] text-[#8a6d1f] bg-[#fbf3e2] border border-[#ecd8ab] rounded-[11px] px-3 py-2.5">
                     Add a subject to the school first — a teacher joins a class
                     by teaching something in it.
@@ -2262,7 +2389,7 @@ function ClassDetail({
                       onClick={() =>
                         run(async () => {
                           await setClassSubjects(t.id, klass.id, [
-                            subjects![0].id,
+                            firstLiveSubject.id,
                           ]);
                           setClsTAddOpen(false);
                         })
@@ -2317,26 +2444,25 @@ function ClassDetail({
                     >
                       {t.isClassTeacher ? "Class teacher ✓" : "Make CT"}
                     </button>
-                    <button
+                    <ConfirmIconButton
                       disabled={busy}
-                      onClick={() =>
+                      onConfirm={() =>
                         run(() => unassignClass(t.id, klass.id), true)
                       }
-                      aria-label={`Remove ${t.name}`}
-                      className="w-7 h-7 rounded-[9px] bg-[#f6ecec] text-danger text-[16px] font-bold flex-none"
-                    >
-                      ×
-                    </button>
+                      label={t.name}
+                      className="w-7 h-7 rounded-[9px] bg-[#f6ecec] text-danger text-[16px] flex-none"
+                    />
                   </div>
                   <div className="text-[9.5px] tracking-[0.1em] uppercase font-semibold text-[#9aa39b] mb-1.5">
                     Subjects taught here
                   </div>
                   <div className="flex gap-1.5 flex-wrap">
-                    {(subjects ?? []).map((su) => {
+                    {chipSubjects(subjects, onIds).map((su) => {
                       const on = onIds.includes(su.id);
                       // The last subject can't be toggled off — that would mean
                       // no assignment at all, which is what × is for.
                       const locked = on && onIds.length === 1;
+                      const archived = !!su.archivedAt;
                       return (
                         <button
                           key={su.id}
@@ -2344,7 +2470,9 @@ function ClassDetail({
                           title={
                             locked
                               ? "A teacher needs at least one subject here — use × to remove them"
-                              : undefined
+                              : archived
+                                ? "Archived subject — you can remove it, but not add it back"
+                                : undefined
                           }
                           onClick={() =>
                             run(() =>
@@ -2359,9 +2487,11 @@ function ClassDetail({
                           }
                           className={cx(
                             "px-2.5 py-1 rounded-lg text-[10.5px] font-semibold border",
-                            on
-                              ? "border-green bg-green text-white"
-                              : "border-[#dbe5db] bg-white text-green",
+                            archived
+                              ? "border-[#dbe5db] bg-mist text-muted line-through"
+                              : on
+                                ? "border-green bg-green text-white"
+                                : "border-[#dbe5db] bg-white text-green",
                             locked && "opacity-70",
                           )}
                         >
@@ -2385,15 +2515,16 @@ function ClassDetail({
         ) : (
           <>
             <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-2.5">
-              {subjects.length} {subjects.length === 1 ? "subject" : "subjects"}{" "}
+              {liveSubjects(subjects).length}{" "}
+              {liveSubjects(subjects).length === 1 ? "subject" : "subjects"}{" "}
               · school-wide
             </div>
-            {subjects.length === 0 ? (
+            {liveSubjects(subjects).length === 0 ? (
               <div className="text-center text-muted text-[12.5px] py-5">
                 No subjects yet. Add them under Classes → Add.
               </div>
             ) : (
-              subjects.map((s) => (
+              liveSubjects(subjects).map((s) => (
                 <Card
                   key={s.id}
                   className="p-3 mb-2 rounded-[13px] flex gap-[11px] items-center"
@@ -2500,7 +2631,7 @@ function ClassDetail({
                   >
                     All subjects
                   </Chip>
-                  {(subjects ?? []).map((s) => (
+                  {liveSubjects(subjects).map((s) => (
                     <Chip
                       key={s.id}
                       active={examSubjectId === s.id}
@@ -2554,18 +2685,20 @@ function ClassDetail({
                       {e.name}
                     </b>
                     <small className="text-[10.5px] text-muted">
+                      {/* A null subject genuinely means "all subjects" — an
+                          archived one still names itself, never degrades to
+                          that claim. See Term.subjectId being RESTRICT. */}
                       {e.subject ? e.subject.name : "All subjects"}
+                      {e.subject?.archived && " · archived"}
                       {e.schoolWide && " · School-wide"}
                     </small>
                   </div>
-                  <button
+                  <ConfirmIconButton
                     disabled={busy}
-                    onClick={() => run(() => deleteExam(e.id))}
-                    aria-label={`Remove ${e.name}`}
-                    className="w-7 h-7 rounded-[9px] bg-[#f6ecec] text-danger text-[16px] font-bold flex-none"
-                  >
-                    ×
-                  </button>
+                    onConfirm={() => run(() => deleteExam(e.id))}
+                    label={e.name}
+                    className="w-7 h-7 rounded-[9px] bg-[#f6ecec] text-danger text-[16px] flex-none"
+                  />
                 </Card>
               ))
             )}
@@ -2939,12 +3072,14 @@ function SubjectManager({
   const [error, setError] = useState<string | null>(null);
   const [editId, setEditId] = useState<number | null>(null);
   const [editName, setEditName] = useState("");
+  // Set when the server refuses a delete because history depends on the
+  // subject. Held per-subject so the explanation sits on the row it concerns.
+  const [blocked, setBlocked] = useState<{ id: number; usage: string } | null>(
+    null,
+  );
 
   function readErr(e: unknown, fallback: string) {
-    return (
-      (e as { response?: { data?: { error?: string } } }).response?.data
-        ?.error ?? fallback
-    );
+    return apiError(e, fallback).error;
   }
 
   async function add() {
@@ -2983,11 +3118,51 @@ function SubjectManager({
     if (busy) return;
     setBusy(true);
     setError(null);
+    setBlocked(null);
     try {
       await deleteSubject(id);
       await onChanged();
     } catch (e) {
-      setError(readErr(e, "Couldn't delete the subject. Please try again."));
+      const err = apiError(e, "Couldn't delete the subject. Please try again.");
+      // The subject is still on report cards. Explain what it holds rather
+      // than showing a bare failure — the counts are the whole point.
+      if (err.code === "IN_USE") {
+        setBlocked({ id, usage: describeUsage(err.usage) });
+      } else {
+        setError(err.error);
+      }
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const archivedCount = (subjects ?? []).filter((s) => s.archivedAt).length;
+  const liveCount = (subjects ?? []).length - archivedCount;
+
+  async function archive(id: number) {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await archiveSubject(id);
+      setBlocked(null);
+      await onChanged();
+    } catch (e) {
+      setError(readErr(e, "Couldn't archive the subject. Please try again."));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function restore(id: number) {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await restoreSubject(id);
+      await onChanged();
+    } catch (e) {
+      setError(readErr(e, "Couldn't restore the subject. Please try again."));
     } finally {
       setBusy(false);
     }
@@ -3029,7 +3204,8 @@ function SubjectManager({
       ) : (
         <>
           <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-2.5">
-            {subjects.length} {subjects.length === 1 ? "subject" : "subjects"}
+            {liveCount} {liveCount === 1 ? "subject" : "subjects"}
+            {archivedCount > 0 && ` · ${archivedCount} archived`}
           </div>
           {subjects.length === 0 ? (
             <EmptyState icon={GLYPH.results} title="No subjects yet">
@@ -3038,10 +3214,8 @@ function SubjectManager({
             </EmptyState>
           ) : (
             subjects.map((s) => (
-              <Card
-                key={s.id}
-                className="p-[13px] mb-2.25 flex gap-3 items-center"
-              >
+              <Card key={s.id} className="p-[13px] mb-2.25">
+                <div className="flex gap-3 items-center">
                 <div className="w-[42px] h-[42px] rounded-[13px] bg-mist grid place-items-center flex-none text-green">
                   <Glyph d={GLYPH.results} size={20} stroke={1.9} />
                 </div>
@@ -3075,29 +3249,70 @@ function SubjectManager({
                 ) : (
                   <>
                     <div className="flex-1 min-w-0">
-                      <b className="text-[14px] font-bold block truncate">
+                      <b
+                        className={cx(
+                          "text-[14px] font-bold block truncate",
+                          s.archivedAt && "text-muted",
+                        )}
+                      >
                         {s.name}
                       </b>
+                      {s.archivedAt && (
+                        <small className="text-[10.5px] text-muted">
+                          Archived · still on old report cards
+                        </small>
+                      )}
                     </div>
-                    <button
-                      onClick={() => {
-                        setEditId(s.id);
-                        setEditName(s.name);
-                      }}
-                      className="text-muted flex-none"
-                      aria-label="Rename"
-                    >
-                      <Glyph d={GLYPH.edit} size={18} stroke={1.9} />
-                    </button>
-                    <button
-                      onClick={() => remove(s.id)}
-                      disabled={busy}
-                      className="text-danger flex-none"
-                      aria-label="Delete"
-                    >
-                      <Glyph d={GLYPH.trash} size={18} stroke={1.9} />
-                    </button>
+                    {s.archivedAt ? (
+                      <button
+                        onClick={() => restore(s.id)}
+                        disabled={busy}
+                        className="px-3 h-8 rounded-[9px] border border-[#dbe5db] bg-white text-green text-[11.5px] font-semibold flex-none disabled:opacity-60"
+                      >
+                        Restore
+                      </button>
+                    ) : (
+                      <>
+                        <button
+                          onClick={() => {
+                            setEditId(s.id);
+                            setEditName(s.name);
+                          }}
+                          className="text-muted flex-none"
+                          aria-label="Rename"
+                        >
+                          <Glyph d={GLYPH.edit} size={18} stroke={1.9} />
+                        </button>
+                        <ConfirmIconButton
+                          onConfirm={() => remove(s.id)}
+                          disabled={busy}
+                          label={s.name}
+                          className="w-8 h-8 rounded-[9px] text-danger flex-none"
+                        >
+                          <Glyph d={GLYPH.trash} size={18} stroke={1.9} />
+                        </ConfirmIconButton>
+                      </>
+                    )}
                   </>
+                )}
+                </div>
+                {blocked?.id === s.id && (
+                  <div className="mt-2.5 rounded-[11px] border border-[#ecd8ab] bg-[#fbf3e2] px-3 py-2.5 text-[11.5px] leading-[1.55] text-[#8a6d1f]">
+                    <b className="font-semibold">{s.name}</b> is used by{" "}
+                    {blocked.usage}. Deleting it would erase them.
+                    <div className="mt-2 flex gap-2 items-center">
+                      <button
+                        disabled={busy}
+                        onClick={() => archive(s.id)}
+                        className="px-3 h-8 rounded-[9px] bg-white border border-[#ecd8ab] text-[11.5px] font-semibold disabled:opacity-60"
+                      >
+                        Archive instead
+                      </button>
+                      <span className="text-[10.5px] opacity-75">
+                        Stays on old report cards
+                      </span>
+                    </div>
+                  </div>
                 )}
               </Card>
             ))
@@ -3315,7 +3530,6 @@ function AdminNoticeDetail({
   onEdit: () => void;
   onDeleted: () => void | Promise<void>;
 }) {
-  const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -3384,22 +3598,14 @@ function AdminNoticeDetail({
         >
           Edit notice
         </button>
-        {confirming ? (
-          <button
-            disabled={busy}
-            onClick={remove}
-            className="flex-1 py-3 rounded-[14px] bg-danger text-white font-semibold text-[13px] disabled:opacity-60"
-          >
-            {busy ? "Deleting…" : "Tap again to delete"}
-          </button>
-        ) : (
-          <button
-            onClick={() => setConfirming(true)}
-            className="flex-1 py-3 rounded-[14px] bg-[#f6ecec] text-danger font-semibold text-[13px]"
-          >
-            Delete
-          </button>
-        )}
+        <ConfirmTextButton
+          idle="Delete"
+          armed="Tap again to delete"
+          busy={busy}
+          busyLabel="Deleting…"
+          onConfirm={remove}
+          className="flex-1 h-auto py-3 rounded-[14px]"
+        />
       </div>
     </div>
   );
@@ -3601,8 +3807,7 @@ function AdminCalendar({
       setEditId(null);
     } catch (e) {
       setActionError(
-        (e as { response?: { data?: { error?: string } } }).response?.data
-          ?.error ?? "That didn't save. Please try again.",
+        apiErrorText(e, "That didn't save. Please try again."),
       );
     } finally {
       setBusy(false);
@@ -3737,14 +3942,12 @@ function AdminCalendar({
                 >
                   <Glyph d={GLYPH.edit} size={14} stroke={2} />
                 </button>
-                <button
+                <ConfirmIconButton
                   disabled={busy}
-                  onClick={() => run(() => deleteEvent(e.id))}
-                  aria-label={`Remove ${e.title}`}
-                  className="w-7 h-7 rounded-[9px] bg-[#f6ecec] text-danger text-[16px] font-bold flex-none"
-                >
-                  ×
-                </button>
+                  onConfirm={() => run(() => deleteEvent(e.id))}
+                  label={e.title}
+                  className="w-7 h-7 rounded-[9px] bg-[#f6ecec] text-danger text-[16px] flex-none"
+                />
               </Card>
             );
           })

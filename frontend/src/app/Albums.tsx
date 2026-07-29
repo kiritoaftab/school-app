@@ -13,7 +13,7 @@ import {
   type GalleryPhoto,
 } from '../api/gallery';
 import { ALBUM_TONES, GLYPH } from './data';
-import { Card, EmptyState, Glyph, SectionLabel, Spinner, cx } from './kit';
+import { Card, ConfirmIconButton, EmptyState, Glyph, SectionLabel, Spinner, cx } from './kit';
 
 // Photo albums, shared by the admin, teacher and parent apps. Admins and
 // teachers get the full CRUD; parents pass `readOnly` for the same views.
@@ -220,23 +220,13 @@ function RemoveButton({
   disabled?: boolean;
   onRemove: () => void;
 }) {
-  const [armed, setArmed] = useState(false);
   return (
-    <button
+    <ConfirmIconButton
+      label={label}
       disabled={disabled}
-      aria-label={armed ? `Tap again to remove ${label}` : `Remove ${label}`}
-      onClick={(e) => {
-        e.stopPropagation();
-        if (armed) onRemove();
-        else setArmed(true);
-      }}
-      className={cx(
-        'absolute top-1.5 right-1.5 w-[26px] h-[26px] rounded-lg grid place-items-center text-white text-[15px] font-bold leading-none z-[3] disabled:opacity-60',
-        armed ? 'bg-danger' : 'bg-black/45',
-      )}
-    >
-      ×
-    </button>
+      onConfirm={onRemove}
+      className="absolute top-1.5 right-1.5 w-[26px] h-[26px] rounded-lg text-white text-[15px] z-[3] bg-black/45"
+    />
   );
 }
 

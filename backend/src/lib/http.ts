@@ -10,7 +10,16 @@ export function ah(
 }
 
 export class HttpError extends Error {
-  constructor(public status: number, message: string) {
+  /**
+   * `details` is spread into the JSON body alongside `error`, so a handler can
+   * hand the client something actionable — a `code` to branch on, or the counts
+   * behind a 409 ("4 exams, 312 marks") so the UI can explain what it protects.
+   */
+  constructor(
+    public status: number,
+    message: string,
+    public details?: Record<string, unknown>,
+  ) {
     super(message);
   }
 }

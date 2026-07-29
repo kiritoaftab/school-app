@@ -4,6 +4,8 @@ import { prisma } from '../db.js';
 import { ah, HttpError } from '../lib/http.js';
 import { requireSchoolId } from '../middleware/auth.js';
 import { dayKey, parseDay } from '../lib/day.js';
+import { audit, actorFrom } from '../lib/audit.js';
+import { plural } from '../lib/usage.js';
 import {
   presignGalleryUpload,
   deleteObjectByUrl,
@@ -162,7 +164,19 @@ export function mountGalleryRoutes(router: Router) {
       include: { photos: { select: { url: true } } },
     });
     if (!album) throw new HttpError(404, 'Album not found');
-    await prisma.photoAlbum.delete({ where: { id } });
+    await prisma.$transaction(async (tx) => {
+      await tx.photoAlbum.delete({ where: { id } });
+      // Logged before the S3 objects go, because that part cannot be undone
+      // and `deleteObjectByUrl` swallows its own failures.
+      await audit(tx, actorFrom(req), {
+        action: 'DELETE',
+        entity: 'PhotoAlbum',
+        entityId: id,
+        label: album.title,
+        summary: `${plural(album.photos.length, 'photo')} deleted from storage.`,
+        before: { title: album.title, klassId: album.klassId, photoUrls: album.photos.map((p) => p.url) },
+      });
+    });
     await Promise.all(album.photos.map((p) => deleteObjectByUrl(p.url)));
     res.status(204).end();
   }));
@@ -197,7 +211,17 @@ export function mountGalleryRoutes(router: Router) {
       where: { id: photoId, albumId, album: { schoolId } },
     });
     if (!photo) throw new HttpError(404, 'Photo not found');
-    await prisma.photo.delete({ where: { id: photoId } });
+    await prisma.$transaction(async (tx) => {
+      await tx.photo.delete({ where: { id: photoId } });
+      await audit(tx, actorFrom(req), {
+        action: 'DELETE',
+        entity: 'Photo',
+        entityId: photoId,
+        label: photo.caption ?? `Photo ${photoId}`,
+        summary: 'Deleted from storage.',
+        before: { albumId, url: photo.url, caption: photo.caption },
+      });
+    });
     await deleteObjectByUrl(photo.url);
     res.status(204).end();
   }));

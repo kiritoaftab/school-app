@@ -4,6 +4,7 @@ import { prisma } from '../db.js';
 import { ah, HttpError } from '../lib/http.js';
 import { requireAuth, requireRole } from '../middleware/auth.js';
 import { presignLogoUpload, isS3Configured, EXT_BY_TYPE } from '../lib/s3.js';
+import { audit, auditAfter, actorFrom } from '../lib/audit.js';
 
 // Platform-owner surface: create/manage schools and their admins.
 // Guarded by SUPER_ADMIN — the only role not bound to a single school.
@@ -83,6 +84,13 @@ platformRouter.post('/schools', ah(async (req, res) => {
       : null;
     return { school, admin };
   });
+  auditAfter({ ...actorFrom(req), schoolId: school.id }, {
+    action: 'CREATE',
+    entity: 'School',
+    entityId: school.id,
+    label: school.name,
+    after: { name: school.name, city: school.city, adminPhone: admin?.phone ?? null },
+  });
   res.status(201).json({
     id: school.id,
     name: school.name,
@@ -130,12 +138,91 @@ platformRouter.patch('/schools/:id', ah(async (req, res) => {
   res.json({ id: school.id, name: school.name, timezone: school.timezone, createdAt: school.createdAt });
 }));
 
+const purgeSchema = z.object({ confirmName: z.string().min(1) });
+
+/**
+ * Permanently erase a school and everything in it.
+ *
+ * This no longer leans on `ON DELETE CASCADE`. History tables now RESTRICT so
+ * that a stray delete can never quietly take marks with it, which means the
+ * teardown has to name its children explicitly, deepest first. That also fixes
+ * a latent bug in the old cascade version: `LeaveRequest.createdByParentId` is
+ * RESTRICT while `User.schoolId` is CASCADE, and MySQL does not order cascades,
+ * so purging a school with any leave request could fail halfway and strand a
+ * half-deleted tenant.
+ *
+ * The caller must echo the school's exact name back to us. Nothing else in the
+ * platform is this destructive, and it has no undo.
+ */
 platformRouter.delete('/schools/:id', ah(async (req, res) => {
   const id = parseId(req.params.id);
-  const exists = await prisma.school.findUnique({ where: { id } });
-  if (!exists) throw new HttpError(404, 'School not found');
-  // Cascades to users, students, classes and all school-scoped rows.
-  await prisma.school.delete({ where: { id } });
+  const school = await prisma.school.findUnique({ where: { id } });
+  if (!school) throw new HttpError(404, 'School not found');
+
+  const { confirmName } = purgeSchema.parse(req.body ?? {});
+  if (confirmName.trim() !== school.name) {
+    throw new HttpError(400, `Type the school's exact name ("${school.name}") to confirm`, {
+      code: 'CONFIRM_NAME_MISMATCH',
+    });
+  }
+
+  // Counted before the teardown, so the log records what was destroyed.
+  const [users, students, classes, marks] = await Promise.all([
+    prisma.user.count({ where: { schoolId: id } }),
+    prisma.student.count({ where: { schoolId: id } }),
+    prisma.klass.count({ where: { schoolId: id } }),
+    prisma.result.count({ where: { term: { schoolId: id } } }),
+  ]);
+
+  await prisma.$transaction(async (tx) => {
+    // The log goes in first: it is the only thing that will outlive the school,
+    // and it must not be rolled back by a failure later in the teardown.
+    // A SUPER_ADMIN has no school of their own, so name the purged one here —
+    // otherwise the row that outlives the tenant can't say which tenant it was.
+    await audit(tx, { ...actorFrom(req), schoolId: id }, {
+      action: 'PURGE',
+      entity: 'School',
+      entityId: id,
+      label: school.name,
+      summary: `Purged ${users} users, ${students} students, ${classes} classes and ${marks} marks.`,
+      before: { name: school.name, timezone: school.timezone },
+    });
+
+    // Leaf rows that hang off a user or an entry, before their parents.
+    await tx.noticeAck.deleteMany({ where: { notice: { schoolId: id } } });
+    await tx.diaryDone.deleteMany({ where: { diaryEntry: { schoolId: id } } });
+    await tx.notification.deleteMany({ where: { user: { schoolId: id } } });
+    await tx.parentStudentLink.deleteMany({ where: { student: { schoolId: id } } });
+
+    // Everything keyed to a student.
+    await tx.result.deleteMany({ where: { term: { schoolId: id } } });
+    await tx.resultMeta.deleteMany({ where: { term: { schoolId: id } } });
+    await tx.attendance.deleteMany({ where: { schoolId: id } });
+    await tx.enrollment.deleteMany({ where: { student: { schoolId: id } } });
+    await tx.leaveRequest.deleteMany({ where: { schoolId: id } });
+    await tx.diaryEntry.deleteMany({ where: { schoolId: id } });
+
+    // Gallery rows. The S3 objects behind them are deliberately left in place:
+    // deleting them from inside a transaction is not rollback-safe, and a
+    // stranded object is a far cheaper mistake than an unrecoverable one.
+    await tx.photo.deleteMany({ where: { album: { schoolId: id } } });
+    await tx.photoAlbum.deleteMany({ where: { schoolId: id } });
+
+    await tx.term.deleteMany({ where: { schoolId: id } });
+    await tx.teachingAssignment.deleteMany({ where: { schoolId: id } });
+    await tx.notice.deleteMany({ where: { schoolId: id } });
+    await tx.event.deleteMany({ where: { schoolId: id } });
+
+    // Break the class -> teacher link before the users go.
+    await tx.klass.updateMany({ where: { schoolId: id }, data: { classTeacherId: null } });
+
+    await tx.student.deleteMany({ where: { schoolId: id } });
+    await tx.klass.deleteMany({ where: { schoolId: id } });
+    await tx.subject.deleteMany({ where: { schoolId: id } });
+    await tx.user.deleteMany({ where: { schoolId: id } });
+    await tx.school.delete({ where: { id } });
+  });
+
   res.status(204).end();
 }));
 
@@ -162,6 +249,14 @@ platformRouter.post('/schools/:id/admins', ah(async (req, res) => {
   const admin = await prisma.user.create({
     data: { schoolId, name: data.name, phone: data.phone, role: 'ADMIN' },
   });
+  auditAfter({ ...actorFrom(req), schoolId }, {
+    action: 'CREATE',
+    entity: 'User',
+    entityId: admin.id,
+    label: admin.name,
+    summary: `Granted admin access to ${school.name}.`,
+    after: { phone: admin.phone, role: 'ADMIN' },
+  });
   res.status(201).json({ id: admin.id, name: admin.name, phone: admin.phone });
 }));
 
@@ -183,6 +278,15 @@ platformRouter.patch('/schools/:id/admins/:adminId', ah(async (req, res) => {
   const updated = await prisma.user.update({
     where: { id: adminId },
     data: { ...(data.name ? { name: data.name } : {}), ...(data.phone ? { phone: data.phone } : {}) },
+  });
+  auditAfter({ ...actorFrom(req), schoolId }, {
+    action: 'UPDATE',
+    entity: 'User',
+    entityId: adminId,
+    label: updated.name,
+    summary: data.phone && data.phone !== admin.phone ? 'Admin sign-in mobile changed.' : undefined,
+    before: { name: admin.name, phone: admin.phone },
+    after: { name: updated.name, phone: updated.phone },
   });
   res.json({ id: updated.id, name: updated.name, phone: updated.phone });
 }));

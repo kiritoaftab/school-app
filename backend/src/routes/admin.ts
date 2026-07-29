@@ -3,20 +3,40 @@ import { z } from 'zod';
 import { prisma } from '../db.js';
 import { ah, HttpError } from '../lib/http.js';
 import { requireAuth, requireRole, requireSchoolId } from '../middleware/auth.js';
+import { examUsage, klassUsage, plural, studentUsage, subjectUsage, teacherUsage, throwIfInUse } from '../lib/usage.js';
+import { shapeExam } from '../lib/exam.js';
+import { audit, auditAfter, actorFrom } from '../lib/audit.js';
+import { LIVE, archiveData, archiveStudentData, restoreData, restoreStudentData } from '../lib/archive.js';
 import { mountGalleryRoutes } from './gallery.js';
 
 export const adminRouter = Router();
 adminRouter.use(requireAuth, requireRole('ADMIN'));
+
+/**
+ * Lists hide archived rows unless `?includeArchived=1` asks for them, so the
+ * admin can still open a retired teacher or subject to read its history.
+ */
+function wantsArchived(req: { query: Record<string, unknown> }): boolean {
+  const v = req.query.includeArchived;
+  return v === '1' || v === 'true';
+}
+const liveUnless = (include: boolean) => (include ? {} : LIVE);
 
 // --- Users ---
 adminRouter.get('/users', ah(async (req, res) => {
   const schoolId = requireSchoolId(req);
   const role = req.query.role as string | undefined;
   const users = await prisma.user.findMany({
-    where: { schoolId, ...(role ? { role: role as any } : {}) },
+    where: { schoolId, ...(role ? { role: role as any } : {}), ...liveUnless(wantsArchived(req)) },
     orderBy: { name: 'asc' },
   });
-  res.json(users.map((u) => ({ id: u.id, name: u.name, phone: u.phone, role: u.role })));
+  res.json(users.map((u) => ({
+    id: u.id,
+    name: u.name,
+    phone: u.phone,
+    role: u.role,
+    archivedAt: u.archivedAt,
+  })));
 }));
 
 const userSchema = z.object({
@@ -47,7 +67,7 @@ adminRouter.post('/teachers', ah(async (req, res) => {
   const data = teacherCreateSchema.parse(req.body);
   const phone = data.phone.trim();
 
-  const exists = await prisma.user.findFirst({ where: { schoolId, phone, role: 'TEACHER' } });
+  const exists = await prisma.user.findFirst({ where: { schoolId, phone, role: 'TEACHER', ...LIVE } });
   if (exists) throw new HttpError(409, 'A teacher with this phone already exists');
 
   // Every referenced class & subject must belong to this school.
@@ -57,8 +77,8 @@ adminRouter.post('/teachers', ah(async (req, res) => {
   ])];
   const subjectIds = [...new Set(data.assignments.flatMap((a) => a.subjectIds))];
   const [klasses, subjects] = await Promise.all([
-    klassIds.length ? prisma.klass.findMany({ where: { id: { in: klassIds }, schoolId }, select: { id: true } }) : Promise.resolve([]),
-    subjectIds.length ? prisma.subject.findMany({ where: { id: { in: subjectIds }, schoolId }, select: { id: true } }) : Promise.resolve([]),
+    klassIds.length ? prisma.klass.findMany({ where: { id: { in: klassIds }, schoolId, ...LIVE }, select: { id: true } }) : Promise.resolve([]),
+    subjectIds.length ? prisma.subject.findMany({ where: { id: { in: subjectIds }, schoolId, ...LIVE }, select: { id: true } }) : Promise.resolve([]),
   ]);
   const validKlass = new Set(klasses.map((k) => k.id));
   const validSubject = new Set(subjects.map((s) => s.id));
@@ -88,6 +108,13 @@ adminRouter.post('/teachers', ah(async (req, res) => {
     return user;
   });
 
+  auditAfter(actorFrom(req), {
+    action: 'CREATE',
+    entity: 'User',
+    entityId: teacher.id,
+    label: teacher.name,
+    after: { phone, role: 'TEACHER', assignments: rows.length, classTeacherOf: data.classTeacherOf ?? null },
+  });
   res.status(201).json({ id: teacher.id, name: teacher.name, phone: teacher.phone, role: teacher.role });
 }));
 
@@ -145,7 +172,7 @@ adminRouter.put('/teachers/:id/assignments/:klassId', ah(async (req, res) => {
     prisma.user.findFirst({ where: { id: teacherId, schoolId, role: 'TEACHER' } }),
     prisma.klass.findFirst({ where: { id: klassId, schoolId } }),
     wanted.length
-      ? prisma.subject.findMany({ where: { id: { in: wanted }, schoolId }, select: { id: true } })
+      ? prisma.subject.findMany({ where: { id: { in: wanted }, schoolId, ...LIVE }, select: { id: true } })
       : Promise.resolve([]),
   ]);
   if (!teacher) throw new HttpError(404, 'Teacher not found');
@@ -153,6 +180,11 @@ adminRouter.put('/teachers/:id/assignments/:klassId', ah(async (req, res) => {
   if (subjects.length !== wanted.length) {
     throw new HttpError(404, 'A selected subject was not found in this school');
   }
+
+  const before = await prisma.teachingAssignment.findMany({
+    where: { schoolId, teacherId, klassId },
+    select: { subjectId: true },
+  });
 
   // Replace the whole set for this class so the write matches the chips exactly.
   await prisma.$transaction([
@@ -165,6 +197,14 @@ adminRouter.put('/teachers/:id/assignments/:klassId', ah(async (req, res) => {
         ]
       : []),
   ]);
+  auditAfter(actorFrom(req), {
+    action: 'UPDATE',
+    entity: 'TeachingAssignment',
+    entityId: teacherId,
+    label: `${teacher.name} · ${klass.grade}${klass.section}`,
+    before: { subjectIds: before.map((a) => a.subjectId) },
+    after: { subjectIds: subjects.map((s) => s.id) },
+  });
   res.json({ ok: true });
 }));
 
@@ -173,12 +213,99 @@ adminRouter.delete('/teachers/:id/assignments/:klassId', ah(async (req, res) => 
   const schoolId = requireSchoolId(req);
   const teacherId = Number(req.params.id);
   const klassId = Number(req.params.klassId);
-  const teacher = await prisma.user.findFirst({ where: { id: teacherId, schoolId, role: 'TEACHER' } });
+  const [teacher, klass] = await Promise.all([
+    prisma.user.findFirst({ where: { id: teacherId, schoolId, role: 'TEACHER' } }),
+    prisma.klass.findFirst({ where: { id: klassId, schoolId } }),
+  ]);
   if (!teacher) throw new HttpError(404, 'Teacher not found');
+  // Without this a wrong or out-of-school klassId deleted nothing and still
+  // answered 204, so the caller was told a change had happened that hadn't.
+  if (!klass) throw new HttpError(404, 'Class not found in this school');
 
-  await prisma.teachingAssignment.deleteMany({ where: { schoolId, teacherId, klassId } });
+  const removed = await prisma.teachingAssignment.deleteMany({ where: { schoolId, teacherId, klassId } });
   // Leading a class you no longer teach in is allowed, so classTeacherId is left alone.
+  auditAfter(actorFrom(req), {
+    action: 'DELETE',
+    entity: 'TeachingAssignment',
+    entityId: teacherId,
+    label: `${teacher.name} · ${klass.grade}${klass.section}`,
+    summary: `${plural(removed.count, 'subject link')} removed.`,
+  });
   res.status(204).end();
+}));
+
+/**
+ * Retire a teacher who has left.
+ *
+ * There is no delete-teacher endpoint and there should not be: their name is on
+ * diary entries, notices and attendance registers, and a delete would null all
+ * of that out silently. Archiving keeps every trace and takes away the login.
+ */
+adminRouter.post('/teachers/:id/archive', ah(async (req, res) => {
+  const schoolId = requireSchoolId(req);
+  const { userId } = req.auth!;
+  const id = Number(req.params.id);
+  const teacher = await prisma.user.findFirst({ where: { id, schoolId, role: 'TEACHER' } });
+  if (!teacher) throw new HttpError(404, 'Teacher not found');
+  if (teacher.archivedAt) throw new HttpError(409, 'That teacher is already archived', { code: 'ALREADY_ARCHIVED' });
+
+  // Leading a class is a live responsibility, not a historical fact. Rather
+  // than nulling it out behind the admin's back, make them hand it over first.
+  const leads = await prisma.klass.findMany({
+    where: { schoolId, classTeacherId: id, archivedAt: null },
+    select: { id: true, grade: true, section: true },
+  });
+  if (leads.length) {
+    throw new HttpError(409, 'Hand over their class first — they are still the class teacher.', {
+      code: 'IS_CLASS_TEACHER',
+      classes: leads.map((k) => ({ id: k.id, label: `${k.grade}-${k.section}` })),
+    });
+  }
+
+  const usage = await teacherUsage(schoolId, id);
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({ where: { id }, data: archiveData(id, userId) });
+    // The timetable is current state; the diary entries and registers they
+    // wrote are history and keep pointing at them.
+    const unlinked = await tx.teachingAssignment.deleteMany({ where: { schoolId, teacherId: id } });
+    await audit(tx, actorFrom(req), {
+      action: 'ARCHIVE',
+      entity: 'User',
+      entityId: id,
+      label: teacher.name,
+      summary:
+        `Sign-in revoked. ${plural(usage.counts.diary, 'diary entry', 'diary entries')}, ` +
+        `${plural(usage.counts.notices, 'notice')} and ${plural(usage.counts.attendanceMarked, 'attendance record')} ` +
+        `keep their name; ${plural(unlinked.count, 'class assignment')} removed.`,
+    });
+  });
+  res.json({ ok: true });
+}));
+
+adminRouter.post('/teachers/:id/restore', ah(async (req, res) => {
+  const schoolId = requireSchoolId(req);
+  const id = Number(req.params.id);
+  const teacher = await prisma.user.findFirst({ where: { id, schoolId, role: 'TEACHER' } });
+  if (!teacher) throw new HttpError(404, 'Teacher not found');
+  // Their mobile is freed on archive, so someone else may hold it now.
+  const clash = await prisma.user.findFirst({
+    where: { schoolId, phone: teacher.phone, role: 'TEACHER', archivedAt: null, id: { not: id } },
+  });
+  if (clash) {
+    throw new HttpError(409, 'Another active teacher now uses that mobile number.', { code: 'PHONE_TAKEN' });
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.user.update({ where: { id }, data: restoreData() });
+    await audit(tx, actorFrom(req), {
+      action: 'RESTORE',
+      entity: 'User',
+      entityId: id,
+      label: teacher.name,
+      summary: 'Class assignments are not restored — reassign them.',
+    });
+  });
+  res.json({ ok: true });
 }));
 
 // Make this teacher the class teacher of a class, or step them down from it.
@@ -195,10 +322,20 @@ adminRouter.put('/teachers/:id/class-teacher', ah(async (req, res) => {
   if (!teacher) throw new HttpError(404, 'Teacher not found');
   if (!klass) throw new HttpError(404, 'Class not found in this school');
 
-  if (isClassTeacher) {
-    await prisma.klass.update({ where: { id: klassId }, data: { classTeacherId: teacherId } });
-  } else if (klass.classTeacherId === teacherId) {
-    await prisma.klass.update({ where: { id: klassId }, data: { classTeacherId: null } });
+  const next = isClassTeacher ? teacherId : klass.classTeacherId === teacherId ? null : klass.classTeacherId;
+  if (next !== klass.classTeacherId) {
+    await prisma.klass.update({ where: { id: klassId }, data: { classTeacherId: next } });
+    // Who leads a class decides who can see its whole diary and marks, so the
+    // handover is worth a line of its own.
+    auditAfter(actorFrom(req), {
+      action: 'UPDATE',
+      entity: 'Klass',
+      entityId: klassId,
+      label: `${klass.grade}${klass.section}`,
+      summary: next == null ? `${teacher.name} stepped down as class teacher.` : `${teacher.name} became class teacher.`,
+      before: { classTeacherId: klass.classTeacherId },
+      after: { classTeacherId: next },
+    });
   }
   res.json({ ok: true });
 }));
@@ -207,7 +344,7 @@ adminRouter.put('/teachers/:id/class-teacher', ah(async (req, res) => {
 adminRouter.get('/students', ah(async (req, res) => {
   const schoolId = requireSchoolId(req);
   const students = await prisma.student.findMany({
-    where: { schoolId },
+    where: { schoolId, ...liveUnless(wantsArchived(req)) },
     orderBy: { name: 'asc' },
     include: { enrollments: { include: { klass: true } }, parentLinks: { include: { parent: true } } },
   });
@@ -248,9 +385,13 @@ adminRouter.post('/students', ah(async (req, res) => {
 adminRouter.get('/classes', ah(async (req, res) => {
   const schoolId = requireSchoolId(req);
   const classes = await prisma.klass.findMany({
-    where: { schoolId },
+    where: { schoolId, ...liveUnless(wantsArchived(req)) },
     orderBy: [{ grade: 'asc' }, { section: 'asc' }],
-    include: { classTeacher: true, _count: { select: { enrollments: true } } },
+    include: {
+      classTeacher: true,
+      // A departed pupil shouldn't still be counted in the class size.
+      _count: { select: { enrollments: { where: { student: { ...LIVE } } } } },
+    },
   });
   res.json(
     classes.map((c) => ({
@@ -261,6 +402,7 @@ adminRouter.get('/classes', ah(async (req, res) => {
       classTeacherId: c.classTeacherId,
       teacher: c.classTeacher?.name ?? null,
       students: c._count.enrollments,
+      archivedAt: c.archivedAt,
     })),
   );
 }));
@@ -276,7 +418,7 @@ adminRouter.post('/classes', ah(async (req, res) => {
   const grade = data.grade.trim();
   const section = data.section.trim().toUpperCase();
 
-  const exists = await prisma.klass.findFirst({ where: { schoolId, grade, section } });
+  const exists = await prisma.klass.findFirst({ where: { schoolId, grade, section, ...LIVE } });
   if (exists) throw new HttpError(409, `Class ${grade}-${section} already exists`);
 
   if (data.classTeacherId != null) {
@@ -289,6 +431,13 @@ adminRouter.post('/classes', ah(async (req, res) => {
   const klass = await prisma.klass.create({
     data: { schoolId, grade, section, classTeacherId: data.classTeacherId ?? null },
   });
+  auditAfter(actorFrom(req), {
+    action: 'CREATE',
+    entity: 'Klass',
+    entityId: klass.id,
+    label: `${grade}-${section}`,
+    after: { grade, section, classTeacherId: klass.classTeacherId },
+  });
   res.status(201).json({
     id: klass.id,
     label: `${klass.grade}-${klass.section}`,
@@ -296,6 +445,76 @@ adminRouter.post('/classes', ah(async (req, res) => {
     section: klass.section,
     classTeacherId: klass.classTeacherId,
   });
+}));
+
+/**
+ * Retire a class once its year is over.
+ *
+ * Its enrolments, exams, marks and diary stay put — the class is how they are
+ * grouped. Move the children on first: a class still holding pupils is a live
+ * class, and archiving it would strand them with nowhere to appear.
+ */
+adminRouter.post('/classes/:id/archive', ah(async (req, res) => {
+  const schoolId = requireSchoolId(req);
+  const { userId } = req.auth!;
+  const id = Number(req.params.id);
+  const klass = await prisma.klass.findFirst({ where: { id, schoolId } });
+  if (!klass) throw new HttpError(404, 'Class not found');
+  if (klass.archivedAt) throw new HttpError(409, 'That class is already archived', { code: 'ALREADY_ARCHIVED' });
+
+  const students = await prisma.enrollment.count({
+    where: { klassId: id, student: { archivedAt: null } },
+  });
+  if (students > 0) {
+    throw new HttpError(409, 'Move its students to another class first.', {
+      code: 'HAS_STUDENTS',
+      usage: { students },
+    });
+  }
+
+  const usage = await klassUsage(schoolId, id);
+  await prisma.$transaction(async (tx) => {
+    await tx.klass.update({
+      where: { id },
+      data: { ...archiveData(id, userId), classTeacherId: null },
+    });
+    const unlinked = await tx.teachingAssignment.deleteMany({ where: { schoolId, klassId: id } });
+    await audit(tx, actorFrom(req), {
+      action: 'ARCHIVE',
+      entity: 'Klass',
+      entityId: id,
+      label: `${klass.grade}-${klass.section}`,
+      summary:
+        `${plural(usage.counts.exams, 'exam')} and ${plural(usage.counts.diary, 'diary entry', 'diary entries')} retained; ` +
+        `${plural(unlinked.count, 'teacher assignment')} removed.`,
+    });
+  });
+  res.json({ ok: true });
+}));
+
+adminRouter.post('/classes/:id/restore', ah(async (req, res) => {
+  const schoolId = requireSchoolId(req);
+  const id = Number(req.params.id);
+  const klass = await prisma.klass.findFirst({ where: { id, schoolId } });
+  if (!klass) throw new HttpError(404, 'Class not found');
+  const clash = await prisma.klass.findFirst({
+    where: { schoolId, grade: klass.grade, section: klass.section, archivedAt: null, id: { not: id } },
+  });
+  if (clash) {
+    throw new HttpError(409, `Class ${klass.grade}-${klass.section} already exists.`, { code: 'NAME_TAKEN' });
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.klass.update({ where: { id }, data: restoreData() });
+    await audit(tx, actorFrom(req), {
+      action: 'RESTORE',
+      entity: 'Klass',
+      entityId: id,
+      label: `${klass.grade}-${klass.section}`,
+      summary: 'No class teacher and no subject assignments — set them up again.',
+    });
+  });
+  res.json({ ok: true });
 }));
 
 // --- Class detail tabs: students, teachers, exams ---
@@ -320,7 +539,7 @@ adminRouter.get('/classes/:id/students', ah(async (req, res) => {
   await requireKlass(schoolId, klassId);
 
   const enrollments = await prisma.enrollment.findMany({
-    where: { klassId },
+    where: { klassId, student: { ...LIVE } },
     include: { student: { include: { parentLinks: { include: { parent: true } } } } },
     orderBy: { student: { name: 'asc' } },
   });
@@ -371,6 +590,13 @@ adminRouter.post('/classes/:id/students', ah(async (req, res) => {
     });
     return s;
   });
+  auditAfter(actorFrom(req), {
+    action: 'CREATE',
+    entity: 'Student',
+    entityId: student.id,
+    label: student.name,
+    after: { admissionNo, klassId, academicYear: data.academicYear, guardianPhone: phone },
+  });
   res.status(201).json({ id: student.id, name: student.name, admissionNo: student.admissionNo });
 }));
 
@@ -406,7 +632,56 @@ adminRouter.put('/students/:id', ah(async (req, res) => {
     }
     if (Object.keys(guardianData).length) {
       await tx.user.update({ where: { id: link.parentUserId }, data: guardianData });
+      // Changing a guardian's mobile moves which phone can log in and read this
+      // child's record, so it is logged inside the transaction, not after it.
+      await audit(tx, actorFrom(req), {
+        action: 'UPDATE',
+        entity: 'User',
+        entityId: link.parentUserId,
+        label: guardianData.name ?? data.guardianName ?? 'Guardian',
+        summary: guardianData.phone ? `Sign-in mobile changed for ${student.name}'s guardian.` : undefined,
+        after: guardianData,
+      });
     }
+  });
+  res.json({ ok: true });
+}));
+
+/** Retire a pupil who has left. Their whole record stays exactly as it was. */
+adminRouter.post('/students/:id/archive', ah(async (req, res) => {
+  const schoolId = requireSchoolId(req);
+  const { userId } = req.auth!;
+  const id = Number(req.params.id);
+  const student = await prisma.student.findFirst({ where: { id, schoolId } });
+  if (!student) throw new HttpError(404, 'Student not found');
+  if (student.archivedAt) throw new HttpError(409, 'That student is already archived', { code: 'ALREADY_ARCHIVED' });
+
+  const usage = await studentUsage(id);
+  await prisma.$transaction(async (tx) => {
+    await tx.student.update({ where: { id }, data: archiveStudentData(userId) });
+    await audit(tx, actorFrom(req), {
+      action: 'ARCHIVE',
+      entity: 'Student',
+      entityId: id,
+      label: student.name,
+      summary:
+        `${plural(usage.counts.marks, 'mark')}, ${plural(usage.counts.attendance, 'attendance record')} and ` +
+        `${plural(usage.counts.leaveRequests, 'leave request')} retained.`,
+    });
+  });
+  res.json({ ok: true });
+}));
+
+adminRouter.post('/students/:id/restore', ah(async (req, res) => {
+  const schoolId = requireSchoolId(req);
+  const id = Number(req.params.id);
+  const student = await prisma.student.findFirst({ where: { id, schoolId } });
+  if (!student) throw new HttpError(404, 'Student not found');
+  await prisma.$transaction(async (tx) => {
+    await tx.student.update({ where: { id }, data: restoreStudentData() });
+    await audit(tx, actorFrom(req), {
+      action: 'RESTORE', entity: 'Student', entityId: id, label: student.name,
+    });
   });
   res.json({ ok: true });
 }));
@@ -416,8 +691,23 @@ adminRouter.delete('/students/:id', ah(async (req, res) => {
   const id = Number(req.params.id);
   const student = await prisma.student.findFirst({ where: { id, schoolId } });
   if (!student) throw new HttpError(404, 'Student not found');
-  // Enrollments, links, attendance and results cascade from Student.
-  await prisma.student.delete({ where: { id } });
+  // A child with marks, a register or a leave history is not deletable — that
+  // record is the point of the platform. Only a row added by mistake, before
+  // anything was written against it, can still be removed outright; anything
+  // else must be archived instead.
+  throwIfInUse(await studentUsage(id), 'student', 'ARCHIVE');
+  await prisma.$transaction(async (tx) => {
+    await tx.parentStudentLink.deleteMany({ where: { studentId: id } });
+    await tx.student.delete({ where: { id } });
+    await audit(tx, actorFrom(req), {
+      action: 'DELETE',
+      entity: 'Student',
+      entityId: id,
+      label: student.name,
+      summary: 'Deleted while no marks, register or leave history existed.',
+      before: { name: student.name, admissionNo: student.admissionNo },
+    });
+  });
   res.status(204).end();
 }));
 
@@ -458,12 +748,7 @@ adminRouter.get('/classes/:id/exams', ah(async (req, res) => {
     include: { subject: true },
     orderBy: { id: 'asc' },
   });
-  res.json(terms.map((t) => ({
-    id: t.id,
-    name: t.name,
-    schoolWide: t.klassId === null,
-    subject: t.subject ? { id: t.subject.id, name: t.subject.name } : null,
-  })));
+  res.json(terms.map(shapeExam));
 }));
 
 const examSchema = z.object({
@@ -487,23 +772,71 @@ adminRouter.post('/classes/:id/exams', ah(async (req, res) => {
   // "All school" fans out to one row per class, so each class owns its copy
   // and can delete or grade it independently.
   const targets = allSchool
-    ? (await prisma.klass.findMany({ where: { schoolId }, select: { id: true } })).map((k) => k.id)
+    ? (await prisma.klass.findMany({ where: { schoolId, ...LIVE }, select: { id: true } })).map((k) => k.id)
     : [klassId];
 
+  // klassKey/subjectKey mirror the nullable columns so the unique index
+  // actually fires — without them `skipDuplicates` silently does nothing.
   await prisma.term.createMany({
-    data: targets.map((kId) => ({ schoolId, klassId: kId, name, subjectId: subjectId ?? null })),
+    data: targets.map((kId) => ({
+      schoolId,
+      klassId: kId,
+      klassKey: kId,
+      name,
+      subjectId: subjectId ?? null,
+      subjectKey: subjectId ?? 0,
+    })),
     skipDuplicates: true,
   });
   const created = await prisma.term.findFirst({
-    where: { schoolId, klassId, name, subjectId: subjectId ?? null },
+    where: { schoolId, klassId, name, subjectId: subjectId ?? null, archivedAt: null },
     include: { subject: true },
   });
+  // `count` is how many classes the exam was fanned out to; the rest is the
+  // copy belonging to the class the admin was looking at.
   res.status(201).json({
-    id: created?.id ?? null,
-    name,
+    ...(created ? shapeExam(created) : { id: null, name, schoolWide: false, subjectScope: 'ALL', subject: null }),
     count: targets.length,
-    subject: created?.subject ? { id: created.subject.id, name: created.subject.name } : null,
   });
+}));
+
+// Retire a graded exam. The marks and report cards behind it stay untouched —
+// this only stops it appearing in the exam list and the grading picker.
+adminRouter.post('/exams/:id/archive', ah(async (req, res) => {
+  const schoolId = requireSchoolId(req);
+  const { userId } = req.auth!;
+  const id = Number(req.params.id);
+  const term = await prisma.term.findFirst({ where: { id, schoolId } });
+  if (!term) throw new HttpError(404, 'Exam not found');
+  if (term.archivedAt) throw new HttpError(409, 'That exam is already archived', { code: 'ALREADY_ARCHIVED' });
+
+  const usage = await examUsage(id);
+  await prisma.$transaction(async (tx) => {
+    await tx.term.update({ where: { id }, data: archiveData(id, userId) });
+    await audit(tx, actorFrom(req), {
+      action: 'ARCHIVE',
+      entity: 'Term',
+      entityId: id,
+      label: term.name,
+      summary: `${plural(usage.counts.marks, 'mark')} and ${plural(usage.counts.reportCards, 'report card')} retained.`,
+    });
+  });
+  res.json({ ok: true });
+}));
+
+adminRouter.post('/exams/:id/restore', ah(async (req, res) => {
+  const schoolId = requireSchoolId(req);
+  const id = Number(req.params.id);
+  const term = await prisma.term.findFirst({ where: { id, schoolId } });
+  if (!term) throw new HttpError(404, 'Exam not found');
+
+  await prisma.$transaction(async (tx) => {
+    await tx.term.update({ where: { id }, data: restoreData() });
+    await audit(tx, actorFrom(req), {
+      action: 'RESTORE', entity: 'Term', entityId: id, label: term.name,
+    });
+  });
+  res.json({ ok: true });
 }));
 
 adminRouter.delete('/exams/:id', ah(async (req, res) => {
@@ -511,7 +844,19 @@ adminRouter.delete('/exams/:id', ah(async (req, res) => {
   const id = Number(req.params.id);
   const term = await prisma.term.findFirst({ where: { id, schoolId } });
   if (!term) throw new HttpError(404, 'Exam not found');
-  await prisma.term.delete({ where: { id } });
+  // Deleting a graded exam used to take every mark and report card with it.
+  throwIfInUse(await examUsage(id), 'exam', 'ARCHIVE');
+  await prisma.$transaction(async (tx) => {
+    await tx.term.delete({ where: { id } });
+    await audit(tx, actorFrom(req), {
+      action: 'DELETE',
+      entity: 'Term',
+      entityId: id,
+      label: term.name,
+      summary: 'Deleted while ungraded — no marks existed.',
+      before: { name: term.name, klassId: term.klassId, subjectId: term.subjectId },
+    });
+  });
   res.status(204).end();
 }));
 
@@ -519,10 +864,10 @@ adminRouter.delete('/exams/:id', ah(async (req, res) => {
 adminRouter.get('/subjects', ah(async (req, res) => {
   const schoolId = requireSchoolId(req);
   const subjects = await prisma.subject.findMany({
-    where: { schoolId },
+    where: { schoolId, ...liveUnless(wantsArchived(req)) },
     orderBy: { name: 'asc' },
   });
-  res.json(subjects.map((s) => ({ id: s.id, name: s.name })));
+  res.json(subjects.map((s) => ({ id: s.id, name: s.name, archivedAt: s.archivedAt })));
 }));
 
 const subjectSchema = z.object({ name: z.string().min(1) });
@@ -545,8 +890,107 @@ adminRouter.put('/subjects/:id', ah(async (req, res) => {
   if (!subject) throw new HttpError(404, 'Subject not found');
   const clash = await prisma.subject.findFirst({ where: { schoolId, name, id: { not: id } } });
   if (clash) throw new HttpError(409, `Subject "${name}" already exists`);
-  const updated = await prisma.subject.update({ where: { id }, data: { name } });
+
+  // Marks and diary entries store the subject's *name*, not its id, so a rename
+  // that only touched the Subject row would strand every historical mark under
+  // the old name — and the grading screen keys on the name, so those marks would
+  // become unreachable. Carry the rename through in the same transaction.
+  // Result is unique on [studentId, termId, subject], so if a student already
+  // has a mark filed under the new name — possible for a subject deleted before
+  // these guards existed — the rename would collide. Say so instead of 500ing.
+  if (subject.name !== name) {
+    const collision = await prisma.result.findFirst({
+      where: { subject: name, term: { schoolId } },
+      select: { id: true },
+    });
+    if (collision) {
+      throw new HttpError(409, `Some marks are already recorded under "${name}". Rename it to something else.`, {
+        code: 'NAME_HAS_HISTORY',
+      });
+    }
+  }
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const row = await tx.subject.update({ where: { id }, data: { name } });
+    if (subject.name !== name) {
+      const marks = await tx.result.updateMany({
+        where: { subject: subject.name, term: { schoolId } },
+        data: { subject: name },
+      });
+      const diary = await tx.diaryEntry.updateMany({
+        where: { schoolId, subject: subject.name },
+        data: { subject: name },
+      });
+      await audit(tx, actorFrom(req), {
+        action: 'UPDATE',
+        entity: 'Subject',
+        entityId: id,
+        label: name,
+        summary: `Renamed; carried through ${plural(marks.count, 'mark')} and ${plural(diary.count, 'diary entry', 'diary entries')}.`,
+        before: { name: subject.name },
+        after: { name },
+      });
+    }
+    return row;
+  });
   res.json({ id: updated.id, name: updated.name });
+}));
+
+// Retire a subject the school no longer teaches. Old marks, exams and diary
+// entries keep naming it; it just stops being offered for new work.
+adminRouter.post('/subjects/:id/archive', ah(async (req, res) => {
+  const schoolId = requireSchoolId(req);
+  const { userId } = req.auth!;
+  const id = Number(req.params.id);
+  const subject = await prisma.subject.findFirst({ where: { id, schoolId } });
+  if (!subject) throw new HttpError(404, 'Subject not found');
+  if (subject.archivedAt) throw new HttpError(409, 'That subject is already archived', { code: 'ALREADY_ARCHIVED' });
+
+  const usage = await subjectUsage(schoolId, id, subject.name);
+  await prisma.$transaction(async (tx) => {
+    await tx.subject.update({ where: { id }, data: archiveData(id, userId) });
+    // Teaching assignments describe the current timetable, not history, so they
+    // go with the subject. Everything historical keeps pointing at the row.
+    const unlinked = await tx.teachingAssignment.deleteMany({ where: { schoolId, subjectId: id } });
+    await audit(tx, actorFrom(req), {
+      action: 'ARCHIVE',
+      entity: 'Subject',
+      entityId: id,
+      label: subject.name,
+      summary:
+        `${plural(usage.counts.marks, 'mark')} and ${plural(usage.counts.exams, 'exam')} retained; ` +
+        `${plural(unlinked.count, 'teacher assignment')} removed.`,
+    });
+  });
+  res.json({ ok: true });
+}));
+
+adminRouter.post('/subjects/:id/restore', ah(async (req, res) => {
+  const schoolId = requireSchoolId(req);
+  const id = Number(req.params.id);
+  const subject = await prisma.subject.findFirst({ where: { id, schoolId } });
+  if (!subject) throw new HttpError(404, 'Subject not found');
+  // A live subject may have taken the name in the meantime.
+  const clash = await prisma.subject.findFirst({
+    where: { schoolId, name: subject.name, archivedAt: null, id: { not: id } },
+  });
+  if (clash) {
+    throw new HttpError(409, `A live subject is already called "${subject.name}". Rename it first.`, {
+      code: 'NAME_TAKEN',
+    });
+  }
+
+  await prisma.$transaction(async (tx) => {
+    await tx.subject.update({ where: { id }, data: restoreData() });
+    await audit(tx, actorFrom(req), {
+      action: 'RESTORE',
+      entity: 'Subject',
+      entityId: id,
+      label: subject.name,
+      summary: 'Teacher assignments are not restored — reassign it to classes.',
+    });
+  });
+  res.json({ ok: true });
 }));
 
 adminRouter.delete('/subjects/:id', ah(async (req, res) => {
@@ -554,7 +998,21 @@ adminRouter.delete('/subjects/:id', ah(async (req, res) => {
   const id = Number(req.params.id);
   const subject = await prisma.subject.findFirst({ where: { id, schoolId } });
   if (!subject) throw new HttpError(404, 'Subject not found');
-  await prisma.subject.delete({ where: { id } });
+  // The worst path in the app before this check existed: deleting a subject
+  // cascaded to its single-subject exams and from there to every mark under
+  // them, school-wide and across every year, with no confirmation.
+  throwIfInUse(await subjectUsage(schoolId, id, subject.name), 'subject', 'ARCHIVE');
+  await prisma.$transaction(async (tx) => {
+    await tx.subject.delete({ where: { id } });
+    await audit(tx, actorFrom(req), {
+      action: 'DELETE',
+      entity: 'Subject',
+      entityId: id,
+      label: subject.name,
+      summary: 'Deleted while unused — nothing referenced it.',
+      before: { name: subject.name },
+    });
+  });
   res.status(204).end();
 }));
 
@@ -730,7 +1188,19 @@ adminRouter.delete('/notices/:id', ah(async (req, res) => {
   const id = Number(req.params.id);
   const notice = await prisma.notice.findFirst({ where: { id, schoolId } });
   if (!notice) throw new HttpError(404, 'Notice not found');
-  await prisma.notice.delete({ where: { id } });
+  // Read receipts go with it, so record how many were on the row.
+  const acks = await prisma.noticeAck.count({ where: { noticeId: id } });
+  await prisma.$transaction(async (tx) => {
+    await tx.notice.delete({ where: { id } });
+    await audit(tx, actorFrom(req), {
+      action: 'DELETE',
+      entity: 'Notice',
+      entityId: id,
+      label: notice.title,
+      summary: `${plural(acks, 'read receipt')} removed with it.`,
+      before: { title: notice.title, body: notice.body },
+    });
+  });
   res.status(204).end();
 }));
 
@@ -834,7 +1304,7 @@ adminRouter.get('/classes/:id/attendance', ah(async (req, res) => {
   const day = dayParam(req);
 
   const enrollments = await prisma.enrollment.findMany({
-    where: { klassId },
+    where: { klassId, student: { ...LIVE } },
     include: { student: { select: { id: true, name: true, admissionNo: true } } },
     orderBy: { student: { name: 'asc' } },
   });
@@ -1029,7 +1499,16 @@ adminRouter.delete('/events/:id', ah(async (req, res) => {
   const id = Number(req.params.id);
   const event = await prisma.event.findFirst({ where: { id, schoolId } });
   if (!event) throw new HttpError(404, 'Event not found');
-  await prisma.event.delete({ where: { id } });
+  await prisma.$transaction(async (tx) => {
+    await tx.event.delete({ where: { id } });
+    await audit(tx, actorFrom(req), {
+      action: 'DELETE',
+      entity: 'Event',
+      entityId: id,
+      label: event.title,
+      before: { title: event.title, date: event.date },
+    });
+  });
   res.status(204).end();
 }));
 

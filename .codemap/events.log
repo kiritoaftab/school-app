@@ -830,3 +830,621 @@
 2026-07-28 20:59:28 | WRITE  | frontend/src/app/ParentApp.tsx           | 1493 |   +607 | dirty
 2026-07-28 20:59:37 | WRITE  | frontend/src/pages/LoginPage.tsx         |  276 |    +29 | dirty
 2026-07-28 20:59:37 | WRITE  | frontend/src/pages/LoginPage.tsx         |  276 |    +29 | dirty
+2026-07-28 21:33:30 | REMOVE | backend/src/routes/platform.ts           |    0 |   -188 | 
+2026-07-28 21:33:30 | REMOVE | backend/src/routes/platform.ts           |    0 |   -188 | 
+2026-07-28 21:33:30 | CREATE | backend/src/routes/platform.ts           |  244 |   +244 | dirty
+2026-07-28 21:33:30 | CREATE | backend/src/routes/platform.ts           |  244 |   +244 | dirty
+2026-07-28 21:33:40 | REMOVE | backend/src/routes/platform.ts           |    0 |   -244 | 
+2026-07-28 21:33:40 | REMOVE | backend/src/routes/platform.ts           |    0 |   -244 | 
+2026-07-28 21:33:40 | CREATE | backend/src/routes/platform.ts           |  246 |   +246 | dirty
+2026-07-28 21:33:40 | CREATE | backend/src/routes/platform.ts           |  246 |   +246 | dirty
+2026-07-28 21:33:50 | REMOVE | backend/src/lib/http.ts                  |    0 |    -16 | 
+2026-07-28 21:33:50 | REMOVE | backend/src/lib/http.ts                  |    0 |    -16 | 
+2026-07-28 21:33:50 | CREATE | backend/src/lib/http.ts                  |   25 |    +25 | dirty
+2026-07-28 21:33:50 | CREATE | backend/src/lib/http.ts                  |   25 |    +25 | dirty
+2026-07-28 21:33:58 | REMOVE | backend/src/app.ts                       |    0 |    -57 | 
+2026-07-28 21:33:58 | REMOVE | backend/src/app.ts                       |    0 |    -57 | 
+2026-07-28 21:33:58 | CREATE | backend/src/app.ts                       |   67 |    +67 | dirty
+2026-07-28 21:33:58 | CREATE | backend/src/app.ts                       |   67 |    +67 | dirty
+2026-07-28 21:34:06 | REMOVE | backend/src/app.ts                       |    0 |    -67 | 
+2026-07-28 21:34:06 | REMOVE | backend/src/app.ts                       |    0 |    -67 | 
+2026-07-28 21:34:06 | CREATE | backend/src/app.ts                       |   68 |    +68 | dirty
+2026-07-28 21:34:06 | CREATE | backend/src/app.ts                       |   68 |    +68 | dirty
+2026-07-28 21:34:33 | CREATE | backend/src/lib/usage.ts                 |   92 |    +92 | 
+2026-07-28 21:34:33 | CREATE | backend/src/lib/usage.ts                 |   92 |    +92 | 
+2026-07-28 21:34:43 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1037 | 
+2026-07-28 21:34:43 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1037 | 
+2026-07-28 21:34:43 | CREATE | backend/src/routes/admin.ts              | 1038 |  +1038 | dirty
+2026-07-28 21:34:43 | CREATE | backend/src/routes/admin.ts              | 1038 |  +1038 | dirty
+2026-07-28 21:34:51 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1038 | 
+2026-07-28 21:34:51 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1038 | 
+2026-07-28 21:34:51 | CREATE | backend/src/routes/admin.ts              | 1044 |  +1044 | dirty
+2026-07-28 21:34:51 | CREATE | backend/src/routes/admin.ts              | 1044 |  +1044 | dirty
+2026-07-28 21:34:59 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1044 | 
+2026-07-28 21:34:59 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1044 | 
+2026-07-28 21:34:59 | CREATE | backend/src/routes/admin.ts              | 1046 |  +1046 | dirty
+2026-07-28 21:34:59 | CREATE | backend/src/routes/admin.ts              | 1046 |  +1046 | dirty
+2026-07-28 21:35:06 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1046 | 
+2026-07-28 21:35:06 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1046 | 
+2026-07-28 21:35:06 | CREATE | backend/src/routes/admin.ts              | 1050 |  +1050 | dirty
+2026-07-28 21:35:06 | CREATE | backend/src/routes/admin.ts              | 1050 |  +1050 | dirty
+2026-07-28 21:35:22 | REMOVE | backend/src/routes/teacher.ts            |    0 |   -693 | 
+2026-07-28 21:35:22 | REMOVE | backend/src/routes/teacher.ts            |    0 |   -693 | 
+2026-07-28 21:35:22 | CREATE | backend/src/routes/teacher.ts            |  701 |   +701 | dirty
+2026-07-28 21:35:22 | CREATE | backend/src/routes/teacher.ts            |  701 |   +701 | dirty
+2026-07-28 21:35:27 | REMOVE | backend/src/routes/teacher.ts            |    0 |   -701 | 
+2026-07-28 21:35:27 | REMOVE | backend/src/routes/teacher.ts            |    0 |   -701 | 
+2026-07-28 21:35:27 | CREATE | backend/src/routes/teacher.ts            |  702 |   +702 | dirty
+2026-07-28 21:35:27 | CREATE | backend/src/routes/teacher.ts            |  702 |   +702 | dirty
+2026-07-28 21:35:36 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1050 | 
+2026-07-28 21:35:36 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1050 | 
+2026-07-28 21:35:36 | CREATE | backend/src/routes/admin.ts              | 1068 |  +1068 | dirty
+2026-07-28 21:35:36 | CREATE | backend/src/routes/admin.ts              | 1068 |  +1068 | dirty
+2026-07-28 21:35:50 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1068 | 
+2026-07-28 21:35:50 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1068 | 
+2026-07-28 21:35:50 | CREATE | backend/src/routes/admin.ts              | 1083 |  +1083 | dirty
+2026-07-28 21:35:50 | CREATE | backend/src/routes/admin.ts              | 1083 |  +1083 | dirty
+2026-07-28 21:36:23 | CREATE | backend/src/lib/exam.ts                  |   45 |    +45 | 
+2026-07-28 21:36:23 | CREATE | backend/src/lib/exam.ts                  |   45 |    +45 | 
+2026-07-28 21:36:30 | REMOVE | backend/src/routes/teacher.ts            |    0 |   -702 | 
+2026-07-28 21:36:30 | REMOVE | backend/src/routes/teacher.ts            |    0 |   -702 | 
+2026-07-28 21:36:30 | CREATE | backend/src/routes/teacher.ts            |  692 |   +692 | dirty
+2026-07-28 21:36:30 | CREATE | backend/src/routes/teacher.ts            |  692 |   +692 | dirty
+2026-07-28 21:36:35 | REMOVE | backend/src/routes/teacher.ts            |    0 |   -692 | 
+2026-07-28 21:36:35 | REMOVE | backend/src/routes/teacher.ts            |    0 |   -692 | 
+2026-07-28 21:36:35 | CREATE | backend/src/routes/teacher.ts            |  693 |   +693 | dirty
+2026-07-28 21:36:35 | CREATE | backend/src/routes/teacher.ts            |  693 |   +693 | dirty
+2026-07-28 21:36:40 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1083 | 
+2026-07-28 21:36:40 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1083 | 
+2026-07-28 21:36:40 | CREATE | backend/src/routes/admin.ts              | 1078 |  +1078 | dirty
+2026-07-28 21:36:40 | CREATE | backend/src/routes/admin.ts              | 1078 |  +1078 | dirty
+2026-07-28 21:36:46 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1078 | 
+2026-07-28 21:36:46 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1078 | 
+2026-07-28 21:36:46 | CREATE | backend/src/routes/admin.ts              | 1079 |  +1079 | dirty
+2026-07-28 21:36:46 | CREATE | backend/src/routes/admin.ts              | 1079 |  +1079 | dirty
+2026-07-28 21:36:55 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1079 | 
+2026-07-28 21:36:55 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1079 | 
+2026-07-28 21:36:55 | CREATE | backend/src/routes/admin.ts              | 1079 |  +1079 | dirty
+2026-07-28 21:36:55 | CREATE | backend/src/routes/admin.ts              | 1079 |  +1079 | dirty
+2026-07-28 21:37:35 | REMOVE | frontend/src/api/client.ts               |    0 |    -26 | 
+2026-07-28 21:37:35 | REMOVE | frontend/src/api/client.ts               |    0 |    -26 | 
+2026-07-28 21:37:35 | CREATE | frontend/src/api/client.ts               |   84 |    +84 | dirty
+2026-07-28 21:37:35 | CREATE | frontend/src/api/client.ts               |   84 |    +84 | dirty
+2026-07-28 21:37:58 | REMOVE | frontend/src/app/kit.tsx                 |    0 |   -464 | 
+2026-07-28 21:37:58 | REMOVE | frontend/src/app/kit.tsx                 |    0 |   -464 | 
+2026-07-28 21:37:58 | CREATE | frontend/src/app/kit.tsx                 |  552 |   +552 | dirty
+2026-07-28 21:37:58 | CREATE | frontend/src/app/kit.tsx                 |  552 |   +552 | dirty
+2026-07-28 21:38:06 | REMOVE | frontend/src/app/kit.tsx                 |    0 |   -552 | 
+2026-07-28 21:38:06 | REMOVE | frontend/src/app/kit.tsx                 |    0 |   -552 | 
+2026-07-28 21:38:06 | CREATE | frontend/src/app/kit.tsx                 |  553 |   +553 | dirty
+2026-07-28 21:38:06 | CREATE | frontend/src/app/kit.tsx                 |  553 |   +553 | dirty
+2026-07-28 21:38:24 | REMOVE | frontend/src/app/Albums.tsx              |    0 |   -719 | 
+2026-07-28 21:38:24 | REMOVE | frontend/src/app/Albums.tsx              |    0 |   -719 | 
+2026-07-28 21:38:24 | CREATE | frontend/src/app/Albums.tsx              |  709 |   +709 | dirty
+2026-07-28 21:38:24 | CREATE | frontend/src/app/Albums.tsx              |  709 |   +709 | dirty
+2026-07-28 21:38:30 | REMOVE | frontend/src/app/Albums.tsx              |    0 |   -709 | 
+2026-07-28 21:38:30 | REMOVE | frontend/src/app/Albums.tsx              |    0 |   -709 | 
+2026-07-28 21:38:30 | CREATE | frontend/src/app/Albums.tsx              |  709 |   +709 | dirty
+2026-07-28 21:38:30 | CREATE | frontend/src/app/Albums.tsx              |  709 |   +709 | dirty
+2026-07-28 21:38:41 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3778 | 
+2026-07-28 21:38:41 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3778 | 
+2026-07-28 21:38:41 | CREATE | frontend/src/app/AdminApp.tsx            | 3776 |  +3776 | dirty
+2026-07-28 21:38:41 | CREATE | frontend/src/app/AdminApp.tsx            | 3776 |  +3776 | dirty
+2026-07-28 21:38:48 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3776 | 
+2026-07-28 21:38:48 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3776 | 
+2026-07-28 21:38:48 | CREATE | frontend/src/app/AdminApp.tsx            | 3774 |  +3774 | dirty
+2026-07-28 21:38:48 | CREATE | frontend/src/app/AdminApp.tsx            | 3774 |  +3774 | dirty
+2026-07-28 21:39:00 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3774 | 
+2026-07-28 21:39:00 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3774 | 
+2026-07-28 21:39:00 | CREATE | frontend/src/app/AdminApp.tsx            | 3772 |  +3772 | dirty
+2026-07-28 21:39:00 | CREATE | frontend/src/app/AdminApp.tsx            | 3772 |  +3772 | dirty
+2026-07-28 21:39:07 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3772 | 
+2026-07-28 21:39:07 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3772 | 
+2026-07-28 21:39:07 | CREATE | frontend/src/app/AdminApp.tsx            | 3772 |  +3772 | dirty
+2026-07-28 21:39:07 | CREATE | frontend/src/app/AdminApp.tsx            | 3772 |  +3772 | dirty
+2026-07-28 21:39:26 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3772 | 
+2026-07-28 21:39:26 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3772 | 
+2026-07-28 21:39:26 | CREATE | frontend/src/app/AdminApp.tsx            | 3774 |  +3774 | dirty
+2026-07-28 21:39:26 | CREATE | frontend/src/app/AdminApp.tsx            | 3774 |  +3774 | dirty
+2026-07-28 21:39:34 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3774 | 
+2026-07-28 21:39:34 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3774 | 
+2026-07-28 21:39:34 | CREATE | frontend/src/app/AdminApp.tsx            | 3782 |  +3782 | dirty
+2026-07-28 21:39:34 | CREATE | frontend/src/app/AdminApp.tsx            | 3782 |  +3782 | dirty
+2026-07-28 21:39:41 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3782 | 
+2026-07-28 21:39:41 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3782 | 
+2026-07-28 21:39:41 | CREATE | frontend/src/app/AdminApp.tsx            | 3780 |  +3780 | dirty
+2026-07-28 21:39:41 | CREATE | frontend/src/app/AdminApp.tsx            | 3780 |  +3780 | dirty
+2026-07-28 21:39:52 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3780 | 
+2026-07-28 21:39:52 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3780 | 
+2026-07-28 21:39:52 | CREATE | frontend/src/app/AdminApp.tsx            | 3798 |  +3798 | dirty
+2026-07-28 21:39:52 | CREATE | frontend/src/app/AdminApp.tsx            | 3798 |  +3798 | dirty
+2026-07-28 21:40:07 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3798 | 
+2026-07-28 21:40:07 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3798 | 
+2026-07-28 21:40:07 | CREATE | frontend/src/app/AdminApp.tsx            | 3801 |  +3801 | dirty
+2026-07-28 21:40:07 | CREATE | frontend/src/app/AdminApp.tsx            | 3801 |  +3801 | dirty
+2026-07-28 21:40:18 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3801 | 
+2026-07-28 21:40:18 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3801 | 
+2026-07-28 21:40:18 | CREATE | frontend/src/app/AdminApp.tsx            | 3793 |  +3793 | dirty
+2026-07-28 21:40:18 | CREATE | frontend/src/app/AdminApp.tsx            | 3793 |  +3793 | dirty
+2026-07-28 21:40:29 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3793 | 
+2026-07-28 21:40:29 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3793 | 
+2026-07-28 21:40:29 | CREATE | frontend/src/app/AdminApp.tsx            | 3792 |  +3792 | dirty
+2026-07-28 21:40:29 | CREATE | frontend/src/app/AdminApp.tsx            | 3792 |  +3792 | dirty
+2026-07-28 21:40:42 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3792 | 
+2026-07-28 21:40:42 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3792 | 
+2026-07-28 21:40:42 | CREATE | frontend/src/app/AdminApp.tsx            | 3790 |  +3790 | dirty
+2026-07-28 21:40:42 | CREATE | frontend/src/app/AdminApp.tsx            | 3790 |  +3790 | dirty
+2026-07-28 21:40:54 | REMOVE | frontend/src/api/admin.ts                |    0 |   -383 | 
+2026-07-28 21:40:54 | REMOVE | frontend/src/api/admin.ts                |    0 |   -383 | 
+2026-07-28 21:40:54 | CREATE | frontend/src/api/admin.ts                |  392 |   +392 | dirty
+2026-07-28 21:40:54 | CREATE | frontend/src/api/admin.ts                |  392 |   +392 | dirty
+2026-07-28 21:40:59 | REMOVE | frontend/src/api/teacher.ts              |    0 |   -220 | 
+2026-07-28 21:40:59 | REMOVE | frontend/src/api/teacher.ts              |    0 |   -220 | 
+2026-07-28 21:40:59 | CREATE | frontend/src/api/teacher.ts              |  223 |   +223 | dirty
+2026-07-28 21:40:59 | CREATE | frontend/src/api/teacher.ts              |  223 |   +223 | dirty
+2026-07-28 21:41:53 | REMOVE | frontend/src/api/client.ts               |    0 |    -84 | 
+2026-07-28 21:41:53 | REMOVE | frontend/src/api/client.ts               |    0 |    -84 | 
+2026-07-28 21:41:53 | CREATE | frontend/src/api/client.ts               |   94 |    +94 | dirty
+2026-07-28 21:41:53 | CREATE | frontend/src/api/client.ts               |   94 |    +94 | dirty
+2026-07-28 21:49:40 | WRITE  | frontend/src/app/AdminApp.tsx            | 3787 |     -3 | dirty
+2026-07-28 21:49:40 | WRITE  | frontend/src/app/AdminApp.tsx            | 3787 |     -3 | dirty
+2026-07-28 21:49:46 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3787 | 
+2026-07-28 21:49:46 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3787 | 
+2026-07-28 21:49:46 | CREATE | frontend/src/app/AdminApp.tsx            | 3787 |  +3787 | dirty
+2026-07-28 21:49:46 | CREATE | frontend/src/app/AdminApp.tsx            | 3787 |  +3787 | dirty
+2026-07-28 21:50:26 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1313 | 
+2026-07-28 21:50:26 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1313 | 
+2026-07-28 21:50:26 | CREATE | frontend/src/app/TeacherApp.tsx          | 1320 |  +1320 | dirty
+2026-07-28 21:50:26 | CREATE | frontend/src/app/TeacherApp.tsx          | 1320 |  +1320 | dirty
+2026-07-28 21:50:36 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1320 | 
+2026-07-28 21:50:36 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1320 | 
+2026-07-28 21:50:36 | CREATE | frontend/src/app/TeacherApp.tsx          | 1321 |  +1321 | dirty
+2026-07-28 21:50:36 | CREATE | frontend/src/app/TeacherApp.tsx          | 1321 |  +1321 | dirty
+2026-07-28 21:50:41 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1321 | 
+2026-07-28 21:50:41 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1321 | 
+2026-07-28 21:50:41 | CREATE | frontend/src/app/TeacherApp.tsx          | 1321 |  +1321 | dirty
+2026-07-28 21:50:41 | CREATE | frontend/src/app/TeacherApp.tsx          | 1321 |  +1321 | dirty
+2026-07-28 21:50:46 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1321 | 
+2026-07-28 21:50:46 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1321 | 
+2026-07-28 21:50:46 | CREATE | frontend/src/app/TeacherApp.tsx          | 1321 |  +1321 | dirty
+2026-07-28 21:50:46 | CREATE | frontend/src/app/TeacherApp.tsx          | 1321 |  +1321 | dirty
+2026-07-28 21:50:51 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1321 | 
+2026-07-28 21:50:51 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1321 | 
+2026-07-28 21:50:51 | CREATE | frontend/src/app/TeacherApp.tsx          | 1322 |  +1322 | dirty
+2026-07-28 21:50:51 | CREATE | frontend/src/app/TeacherApp.tsx          | 1322 |  +1322 | dirty
+2026-07-28 21:51:01 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1322 | 
+2026-07-28 21:51:01 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1322 | 
+2026-07-28 21:51:01 | CREATE | frontend/src/app/TeacherApp.tsx          | 1327 |  +1327 | dirty
+2026-07-28 21:51:01 | CREATE | frontend/src/app/TeacherApp.tsx          | 1327 |  +1327 | dirty
+2026-07-28 21:51:13 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1327 | 
+2026-07-28 21:51:13 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1327 | 
+2026-07-28 21:51:13 | CREATE | frontend/src/app/TeacherApp.tsx          | 1327 |  +1327 | dirty
+2026-07-28 21:51:13 | CREATE | frontend/src/app/TeacherApp.tsx          | 1327 |  +1327 | dirty
+2026-07-28 21:51:23 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1327 | 
+2026-07-28 21:51:23 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1327 | 
+2026-07-28 21:51:23 | CREATE | frontend/src/app/TeacherApp.tsx          | 1328 |  +1328 | dirty
+2026-07-28 21:51:23 | CREATE | frontend/src/app/TeacherApp.tsx          | 1328 |  +1328 | dirty
+2026-07-28 21:52:46 | CREATE | backend/src/lib/audit.ts                 |   84 |    +84 | 
+2026-07-28 21:52:46 | CREATE | backend/src/lib/audit.ts                 |   84 |    +84 | 
+2026-07-28 21:53:01 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1079 | 
+2026-07-28 21:53:01 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1079 | 
+2026-07-28 21:53:01 | CREATE | backend/src/routes/admin.ts              | 1089 |  +1089 | dirty
+2026-07-28 21:53:01 | CREATE | backend/src/routes/admin.ts              | 1089 |  +1089 | dirty
+2026-07-28 21:53:07 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1089 | 
+2026-07-28 21:53:07 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1089 | 
+2026-07-28 21:53:07 | CREATE | backend/src/routes/admin.ts              | 1090 |  +1090 | dirty
+2026-07-28 21:53:07 | CREATE | backend/src/routes/admin.ts              | 1090 |  +1090 | dirty
+2026-07-28 21:53:17 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1090 | 
+2026-07-28 21:53:17 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1090 | 
+2026-07-28 21:53:17 | CREATE | backend/src/routes/admin.ts              | 1099 |  +1099 | dirty
+2026-07-28 21:53:17 | CREATE | backend/src/routes/admin.ts              | 1099 |  +1099 | dirty
+2026-07-28 21:53:25 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1099 | 
+2026-07-28 21:53:25 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1099 | 
+2026-07-28 21:53:25 | CREATE | backend/src/routes/admin.ts              | 1109 |  +1109 | dirty
+2026-07-28 21:53:25 | CREATE | backend/src/routes/admin.ts              | 1109 |  +1109 | dirty
+2026-07-28 21:53:32 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1109 | 
+2026-07-28 21:53:32 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1109 | 
+2026-07-28 21:53:32 | CREATE | backend/src/routes/admin.ts              | 1117 |  +1117 | dirty
+2026-07-28 21:53:32 | CREATE | backend/src/routes/admin.ts              | 1117 |  +1117 | dirty
+2026-07-28 21:53:54 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1117 | 
+2026-07-28 21:53:54 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1117 | 
+2026-07-28 21:53:54 | CREATE | backend/src/routes/admin.ts              | 1129 |  +1129 | dirty
+2026-07-28 21:53:54 | CREATE | backend/src/routes/admin.ts              | 1129 |  +1129 | dirty
+2026-07-28 21:54:01 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1129 | 
+2026-07-28 21:54:01 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1129 | 
+2026-07-28 21:54:01 | CREATE | backend/src/routes/admin.ts              | 1138 |  +1138 | dirty
+2026-07-28 21:54:01 | CREATE | backend/src/routes/admin.ts              | 1138 |  +1138 | dirty
+2026-07-28 21:54:08 | REMOVE | backend/src/routes/teacher.ts            |    0 |   -693 | 
+2026-07-28 21:54:08 | REMOVE | backend/src/routes/teacher.ts            |    0 |   -693 | 
+2026-07-28 21:54:08 | CREATE | backend/src/routes/teacher.ts            |  703 |   +703 | dirty
+2026-07-28 21:54:08 | CREATE | backend/src/routes/teacher.ts            |  703 |   +703 | dirty
+2026-07-28 21:54:15 | REMOVE | backend/src/routes/teacher.ts            |    0 |   -703 | 
+2026-07-28 21:54:15 | REMOVE | backend/src/routes/teacher.ts            |    0 |   -703 | 
+2026-07-28 21:54:15 | CREATE | backend/src/routes/teacher.ts            |  704 |   +704 | dirty
+2026-07-28 21:54:15 | CREATE | backend/src/routes/teacher.ts            |  704 |   +704 | dirty
+2026-07-28 21:54:25 | REMOVE | backend/src/routes/teacher.ts            |    0 |   -704 | 
+2026-07-28 21:54:25 | REMOVE | backend/src/routes/teacher.ts            |    0 |   -704 | 
+2026-07-28 21:54:25 | CREATE | backend/src/routes/teacher.ts            |  713 |   +713 | dirty
+2026-07-28 21:54:25 | CREATE | backend/src/routes/teacher.ts            |  713 |   +713 | dirty
+2026-07-28 21:54:34 | REMOVE | backend/src/routes/platform.ts           |    0 |   -246 | 
+2026-07-28 21:54:34 | REMOVE | backend/src/routes/platform.ts           |    0 |   -246 | 
+2026-07-28 21:54:34 | CREATE | backend/src/routes/platform.ts           |  265 |   +265 | dirty
+2026-07-28 21:54:34 | CREATE | backend/src/routes/platform.ts           |  265 |   +265 | dirty
+2026-07-28 21:54:43 | REMOVE | backend/src/routes/platform.ts           |    0 |   -265 | 
+2026-07-28 21:54:43 | REMOVE | backend/src/routes/platform.ts           |    0 |   -265 | 
+2026-07-28 21:54:44 | CREATE | backend/src/routes/platform.ts           |  267 |   +267 | dirty
+2026-07-28 21:54:44 | CREATE | backend/src/routes/platform.ts           |  267 |   +267 | dirty
+2026-07-28 21:54:49 | REMOVE | backend/src/routes/platform.ts           |    0 |   -267 | 
+2026-07-28 21:54:49 | REMOVE | backend/src/routes/platform.ts           |    0 |   -267 | 
+2026-07-28 21:54:49 | CREATE | backend/src/routes/platform.ts           |  268 |   +268 | dirty
+2026-07-28 21:54:49 | CREATE | backend/src/routes/platform.ts           |  268 |   +268 | dirty
+2026-07-28 21:55:13 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1138 | 
+2026-07-28 21:55:13 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1138 | 
+2026-07-28 21:55:13 | CREATE | backend/src/routes/admin.ts              | 1145 |  +1145 | dirty
+2026-07-28 21:55:13 | CREATE | backend/src/routes/admin.ts              | 1145 |  +1145 | dirty
+2026-07-28 21:55:24 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1145 | 
+2026-07-28 21:55:24 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1145 | 
+2026-07-28 21:55:24 | CREATE | backend/src/routes/admin.ts              | 1158 |  +1158 | dirty
+2026-07-28 21:55:24 | CREATE | backend/src/routes/admin.ts              | 1158 |  +1158 | dirty
+2026-07-28 21:55:34 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1158 | 
+2026-07-28 21:55:34 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1158 | 
+2026-07-28 21:55:34 | CREATE | backend/src/routes/admin.ts              | 1171 |  +1171 | dirty
+2026-07-28 21:55:34 | CREATE | backend/src/routes/admin.ts              | 1171 |  +1171 | dirty
+2026-07-28 21:55:50 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1171 | 
+2026-07-28 21:55:50 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1171 | 
+2026-07-28 21:55:50 | CREATE | backend/src/routes/admin.ts              | 1181 |  +1181 | dirty
+2026-07-28 21:55:50 | CREATE | backend/src/routes/admin.ts              | 1181 |  +1181 | dirty
+2026-07-28 21:56:05 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1181 | 
+2026-07-28 21:56:05 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1181 | 
+2026-07-28 21:56:05 | CREATE | backend/src/routes/admin.ts              | 1188 |  +1188 | dirty
+2026-07-28 21:56:05 | CREATE | backend/src/routes/admin.ts              | 1188 |  +1188 | dirty
+2026-07-28 21:56:13 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1188 | 
+2026-07-28 21:56:13 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1188 | 
+2026-07-28 21:56:13 | CREATE | backend/src/routes/admin.ts              | 1198 |  +1198 | dirty
+2026-07-28 21:56:13 | CREATE | backend/src/routes/admin.ts              | 1198 |  +1198 | dirty
+2026-07-28 21:56:29 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1198 | 
+2026-07-28 21:56:29 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1198 | 
+2026-07-28 21:56:29 | CREATE | backend/src/routes/admin.ts              | 1205 |  +1205 | dirty
+2026-07-28 21:56:29 | CREATE | backend/src/routes/admin.ts              | 1205 |  +1205 | dirty
+2026-07-28 21:56:44 | REMOVE | backend/src/routes/auth.ts               |    0 |   -128 | 
+2026-07-28 21:56:44 | REMOVE | backend/src/routes/auth.ts               |    0 |   -128 | 
+2026-07-28 21:56:44 | CREATE | backend/src/routes/auth.ts               |  137 |   +137 | dirty
+2026-07-28 21:56:44 | CREATE | backend/src/routes/auth.ts               |  137 |   +137 | dirty
+2026-07-28 21:56:55 | REMOVE | backend/src/routes/auth.ts               |    0 |   -137 | 
+2026-07-28 21:56:55 | REMOVE | backend/src/routes/auth.ts               |    0 |   -137 | 
+2026-07-28 21:56:55 | CREATE | backend/src/routes/auth.ts               |  138 |   +138 | dirty
+2026-07-28 21:56:55 | CREATE | backend/src/routes/auth.ts               |  138 |   +138 | dirty
+2026-07-28 21:57:13 | REMOVE | backend/src/routes/platform.ts           |    0 |   -268 | 
+2026-07-28 21:57:13 | REMOVE | backend/src/routes/platform.ts           |    0 |   -268 | 
+2026-07-28 21:57:13 | CREATE | backend/src/routes/platform.ts           |  275 |   +275 | dirty
+2026-07-28 21:57:13 | CREATE | backend/src/routes/platform.ts           |  275 |   +275 | dirty
+2026-07-28 21:57:21 | REMOVE | backend/src/routes/platform.ts           |    0 |   -275 | 
+2026-07-28 21:57:21 | REMOVE | backend/src/routes/platform.ts           |    0 |   -275 | 
+2026-07-28 21:57:21 | CREATE | backend/src/routes/platform.ts           |  283 |   +283 | dirty
+2026-07-28 21:57:21 | CREATE | backend/src/routes/platform.ts           |  283 |   +283 | dirty
+2026-07-28 21:57:27 | REMOVE | backend/src/routes/platform.ts           |    0 |   -283 | 
+2026-07-28 21:57:27 | REMOVE | backend/src/routes/platform.ts           |    0 |   -283 | 
+2026-07-28 21:57:27 | CREATE | backend/src/routes/platform.ts           |  292 |   +292 | dirty
+2026-07-28 21:57:27 | CREATE | backend/src/routes/platform.ts           |  292 |   +292 | dirty
+2026-07-28 21:57:49 | REMOVE | backend/src/routes/gallery.ts            |    0 |   -204 | 
+2026-07-28 21:57:49 | REMOVE | backend/src/routes/gallery.ts            |    0 |   -204 | 
+2026-07-28 21:57:49 | CREATE | backend/src/routes/gallery.ts            |  216 |   +216 | dirty
+2026-07-28 21:57:49 | CREATE | backend/src/routes/gallery.ts            |  216 |   +216 | dirty
+2026-07-28 21:57:55 | REMOVE | backend/src/routes/gallery.ts            |    0 |   -216 | 
+2026-07-28 21:57:55 | REMOVE | backend/src/routes/gallery.ts            |    0 |   -216 | 
+2026-07-28 21:57:55 | CREATE | backend/src/routes/gallery.ts            |  226 |   +226 | dirty
+2026-07-28 21:57:55 | CREATE | backend/src/routes/gallery.ts            |  226 |   +226 | dirty
+2026-07-28 21:58:05 | REMOVE | backend/src/routes/gallery.ts            |    0 |   -226 | 
+2026-07-28 21:58:05 | REMOVE | backend/src/routes/gallery.ts            |    0 |   -226 | 
+2026-07-28 21:58:05 | CREATE | backend/src/routes/gallery.ts            |  227 |   +227 | dirty
+2026-07-28 21:58:05 | CREATE | backend/src/routes/gallery.ts            |  227 |   +227 | dirty
+2026-07-28 22:03:15 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1205 | 
+2026-07-28 22:03:15 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1205 | 
+2026-07-28 22:03:15 | CREATE | backend/src/routes/admin.ts              | 1214 |  +1214 | dirty
+2026-07-28 22:03:15 | CREATE | backend/src/routes/admin.ts              | 1214 |  +1214 | dirty
+2026-07-28 22:03:36 | REMOVE | backend/src/routes/teacher.ts            |    0 |   -713 | 
+2026-07-28 22:03:36 | REMOVE | backend/src/routes/teacher.ts            |    0 |   -713 | 
+2026-07-28 22:03:36 | CREATE | backend/src/routes/teacher.ts            |  715 |   +715 | dirty
+2026-07-28 22:03:36 | CREATE | backend/src/routes/teacher.ts            |  715 |   +715 | dirty
+2026-07-28 22:03:51 | CREATE | backend/src/lib/archive.ts               |   30 |    +30 | 
+2026-07-28 22:03:51 | CREATE | backend/src/lib/archive.ts               |   30 |    +30 | 
+2026-07-28 22:04:03 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1214 | 
+2026-07-28 22:04:03 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1214 | 
+2026-07-28 22:04:03 | CREATE | backend/src/routes/admin.ts              | 1253 |  +1253 | dirty
+2026-07-28 22:04:03 | CREATE | backend/src/routes/admin.ts              | 1253 |  +1253 | dirty
+2026-07-28 22:04:09 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1253 | 
+2026-07-28 22:04:09 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1253 | 
+2026-07-28 22:04:09 | CREATE | backend/src/routes/admin.ts              | 1254 |  +1254 | dirty
+2026-07-28 22:04:09 | CREATE | backend/src/routes/admin.ts              | 1254 |  +1254 | dirty
+2026-07-28 22:04:24 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1254 | 
+2026-07-28 22:04:24 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1254 | 
+2026-07-28 22:04:24 | CREATE | backend/src/routes/admin.ts              | 1311 |  +1311 | dirty
+2026-07-28 22:04:24 | CREATE | backend/src/routes/admin.ts              | 1311 |  +1311 | dirty
+2026-07-28 22:04:43 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1311 | 
+2026-07-28 22:04:43 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1311 | 
+2026-07-28 22:04:43 | CREATE | backend/src/routes/admin.ts              | 1385 |  +1385 | dirty
+2026-07-28 22:04:43 | CREATE | backend/src/routes/admin.ts              | 1385 |  +1385 | dirty
+2026-07-28 22:04:50 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1385 | 
+2026-07-28 22:04:50 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1385 | 
+2026-07-28 22:04:50 | CREATE | backend/src/routes/admin.ts              | 1385 |  +1385 | dirty
+2026-07-28 22:04:50 | CREATE | backend/src/routes/admin.ts              | 1385 |  +1385 | dirty
+2026-07-28 22:05:12 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1385 | 
+2026-07-28 22:05:12 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1385 | 
+2026-07-28 22:05:12 | CREATE | backend/src/routes/admin.ts              | 1455 |  +1455 | dirty
+2026-07-28 22:05:12 | CREATE | backend/src/routes/admin.ts              | 1455 |  +1455 | dirty
+2026-07-28 22:05:40 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1455 | 
+2026-07-28 22:05:40 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1455 | 
+2026-07-28 22:05:40 | CREATE | backend/src/routes/admin.ts              | 1495 |  +1495 | dirty
+2026-07-28 22:05:40 | CREATE | backend/src/routes/admin.ts              | 1495 |  +1495 | dirty
+2026-07-28 22:29:48 | REMOVE | backend/src/routes/auth.ts               |    0 |   -138 | 
+2026-07-28 22:29:48 | REMOVE | backend/src/routes/auth.ts               |    0 |   -138 | 
+2026-07-28 22:29:48 | CREATE | backend/src/routes/auth.ts               |  140 |   +140 | dirty
+2026-07-28 22:29:48 | CREATE | backend/src/routes/auth.ts               |  140 |   +140 | dirty
+2026-07-28 22:29:53 | REMOVE | backend/src/routes/auth.ts               |    0 |   -140 | 
+2026-07-28 22:29:53 | REMOVE | backend/src/routes/auth.ts               |    0 |   -140 | 
+2026-07-28 22:29:53 | CREATE | backend/src/routes/auth.ts               |  142 |   +142 | dirty
+2026-07-28 22:29:53 | CREATE | backend/src/routes/auth.ts               |  142 |   +142 | dirty
+2026-07-28 22:30:23 | REMOVE | backend/src/middleware/auth.ts           |    0 |    -52 | 
+2026-07-28 22:30:23 | REMOVE | backend/src/middleware/auth.ts           |    0 |    -52 | 
+2026-07-28 22:30:23 | CREATE | backend/src/middleware/auth.ts           |   66 |    +66 | dirty
+2026-07-28 22:30:23 | CREATE | backend/src/middleware/auth.ts           |   66 |    +66 | dirty
+2026-07-28 22:30:30 | REMOVE | backend/src/middleware/auth.ts           |    0 |    -66 | 
+2026-07-28 22:30:30 | REMOVE | backend/src/middleware/auth.ts           |    0 |    -66 | 
+2026-07-28 22:30:30 | CREATE | backend/src/middleware/auth.ts           |   67 |    +67 | dirty
+2026-07-28 22:30:30 | CREATE | backend/src/middleware/auth.ts           |   67 |    +67 | dirty
+2026-07-28 22:33:09 | REMOVE | backend/src/middleware/auth.ts           |    0 |    -67 | 
+2026-07-28 22:33:09 | REMOVE | backend/src/middleware/auth.ts           |    0 |    -67 | 
+2026-07-28 22:33:09 | CREATE | backend/src/middleware/auth.ts           |   76 |    +76 | dirty
+2026-07-28 22:33:09 | CREATE | backend/src/middleware/auth.ts           |   76 |    +76 | dirty
+2026-07-28 22:33:39 | REMOVE | backend/src/routes/teacher.ts            |    0 |   -715 | 
+2026-07-28 22:33:39 | REMOVE | backend/src/routes/teacher.ts            |    0 |   -715 | 
+2026-07-28 22:33:39 | CREATE | backend/src/routes/teacher.ts            |  721 |   +721 | dirty
+2026-07-28 22:33:39 | CREATE | backend/src/routes/teacher.ts            |  721 |   +721 | dirty
+2026-07-28 22:33:46 | REMOVE | backend/src/routes/teacher.ts            |    0 |   -721 | 
+2026-07-28 22:33:46 | REMOVE | backend/src/routes/teacher.ts            |    0 |   -721 | 
+2026-07-28 22:33:46 | CREATE | backend/src/routes/teacher.ts            |  722 |   +722 | dirty
+2026-07-28 22:33:46 | CREATE | backend/src/routes/teacher.ts            |  722 |   +722 | dirty
+2026-07-28 22:33:52 | REMOVE | backend/src/routes/teacher.ts            |    0 |   -722 | 
+2026-07-28 22:33:52 | REMOVE | backend/src/routes/teacher.ts            |    0 |   -722 | 
+2026-07-28 22:33:52 | CREATE | backend/src/routes/teacher.ts            |  722 |   +722 | dirty
+2026-07-28 22:33:52 | CREATE | backend/src/routes/teacher.ts            |  722 |   +722 | dirty
+2026-07-28 22:33:59 | REMOVE | backend/src/lib/archive.ts               |    0 |    -30 | 
+2026-07-28 22:33:59 | REMOVE | backend/src/lib/archive.ts               |    0 |    -30 | 
+2026-07-28 22:33:59 | CREATE | backend/src/lib/archive.ts               |   36 |    +36 | 
+2026-07-28 22:33:59 | CREATE | backend/src/lib/archive.ts               |   36 |    +36 | 
+2026-07-28 22:34:11 | REMOVE | backend/src/lib/archive.ts               |    0 |    -36 | 
+2026-07-28 22:34:11 | REMOVE | backend/src/lib/archive.ts               |    0 |    -36 | 
+2026-07-28 22:34:11 | CREATE | backend/src/lib/archive.ts               |   35 |    +35 | 
+2026-07-28 22:34:11 | CREATE | backend/src/lib/archive.ts               |   35 |    +35 | 
+2026-07-28 22:34:17 | REMOVE | backend/src/routes/teacher.ts            |    0 |   -722 | 
+2026-07-28 22:34:17 | REMOVE | backend/src/routes/teacher.ts            |    0 |   -722 | 
+2026-07-28 22:34:17 | CREATE | backend/src/routes/teacher.ts            |  726 |   +726 | dirty
+2026-07-28 22:34:17 | CREATE | backend/src/routes/teacher.ts            |  726 |   +726 | dirty
+2026-07-28 22:34:25 | WRITE  | backend/src/routes/teacher.ts            |  726 |        | dirty
+2026-07-28 22:34:25 | WRITE  | backend/src/routes/teacher.ts            |  726 |        | dirty
+2026-07-28 22:36:18 | WRITE  | backend/src/routes/teacher.ts            |  726 |        | dirty
+2026-07-28 22:36:18 | WRITE  | backend/src/routes/teacher.ts            |  726 |        | dirty
+2026-07-28 22:36:18 | WRITE  | backend/src/routes/admin.ts              | 1495 |        | dirty
+2026-07-28 22:36:18 | WRITE  | backend/src/routes/admin.ts              | 1495 |        | dirty
+2026-07-28 22:36:26 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1495 | 
+2026-07-28 22:36:26 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1495 | 
+2026-07-28 22:36:26 | CREATE | backend/src/routes/admin.ts              | 1505 |  +1505 | dirty
+2026-07-28 22:36:26 | CREATE | backend/src/routes/admin.ts              | 1505 |  +1505 | dirty
+2026-07-28 22:36:35 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1505 | 
+2026-07-28 22:36:35 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1505 | 
+2026-07-28 22:36:35 | CREATE | backend/src/routes/admin.ts              | 1511 |  +1511 | dirty
+2026-07-28 22:36:35 | CREATE | backend/src/routes/admin.ts              | 1511 |  +1511 | dirty
+2026-07-28 22:36:45 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1511 | 
+2026-07-28 22:36:45 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1511 | 
+2026-07-28 22:36:45 | CREATE | backend/src/routes/admin.ts              | 1511 |  +1511 | dirty
+2026-07-28 22:36:45 | CREATE | backend/src/routes/admin.ts              | 1511 |  +1511 | dirty
+2026-07-28 22:37:00 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1511 | 
+2026-07-28 22:37:00 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1511 | 
+2026-07-28 22:37:00 | CREATE | backend/src/routes/admin.ts              | 1516 |  +1516 | dirty
+2026-07-28 22:37:00 | CREATE | backend/src/routes/admin.ts              | 1516 |  +1516 | dirty
+2026-07-28 22:37:10 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1516 | 
+2026-07-28 22:37:10 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1516 | 
+2026-07-28 22:37:10 | CREATE | backend/src/routes/admin.ts              | 1516 |  +1516 | dirty
+2026-07-28 22:37:10 | CREATE | backend/src/routes/admin.ts              | 1516 |  +1516 | dirty
+2026-07-28 22:37:22 | WRITE  | backend/src/routes/admin.ts              | 1516 |        | dirty
+2026-07-28 22:37:22 | WRITE  | backend/src/routes/admin.ts              | 1516 |        | dirty
+2026-07-28 22:37:53 | REMOVE | backend/src/routes/teacher.ts            |    0 |   -726 | 
+2026-07-28 22:37:53 | REMOVE | backend/src/routes/teacher.ts            |    0 |   -726 | 
+2026-07-28 22:37:53 | CREATE | backend/src/routes/teacher.ts            |  739 |   +739 | dirty
+2026-07-28 22:37:53 | CREATE | backend/src/routes/teacher.ts            |  739 |   +739 | dirty
+2026-07-28 22:38:02 | REMOVE | backend/src/routes/teacher.ts            |    0 |   -739 | 
+2026-07-28 22:38:02 | REMOVE | backend/src/routes/teacher.ts            |    0 |   -739 | 
+2026-07-28 22:38:02 | CREATE | backend/src/routes/teacher.ts            |  739 |   +739 | dirty
+2026-07-28 22:38:02 | CREATE | backend/src/routes/teacher.ts            |  739 |   +739 | dirty
+2026-07-28 22:38:08 | REMOVE | backend/src/routes/teacher.ts            |    0 |   -739 | 
+2026-07-28 22:38:08 | REMOVE | backend/src/routes/teacher.ts            |    0 |   -739 | 
+2026-07-28 22:38:08 | CREATE | backend/src/routes/teacher.ts            |  742 |   +742 | dirty
+2026-07-28 22:38:08 | CREATE | backend/src/routes/teacher.ts            |  742 |   +742 | dirty
+2026-07-28 22:38:19 | REMOVE | backend/src/routes/teacher.ts            |    0 |   -742 | 
+2026-07-28 22:38:19 | REMOVE | backend/src/routes/teacher.ts            |    0 |   -742 | 
+2026-07-28 22:38:19 | CREATE | backend/src/routes/teacher.ts            |  744 |   +744 | dirty
+2026-07-28 22:38:19 | CREATE | backend/src/routes/teacher.ts            |  744 |   +744 | dirty
+2026-07-28 22:38:33 | REMOVE | backend/src/routes/teacher.ts            |    0 |   -744 | 
+2026-07-28 22:38:33 | REMOVE | backend/src/routes/teacher.ts            |    0 |   -744 | 
+2026-07-28 22:38:33 | CREATE | backend/src/routes/teacher.ts            |  806 |   +806 | dirty
+2026-07-28 22:38:33 | CREATE | backend/src/routes/teacher.ts            |  806 |   +806 | dirty
+2026-07-28 22:39:00 | WRITE  | frontend/src/api/admin.ts                |  398 |     +6 | dirty
+2026-07-28 22:39:00 | WRITE  | frontend/src/api/admin.ts                |  398 |     +6 | dirty
+2026-07-28 22:39:10 | REMOVE | frontend/src/api/admin.ts                |    0 |   -398 | 
+2026-07-28 22:39:10 | REMOVE | frontend/src/api/admin.ts                |    0 |   -398 | 
+2026-07-28 22:39:10 | CREATE | frontend/src/api/admin.ts                |  442 |   +442 | dirty
+2026-07-28 22:39:10 | CREATE | frontend/src/api/admin.ts                |  442 |   +442 | dirty
+2026-07-28 22:39:22 | WRITE  | frontend/src/api/admin.ts                |  448 |     +6 | dirty
+2026-07-28 22:39:22 | WRITE  | frontend/src/api/admin.ts                |  448 |     +6 | dirty
+2026-07-28 22:39:34 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3787 | 
+2026-07-28 22:39:34 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3787 | 
+2026-07-28 22:39:34 | CREATE | frontend/src/app/AdminApp.tsx            | 3816 |  +3816 | dirty
+2026-07-28 22:39:34 | CREATE | frontend/src/app/AdminApp.tsx            | 3816 |  +3816 | dirty
+2026-07-28 22:39:42 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3816 | 
+2026-07-28 22:39:42 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3816 | 
+2026-07-28 22:39:42 | CREATE | frontend/src/app/AdminApp.tsx            | 3817 |  +3817 | dirty
+2026-07-28 22:39:42 | CREATE | frontend/src/app/AdminApp.tsx            | 3817 |  +3817 | dirty
+2026-07-28 22:40:06 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3817 | 
+2026-07-28 22:40:06 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3817 | 
+2026-07-28 22:40:06 | CREATE | frontend/src/app/AdminApp.tsx            | 3821 |  +3821 | dirty
+2026-07-28 22:40:06 | CREATE | frontend/src/app/AdminApp.tsx            | 3821 |  +3821 | dirty
+2026-07-28 22:40:21 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3821 | 
+2026-07-28 22:40:21 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3821 | 
+2026-07-28 22:40:21 | CREATE | frontend/src/app/AdminApp.tsx            | 3843 |  +3843 | dirty
+2026-07-28 22:40:21 | CREATE | frontend/src/app/AdminApp.tsx            | 3843 |  +3843 | dirty
+2026-07-28 22:40:26 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3843 | 
+2026-07-28 22:40:26 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3843 | 
+2026-07-28 22:40:26 | CREATE | frontend/src/app/AdminApp.tsx            | 3844 |  +3844 | dirty
+2026-07-28 22:40:26 | CREATE | frontend/src/app/AdminApp.tsx            | 3844 |  +3844 | dirty
+2026-07-28 22:40:33 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3844 | 
+2026-07-28 22:40:33 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3844 | 
+2026-07-28 22:40:33 | CREATE | frontend/src/app/AdminApp.tsx            | 3848 |  +3848 | dirty
+2026-07-28 22:40:33 | CREATE | frontend/src/app/AdminApp.tsx            | 3848 |  +3848 | dirty
+2026-07-28 22:40:41 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3848 | 
+2026-07-28 22:40:41 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3848 | 
+2026-07-28 22:40:41 | CREATE | frontend/src/app/AdminApp.tsx            | 3844 |  +3844 | dirty
+2026-07-28 22:40:41 | CREATE | frontend/src/app/AdminApp.tsx            | 3844 |  +3844 | dirty
+2026-07-28 22:40:46 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3844 | 
+2026-07-28 22:40:46 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3844 | 
+2026-07-28 22:40:46 | CREATE | frontend/src/app/AdminApp.tsx            | 3847 |  +3847 | dirty
+2026-07-28 22:40:46 | CREATE | frontend/src/app/AdminApp.tsx            | 3847 |  +3847 | dirty
+2026-07-28 22:41:17 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3847 | 
+2026-07-28 22:41:17 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3847 | 
+2026-07-28 22:41:17 | CREATE | frontend/src/app/AdminApp.tsx            | 3849 |  +3849 | dirty
+2026-07-28 22:41:17 | CREATE | frontend/src/app/AdminApp.tsx            | 3849 |  +3849 | dirty
+2026-07-28 22:42:09 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3849 | 
+2026-07-28 22:42:09 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3849 | 
+2026-07-28 22:42:09 | CREATE | frontend/src/app/AdminApp.tsx            | 3870 |  +3870 | dirty
+2026-07-28 22:42:09 | CREATE | frontend/src/app/AdminApp.tsx            | 3870 |  +3870 | dirty
+2026-07-28 22:42:17 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3870 | 
+2026-07-28 22:42:17 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3870 | 
+2026-07-28 22:42:17 | CREATE | frontend/src/app/AdminApp.tsx            | 3873 |  +3873 | dirty
+2026-07-28 22:42:17 | CREATE | frontend/src/app/AdminApp.tsx            | 3873 |  +3873 | dirty
+2026-07-28 22:42:28 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3873 | 
+2026-07-28 22:42:28 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3873 | 
+2026-07-28 22:42:28 | CREATE | frontend/src/app/AdminApp.tsx            | 3875 |  +3875 | dirty
+2026-07-28 22:42:28 | CREATE | frontend/src/app/AdminApp.tsx            | 3875 |  +3875 | dirty
+2026-07-28 22:42:40 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3875 | 
+2026-07-28 22:42:40 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3875 | 
+2026-07-28 22:42:40 | CREATE | frontend/src/app/AdminApp.tsx            | 3875 |  +3875 | dirty
+2026-07-28 22:42:40 | CREATE | frontend/src/app/AdminApp.tsx            | 3875 |  +3875 | dirty
+2026-07-28 22:42:45 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3875 | 
+2026-07-28 22:42:45 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3875 | 
+2026-07-28 22:42:45 | CREATE | frontend/src/app/AdminApp.tsx            | 3875 |  +3875 | dirty
+2026-07-28 22:42:45 | CREATE | frontend/src/app/AdminApp.tsx            | 3875 |  +3875 | dirty
+2026-07-28 22:42:57 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3875 | 
+2026-07-28 22:42:57 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3875 | 
+2026-07-28 22:42:57 | CREATE | frontend/src/app/AdminApp.tsx            | 3879 |  +3879 | dirty
+2026-07-28 22:42:57 | CREATE | frontend/src/app/AdminApp.tsx            | 3879 |  +3879 | dirty
+2026-07-28 22:43:08 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3879 | 
+2026-07-28 22:43:08 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3879 | 
+2026-07-28 22:43:08 | CREATE | frontend/src/app/AdminApp.tsx            | 3882 |  +3882 | dirty
+2026-07-28 22:43:08 | CREATE | frontend/src/app/AdminApp.tsx            | 3882 |  +3882 | dirty
+2026-07-28 22:43:15 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3882 | 
+2026-07-28 22:43:15 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3882 | 
+2026-07-28 22:43:15 | CREATE | frontend/src/app/AdminApp.tsx            | 3884 |  +3884 | dirty
+2026-07-28 22:43:15 | CREATE | frontend/src/app/AdminApp.tsx            | 3884 |  +3884 | dirty
+2026-07-28 22:43:24 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3884 | 
+2026-07-28 22:43:24 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3884 | 
+2026-07-28 22:43:24 | CREATE | frontend/src/app/AdminApp.tsx            | 3884 |  +3884 | dirty
+2026-07-28 22:43:24 | CREATE | frontend/src/app/AdminApp.tsx            | 3884 |  +3884 | dirty
+2026-07-28 22:43:35 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3884 | 
+2026-07-28 22:43:35 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3884 | 
+2026-07-28 22:43:35 | CREATE | frontend/src/app/AdminApp.tsx            | 3884 |  +3884 | dirty
+2026-07-28 22:43:35 | CREATE | frontend/src/app/AdminApp.tsx            | 3884 |  +3884 | dirty
+2026-07-28 22:43:49 | WRITE  | frontend/src/app/AdminApp.tsx            | 3884 |        | dirty
+2026-07-28 22:43:49 | WRITE  | frontend/src/app/AdminApp.tsx            | 3884 |        | dirty
+2026-07-28 22:44:03 | WRITE  | frontend/src/app/AdminApp.tsx            | 3885 |     +1 | dirty
+2026-07-28 22:44:03 | WRITE  | frontend/src/app/AdminApp.tsx            | 3885 |     +1 | dirty
+2026-07-28 22:44:21 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3885 | 
+2026-07-28 22:44:21 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3885 | 
+2026-07-28 22:44:21 | CREATE | frontend/src/app/AdminApp.tsx            | 3904 |  +3904 | dirty
+2026-07-28 22:44:21 | CREATE | frontend/src/app/AdminApp.tsx            | 3904 |  +3904 | dirty
+2026-07-28 22:44:28 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3904 | 
+2026-07-28 22:44:28 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3904 | 
+2026-07-28 22:44:28 | CREATE | frontend/src/app/AdminApp.tsx            | 3918 |  +3918 | dirty
+2026-07-28 22:44:28 | CREATE | frontend/src/app/AdminApp.tsx            | 3918 |  +3918 | dirty
+2026-07-28 22:44:33 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3918 | 
+2026-07-28 22:44:33 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3918 | 
+2026-07-28 22:44:33 | CREATE | frontend/src/app/AdminApp.tsx            | 3920 |  +3920 | dirty
+2026-07-28 22:44:33 | CREATE | frontend/src/app/AdminApp.tsx            | 3920 |  +3920 | dirty
+2026-07-28 22:44:55 | WRITE  | frontend/src/app/AdminApp.tsx            | 3921 |     +1 | dirty
+2026-07-28 22:44:55 | WRITE  | frontend/src/app/AdminApp.tsx            | 3921 |     +1 | dirty
+2026-07-28 22:45:02 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3921 | 
+2026-07-28 22:45:02 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3921 | 
+2026-07-28 22:45:02 | CREATE | frontend/src/app/AdminApp.tsx            | 3930 |  +3930 | dirty
+2026-07-28 22:45:02 | CREATE | frontend/src/app/AdminApp.tsx            | 3930 |  +3930 | dirty
+2026-07-28 22:45:11 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3930 | 
+2026-07-28 22:45:11 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3930 | 
+2026-07-28 22:45:11 | CREATE | frontend/src/app/AdminApp.tsx            | 3940 |  +3940 | dirty
+2026-07-28 22:45:11 | CREATE | frontend/src/app/AdminApp.tsx            | 3940 |  +3940 | dirty
+2026-07-28 22:45:31 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3940 | 
+2026-07-28 22:45:31 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3940 | 
+2026-07-28 22:45:31 | CREATE | frontend/src/app/AdminApp.tsx            | 3947 |  +3947 | dirty
+2026-07-28 22:45:31 | CREATE | frontend/src/app/AdminApp.tsx            | 3947 |  +3947 | dirty
+2026-07-28 22:45:50 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3947 | 
+2026-07-28 22:45:50 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3947 | 
+2026-07-28 22:45:50 | CREATE | frontend/src/app/AdminApp.tsx            | 3949 |  +3949 | dirty
+2026-07-28 22:45:50 | CREATE | frontend/src/app/AdminApp.tsx            | 3949 |  +3949 | dirty
+2026-07-28 22:46:04 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3949 | 
+2026-07-28 22:46:04 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3949 | 
+2026-07-28 22:46:04 | CREATE | frontend/src/app/AdminApp.tsx            | 3950 |  +3950 | dirty
+2026-07-28 22:46:04 | CREATE | frontend/src/app/AdminApp.tsx            | 3950 |  +3950 | dirty
+2026-07-28 22:46:16 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3950 | 
+2026-07-28 22:46:16 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3950 | 
+2026-07-28 22:46:16 | CREATE | frontend/src/app/AdminApp.tsx            | 3954 |  +3954 | dirty
+2026-07-28 22:46:16 | CREATE | frontend/src/app/AdminApp.tsx            | 3954 |  +3954 | dirty
+2026-07-28 22:46:23 | WRITE  | frontend/src/app/TeacherApp.tsx          | 1328 |        | dirty
+2026-07-28 22:46:23 | WRITE  | frontend/src/app/TeacherApp.tsx          | 1328 |        | dirty
+2026-07-28 22:46:41 | REMOVE | frontend/src/api/teacher.ts              |    0 |   -223 | 
+2026-07-28 22:46:41 | REMOVE | frontend/src/api/teacher.ts              |    0 |   -223 | 
+2026-07-28 22:46:41 | CREATE | frontend/src/api/teacher.ts              |  253 |   +253 | dirty
+2026-07-28 22:46:41 | CREATE | frontend/src/api/teacher.ts              |  253 |   +253 | dirty
+2026-07-28 22:46:57 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1328 | 
+2026-07-28 22:46:57 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1328 | 
+2026-07-28 22:46:57 | CREATE | frontend/src/app/TeacherApp.tsx          | 1344 |  +1344 | dirty
+2026-07-28 22:46:57 | CREATE | frontend/src/app/TeacherApp.tsx          | 1344 |  +1344 | dirty
+2026-07-28 22:47:06 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1344 | 
+2026-07-28 22:47:06 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1344 | 
+2026-07-28 22:47:06 | CREATE | frontend/src/app/TeacherApp.tsx          | 1348 |  +1348 | dirty
+2026-07-28 22:47:06 | CREATE | frontend/src/app/TeacherApp.tsx          | 1348 |  +1348 | dirty
+2026-07-28 22:47:13 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1348 | 
+2026-07-28 22:47:13 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1348 | 
+2026-07-28 22:47:13 | CREATE | frontend/src/app/TeacherApp.tsx          | 1348 |  +1348 | dirty
+2026-07-28 22:47:13 | CREATE | frontend/src/app/TeacherApp.tsx          | 1348 |  +1348 | dirty
+2026-07-28 22:47:27 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1348 | 
+2026-07-28 22:47:27 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1348 | 
+2026-07-28 22:47:28 | CREATE | frontend/src/app/TeacherApp.tsx          | 1349 |  +1349 | dirty
+2026-07-28 22:47:28 | CREATE | frontend/src/app/TeacherApp.tsx          | 1349 |  +1349 | dirty
+2026-07-28 22:47:49 | WRITE  | frontend/src/app/TeacherApp.tsx          | 1359 |    +10 | dirty
+2026-07-28 22:47:49 | WRITE  | frontend/src/app/TeacherApp.tsx          | 1359 |    +10 | dirty
+2026-07-28 22:48:04 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3954 | 
+2026-07-28 22:48:04 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3954 | 
+2026-07-28 22:48:04 | CREATE | frontend/src/app/AdminApp.tsx            | 3963 |  +3963 | dirty
+2026-07-28 22:48:04 | CREATE | frontend/src/app/AdminApp.tsx            | 3963 |  +3963 | dirty
+2026-07-28 22:48:48 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3963 | 
+2026-07-28 22:48:48 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3963 | 
+2026-07-28 22:48:48 | CREATE | frontend/src/app/AdminApp.tsx            | 3963 |  +3963 | dirty
+2026-07-28 22:48:48 | CREATE | frontend/src/app/AdminApp.tsx            | 3963 |  +3963 | dirty
+2026-07-28 22:48:55 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3963 | 
+2026-07-28 22:48:55 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3963 | 
+2026-07-28 22:48:55 | CREATE | frontend/src/app/AdminApp.tsx            | 3980 |  +3980 | dirty
+2026-07-28 22:48:55 | CREATE | frontend/src/app/AdminApp.tsx            | 3980 |  +3980 | dirty
+2026-07-28 22:49:00 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3980 | 
+2026-07-28 22:49:00 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3980 | 
+2026-07-28 22:49:00 | CREATE | frontend/src/app/AdminApp.tsx            | 3981 |  +3981 | dirty
+2026-07-28 22:49:00 | CREATE | frontend/src/app/AdminApp.tsx            | 3981 |  +3981 | dirty
+2026-07-28 23:55:14 | REMOVE | backend/src/lib/usage.ts                 |    0 |    -92 | 
+2026-07-28 23:55:14 | REMOVE | backend/src/lib/usage.ts                 |    0 |    -92 | 
+2026-07-28 23:55:14 | CREATE | backend/src/lib/usage.ts                 |   97 |    +97 | 
+2026-07-28 23:55:14 | CREATE | backend/src/lib/usage.ts                 |   97 |    +97 | 
+2026-07-28 23:55:28 | WRITE  | backend/src/routes/admin.ts              | 1516 |        | dirty
+2026-07-28 23:55:28 | WRITE  | backend/src/routes/admin.ts              | 1516 |        | dirty
+2026-07-28 23:55:40 | REMOVE | backend/src/routes/gallery.ts            |    0 |   -227 | 
+2026-07-28 23:55:40 | REMOVE | backend/src/routes/gallery.ts            |    0 |   -227 | 
+2026-07-28 23:55:40 | CREATE | backend/src/routes/gallery.ts            |  227 |   +227 | dirty
+2026-07-28 23:55:40 | CREATE | backend/src/routes/gallery.ts            |  227 |   +227 | dirty
+2026-07-28 23:55:45 | REMOVE | backend/src/routes/gallery.ts            |    0 |   -227 | 
+2026-07-28 23:55:45 | REMOVE | backend/src/routes/gallery.ts            |    0 |   -227 | 
+2026-07-28 23:55:45 | CREATE | backend/src/routes/gallery.ts            |  228 |   +228 | dirty
+2026-07-28 23:55:45 | CREATE | backend/src/routes/gallery.ts            |  228 |   +228 | dirty

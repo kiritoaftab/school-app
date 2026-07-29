@@ -1,4 +1,5 @@
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import { useState } from 'react';
 import { GLYPH } from './data';
 
 export function cx(...parts: (string | false | null | undefined)[]) {
@@ -174,6 +175,94 @@ export function InfoNote({
       </span>
       <div className="text-[11.5px] leading-[1.5]">{children}</div>
     </div>
+  );
+}
+
+/**
+ * Destructive actions arm on the first tap and fire on the second.
+ *
+ * Deletes used to go through the moment you touched them, and some of them took
+ * marks or a child's whole record with them. The second tap is the cheapest
+ * possible guard, and it disarms on blur so a stray tap doesn't stay loaded.
+ */
+export function ConfirmIconButton({
+  label,
+  disabled,
+  onConfirm,
+  className,
+  children = '×',
+}: {
+  label: string;
+  disabled?: boolean;
+  onConfirm: () => void;
+  className?: string;
+  children?: ReactNode;
+}) {
+  const [armed, setArmed] = useState(false);
+  return (
+    <button
+      disabled={disabled}
+      aria-label={armed ? `Tap again to remove ${label}` : `Remove ${label}`}
+      onBlur={() => setArmed(false)}
+      onClick={(e) => {
+        e.stopPropagation();
+        if (armed) {
+          setArmed(false);
+          onConfirm();
+        } else {
+          setArmed(true);
+        }
+      }}
+      className={cx(
+        'grid place-items-center font-bold leading-none disabled:opacity-60 transition-colors',
+        armed && 'bg-danger text-white',
+        className,
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
+/** The wide-bar equivalent of {@link ConfirmIconButton}. */
+export function ConfirmTextButton({
+  idle,
+  armed: armedLabel,
+  busy,
+  busyLabel,
+  disabled,
+  onConfirm,
+  className,
+}: {
+  idle: string;
+  armed: string;
+  busy?: boolean;
+  busyLabel?: string;
+  disabled?: boolean;
+  onConfirm: () => void;
+  className?: string;
+}) {
+  const [armed, setArmed] = useState(false);
+  return (
+    <button
+      disabled={disabled || busy}
+      onBlur={() => setArmed(false)}
+      onClick={() => {
+        if (armed) {
+          setArmed(false);
+          onConfirm();
+        } else {
+          setArmed(true);
+        }
+      }}
+      className={cx(
+        'w-full h-11 rounded-xl text-[13px] font-semibold disabled:opacity-60 transition-colors',
+        armed ? 'bg-danger text-white' : 'bg-[#f6ecec] text-danger',
+        className,
+      )}
+    >
+      {busy ? (busyLabel ?? 'Working…') : armed ? armedLabel : idle}
+    </button>
   );
 }
 
