@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import type { Role } from '@prisma/client';
 import { z } from 'zod';
 import { prisma } from '../db.js';
 import { ah, HttpError } from '../lib/http.js';
@@ -15,6 +16,36 @@ import {
 import { config } from '../config.js';
 
 export const authRouter = Router();
+
+/**
+ * One row of the "which of my profiles am I using" list.
+ *
+ * A phone can hold several accounts — the unique key is [schoolId, phone, role]
+ * — so the same person may be a PARENT at two schools, or a parent at one and
+ * an admin at another. Every surface that offers a choice between them (the
+ * login picker, the in-app switcher) speaks this shape.
+ */
+type ProfileUser = {
+  id: number;
+  name: string;
+  phone: string;
+  role: Role;
+  schoolId: number | null;
+  school: { id: number; name: string; logo: string | null } | null;
+};
+
+function toProfile(user: ProfileUser) {
+  return {
+    id: user.id,
+    name: user.name,
+    phone: user.phone,
+    role: user.role,
+    schoolId: user.schoolId,
+    school: user.school
+      ? { id: user.school.id, name: user.school.name, logo: user.school.logo }
+      : null,
+  };
+}
 
 const requestSchema = z.object({
   phone: z.string().min(6),
@@ -86,14 +117,7 @@ authRouter.post(
 
     const accounts = users.map((user) => ({
       token: signToken({ userId: user.id, role: user.role, schoolId: user.schoolId }),
-      id: user.id,
-      name: user.name,
-      phone: user.phone,
-      role: user.role,
-      schoolId: user.schoolId,
-      school: user.school
-        ? { id: user.school.id, name: user.school.name, logo: user.school.logo }
-        : null,
+      ...toProfile(user),
     }));
 
     // One row per account the OTP unlocked. The phone proves the person, so
@@ -106,6 +130,96 @@ authRouter.post(
     }
 
     res.json({ accounts });
+  }),
+);
+
+/**
+ * Every profile reachable from the signed-in one, so the app can offer a
+ * switcher instead of making a two-school parent sign out and back in.
+ *
+ * Read live rather than from the login response: a school added after the
+ * current token was minted should appear without a fresh OTP, and one the
+ * parent was removed from should disappear.
+ */
+authRouter.get(
+  '/profiles',
+  requireAuth,
+  ah(async (req, res) => {
+    const { userId } = req.auth!;
+    const me = await prisma.user.findUnique({ where: { id: userId }, select: { phone: true } });
+    if (!me) throw new HttpError(404, 'User not found');
+
+    const users = await prisma.user.findMany({
+      where: { phone: me.phone, archivedAt: null },
+      include: { school: true },
+      orderBy: { id: 'asc' },
+    });
+
+    res.json({
+      profiles: users.map((user) => ({ ...toProfile(user), current: user.id === userId })),
+    });
+  }),
+);
+
+const switchSchema = z.object({
+  userId: z.number().int().positive(),
+});
+
+/**
+ * Trade the current token for one scoped to another profile on the same phone.
+ *
+ * The phone is the whole authorisation: the OTP proved the number, and every
+ * live account on it belongs to this person — the same rule `verify-otp` uses
+ * when it hands out a token per account. So this mints no new trust, it only
+ * saves the round trip through logout and a second SMS.
+ */
+authRouter.post(
+  '/switch',
+  requireAuth,
+  ah(async (req, res) => {
+    const { userId: targetId } = switchSchema.parse(req.body);
+    const current = req.auth!;
+
+    const me = await prisma.user.findUnique({
+      where: { id: current.userId },
+      select: { phone: true, name: true },
+    });
+    if (!me) throw new HttpError(404, 'User not found');
+
+    const target = await prisma.user.findUnique({
+      where: { id: targetId },
+      include: { school: true },
+    });
+    // Same 404 for "no such user", "someone else's account" and "archived":
+    // a caller poking at ids should not learn which of the three it hit.
+    if (!target || target.phone !== me.phone || target.archivedAt) {
+      throw new HttpError(404, 'Profile not available');
+    }
+
+    const token = signToken({
+      userId: target.id,
+      role: target.role,
+      schoolId: target.schoolId,
+    });
+
+    auditAfter(
+      {
+        userId: target.id,
+        role: target.role,
+        schoolId: target.schoolId,
+        ip: req.ip,
+        name: target.name,
+      },
+      {
+        action: 'LOGIN',
+        entity: 'User',
+        entityId: target.id,
+        label: target.name,
+        summary: `Switched profile from ${current.role} (school ${current.schoolId ?? '—'})`,
+      },
+    );
+
+    res.json({ token, ...toProfile(target) });
   }),
 );
 
@@ -124,14 +238,7 @@ authRouter.get(
     if (!user) throw new HttpError(404, 'User not found');
 
     res.json({
-      id: user.id,
-      name: user.name,
-      phone: user.phone,
-      role: user.role,
-      schoolId: user.schoolId,
-      school: user.school
-        ? { id: user.school.id, name: user.school.name, logo: user.school.logo }
-        : null,
+      ...toProfile(user),
       students: user.parentLinks.map((l) => ({
         id: l.student.id,
         name: l.student.name,

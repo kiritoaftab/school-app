@@ -30,6 +30,7 @@ import {
   useAlbums,
 } from "./Albums";
 import { AccountSheet } from "./AccountSheet";
+import { ProfileList } from "./ProfileList";
 import {
   GLYPH,
   SCHOOL,
@@ -148,11 +149,12 @@ function toNotice(n: ParentNotice, schoolName: string): Notice {
 }
 
 export function ParentApp() {
-  const { user, logout } = useAuth();
+  const { user, logout, profiles, switchProfile } = useAuth();
   const navigate = useNavigate();
 
   const [screen, setScreen] = useState<Screen>("home");
   const [acctOpen, setAcctOpen] = useState(false);
+  const [switchErr, setSwitchErr] = useState("");
   // The school gallery, read-only for parents.
   const photos = useAlbums("/parent");
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -411,6 +413,27 @@ export function ParentApp() {
                 </div>
               );
             })}
+
+            {/* A parent with children at two schools has two accounts on one
+                number. Switching schools belongs next to switching children —
+                it is the same question to them — not behind a re-login. */}
+            {profiles.length > 1 && (
+              <>
+                <div className="mt-4 mb-2.5 pt-4 border-t border-line text-[10px] tracking-[0.13em] uppercase font-semibold text-muted">
+                  Your schools
+                </div>
+                <ProfileList
+                  profiles={profiles}
+                  onSwitch={switchProfile}
+                  onError={setSwitchErr}
+                />
+                {switchErr && (
+                  <div className="text-[11.5px] text-danger font-semibold mt-1">
+                    {switchErr}
+                  </div>
+                )}
+              </>
+            )}
           </BottomSheet>
           <AccountSheet
             open={acctOpen}
@@ -440,6 +463,7 @@ export function ParentApp() {
           events={calEvents}
           go={go}
           openSwitcher={() => setPickerOpen(true)}
+          profileCount={profiles.length}
           openNotice={(id) => {
             setActiveNoticeId(id);
             go("notice");
@@ -743,9 +767,11 @@ function HomeParent({
   go,
   openSwitcher,
   openNotice,
+  profileCount,
 }: {
   student: ParentStudent | null;
   childCount: number;
+  profileCount: number;
   diary: ParentDiaryEntry[];
   doneSet: Set<number>;
   toggleDone: (entryId: number) => void;
@@ -769,16 +795,16 @@ function HomeParent({
   const greeting =
     hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
   const name = student?.name ?? "Your child";
+  // One child at each of two schools is still something to switch between, so
+  // the chip opens on either count — not on children alone.
+  const canSwitch = childCount > 1 || profileCount > 1;
 
   return (
     <div className="px-[15px] pt-4 pb-6">
       <div className="flex items-center gap-2.5 mb-4">
         <div
-          onClick={childCount > 1 ? openSwitcher : undefined}
-          className={cx(
-            "flex items-center gap-2.5",
-            childCount > 1 && "cursor-pointer",
-          )}
+          onClick={canSwitch ? openSwitcher : undefined}
+          className={cx("flex items-center gap-2.5", canSwitch && "cursor-pointer")}
         >
           <div
             className="w-[38px] h-[38px] rounded-[13px] grid place-items-center text-green font-bold text-[15px] flex-none"
@@ -792,7 +818,7 @@ function HomeParent({
               {student?.klass ?? "—"}
             </small>
           </div>
-          {childCount > 1 && (
+          {canSwitch && (
             <span className="text-[#9aa39b] flex-none">
               <Glyph d={GLYPH.chevronDown} size={16} stroke={2.2} />
             </span>
