@@ -58,7 +58,10 @@ export interface ParentTerm {
   id: number;
   name: string;
   overallPct: number;
+  /** Position in the class for this exam, ties sharing a place (1, 2, 2, 4). */
   rank: number | null;
+  /** How many classmates the rank was drawn from. Null when it can't be worked out. */
+  classSize: number | null;
 }
 
 export async function listStudentTerms(studentId: number): Promise<ParentTerm[]> {
@@ -140,7 +143,10 @@ export async function listEvents(): Promise<ParentEvent[]> {
 export interface StudentResults {
   term: { id: number; name: string } | null;
   overallPct: number | null;
+  /** Position in the class for this exam, ties sharing a place (1, 2, 2, 4). */
   rank: number | null;
+  /** How many classmates the rank was drawn from. Null when it can't be worked out. */
+  classSize: number | null;
   teacherComment: string | null;
   subjects: { subject: string; score: number; maxScore: number; grade: string }[];
 }

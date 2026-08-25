@@ -1,126 +1,10 @@
 {
-  "updated_at": "2026-08-25T09:52:28.499643+05:30",
-  "file_count": 118,
+  "updated_at": "2026-08-25T10:22:27.743546+05:30",
+  "file_count": 119,
   "hubs": [],
   "importers": {},
   "imports": {},
   "recent_events": [
-    {
-      "time": "2026-08-25T09:25:27.186768+05:30",
-      "op": "REMOVE",
-      "path": "frontend/src/app/AdminApp.tsx",
-      "lang": "typescript",
-      "delta": -4079,
-      "size_delta": -139850
-    },
-    {
-      "time": "2026-08-25T09:25:27.187842+05:30",
-      "op": "CREATE",
-      "path": "frontend/src/app/AdminApp.tsx",
-      "lang": "typescript",
-      "lines": 4079,
-      "delta": 4079,
-      "size_delta": 139850,
-      "dirty": true
-    },
-    {
-      "time": "2026-08-25T09:25:31.675857+05:30",
-      "op": "REMOVE",
-      "path": "frontend/src/app/AdminApp.tsx",
-      "lang": "typescript",
-      "delta": -4079,
-      "size_delta": -139850
-    },
-    {
-      "time": "2026-08-25T09:25:31.676838+05:30",
-      "op": "CREATE",
-      "path": "frontend/src/app/AdminApp.tsx",
-      "lang": "typescript",
-      "lines": 4079,
-      "delta": 4079,
-      "size_delta": 139848,
-      "dirty": true
-    },
-    {
-      "time": "2026-08-25T09:25:35.207318+05:30",
-      "op": "REMOVE",
-      "path": "frontend/src/app/AdminApp.tsx",
-      "lang": "typescript",
-      "delta": -4079,
-      "size_delta": -139848
-    },
-    {
-      "time": "2026-08-25T09:25:35.208573+05:30",
-      "op": "CREATE",
-      "path": "frontend/src/app/AdminApp.tsx",
-      "lang": "typescript",
-      "lines": 4079,
-      "delta": 4079,
-      "size_delta": 139858,
-      "dirty": true
-    },
-    {
-      "time": "2026-08-25T09:43:50.973769+05:30",
-      "op": "REMOVE",
-      "path": "backend/src/routes/admin.ts",
-      "lang": "typescript",
-      "delta": -1516,
-      "size_delta": -58393
-    },
-    {
-      "time": "2026-08-25T09:43:50.980032+05:30",
-      "op": "CREATE",
-      "path": "backend/src/routes/admin.ts",
-      "lang": "typescript",
-      "lines": 1570,
-      "delta": 1570,
-      "size_delta": 60153,
-      "dirty": true
-    },
-    {
-      "time": "2026-08-25T09:43:58.950911+05:30",
-      "op": "REMOVE",
-      "path": "backend/src/routes/admin.ts",
-      "lang": "typescript",
-      "delta": -1570,
-      "size_delta": -60153
-    },
-    {
-      "time": "2026-08-25T09:43:58.95189+05:30",
-      "op": "CREATE",
-      "path": "backend/src/routes/admin.ts",
-      "lang": "typescript",
-      "lines": 1571,
-      "delta": 1571,
-      "size_delta": 60197,
-      "dirty": true
-    },
-    {
-      "time": "2026-08-25T09:44:06.769641+05:30",
-      "op": "REMOVE",
-      "path": "backend/src/routes/admin.ts",
-      "lang": "typescript",
-      "delta": -1571,
-      "size_delta": -60197
-    },
-    {
-      "time": "2026-08-25T09:44:06.770713+05:30",
-      "op": "CREATE",
-      "path": "backend/src/routes/admin.ts",
-      "lang": "typescript",
-      "lines": 1573,
-      "delta": 1573,
-      "size_delta": 60300,
-      "dirty": true
-    },
-    {
-      "time": "2026-08-25T09:45:01.152445+05:30",
-      "op": "REMOVE",
-      "path": "frontend/src/api/client.ts",
-      "lang": "typescript",
-      "delta": -94,
-      "size_delta": -3310
-    },
     {
       "time": "2026-08-25T09:45:01.153234+05:30",
       "op": "CREATE",
@@ -454,16 +338,151 @@
       "delta": 4163,
       "size_delta": 143841,
       "dirty": true
+    },
+    {
+      "time": "2026-08-25T10:17:46.216459+05:30",
+      "op": "CREATE",
+      "path": "backend/src/lib/rank.ts",
+      "lang": "typescript",
+      "lines": 86,
+      "delta": 86,
+      "size_delta": 3395
+    },
+    {
+      "time": "2026-08-25T10:17:50.947093+05:30",
+      "op": "REMOVE",
+      "path": "backend/src/routes/parent.ts",
+      "lang": "typescript",
+      "delta": -410,
+      "size_delta": -12778
+    },
+    {
+      "time": "2026-08-25T10:17:50.948409+05:30",
+      "op": "CREATE",
+      "path": "backend/src/routes/parent.ts",
+      "lang": "typescript",
+      "lines": 411,
+      "delta": 411,
+      "size_delta": 12823,
+      "dirty": true
+    },
+    {
+      "time": "2026-08-25T10:17:56.784337+05:30",
+      "op": "REMOVE",
+      "path": "backend/src/routes/parent.ts",
+      "lang": "typescript",
+      "delta": -411,
+      "size_delta": -12823
+    },
+    {
+      "time": "2026-08-25T10:17:56.786141+05:30",
+      "op": "CREATE",
+      "path": "backend/src/routes/parent.ts",
+      "lang": "typescript",
+      "lines": 418,
+      "delta": 418,
+      "size_delta": 13179,
+      "dirty": true
+    },
+    {
+      "time": "2026-08-25T10:18:04.370307+05:30",
+      "op": "REMOVE",
+      "path": "backend/src/routes/parent.ts",
+      "lang": "typescript",
+      "delta": -418,
+      "size_delta": -13179
+    },
+    {
+      "time": "2026-08-25T10:18:04.415956+05:30",
+      "op": "CREATE",
+      "path": "backend/src/routes/parent.ts",
+      "lang": "typescript",
+      "lines": 422,
+      "delta": 422,
+      "size_delta": 13395,
+      "dirty": true
+    },
+    {
+      "time": "2026-08-25T10:18:09.347259+05:30",
+      "op": "REMOVE",
+      "path": "frontend/src/api/parent.ts",
+      "lang": "typescript",
+      "delta": -156,
+      "size_delta": -4155
+    },
+    {
+      "time": "2026-08-25T10:18:09.348963+05:30",
+      "op": "CREATE",
+      "path": "frontend/src/api/parent.ts",
+      "lang": "typescript",
+      "lines": 159,
+      "delta": 159,
+      "size_delta": 4352,
+      "dirty": true
+    },
+    {
+      "time": "2026-08-25T10:22:22.219775+05:30",
+      "op": "REMOVE",
+      "path": "frontend/src/api/parent.ts",
+      "lang": "typescript",
+      "delta": -159,
+      "size_delta": -4352
+    },
+    {
+      "time": "2026-08-25T10:22:22.221282+05:30",
+      "op": "CREATE",
+      "path": "frontend/src/api/parent.ts",
+      "lang": "typescript",
+      "lines": 162,
+      "delta": 162,
+      "size_delta": 4549,
+      "dirty": true
+    },
+    {
+      "time": "2026-08-25T10:22:27.712913+05:30",
+      "op": "REMOVE",
+      "path": "frontend/src/app/ParentApp.tsx",
+      "lang": "typescript",
+      "delta": -1491,
+      "size_delta": -47821
+    },
+    {
+      "time": "2026-08-25T10:22:27.714322+05:30",
+      "op": "CREATE",
+      "path": "frontend/src/app/ParentApp.tsx",
+      "lang": "typescript",
+      "lines": 1495,
+      "delta": 1495,
+      "size_delta": 47976,
+      "dirty": true
     }
   ],
   "working_set": {
     "files": {
+      "backend/src/lib/rank.ts": {
+        "path": "backend/src/lib/rank.ts",
+        "first_touch": "2026-08-25T10:17:46.231622+05:30",
+        "last_touch": "2026-08-25T10:17:46.231622+05:30",
+        "edit_count": 1,
+        "net_delta": 86,
+        "is_hub": false,
+        "importers": 0
+      },
       "backend/src/routes/admin.ts": {
         "path": "backend/src/routes/admin.ts",
         "first_touch": "2026-08-25T09:44:06.790657+05:30",
         "last_touch": "2026-08-25T09:44:06.790657+05:30",
         "edit_count": 1,
         "net_delta": 1573,
+        "is_hub": false,
+        "importers": 0
+      },
+      "backend/src/routes/parent.ts": {
+        "path": "backend/src/routes/parent.ts",
+        "first_touch": "2026-08-25T10:18:04.594473+05:30",
+        "last_touch": "2026-08-25T10:18:04.594473+05:30",
+        "edit_count": 1,
+        "net_delta": 422,
         "is_hub": false,
         "importers": 0
       },
@@ -476,12 +495,30 @@
         "is_hub": false,
         "importers": 0
       },
+      "frontend/src/api/parent.ts": {
+        "path": "frontend/src/api/parent.ts",
+        "first_touch": "2026-08-25T10:22:22.235179+05:30",
+        "last_touch": "2026-08-25T10:22:22.235179+05:30",
+        "edit_count": 1,
+        "net_delta": 162,
+        "is_hub": false,
+        "importers": 0
+      },
       "frontend/src/app/AdminApp.tsx": {
         "path": "frontend/src/app/AdminApp.tsx",
         "first_touch": "2026-08-25T09:52:28.499281+05:30",
         "last_touch": "2026-08-25T09:52:28.499281+05:30",
         "edit_count": 1,
         "net_delta": 4163,
+        "is_hub": false,
+        "importers": 0
+      },
+      "frontend/src/app/ParentApp.tsx": {
+        "path": "frontend/src/app/ParentApp.tsx",
+        "first_touch": "2026-08-25T10:22:27.743241+05:30",
+        "last_touch": "2026-08-25T10:22:27.743241+05:30",
+        "edit_count": 1,
+        "net_delta": 1495,
         "is_hub": false,
         "importers": 0
       }

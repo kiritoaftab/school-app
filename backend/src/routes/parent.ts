@@ -4,6 +4,7 @@ import { prisma } from '../db.js';
 import { ah, HttpError } from '../lib/http.js';
 import { requireAuth, requireRole, requireSchoolId } from '../middleware/auth.js';
 import { assertParentOwnsStudent, studentClassId } from '../lib/access.js';
+import { classRanks } from '../lib/rank.js';
 import { dayKey } from '../lib/day.js';
 
 export const parentRouter = Router();
@@ -240,13 +241,20 @@ parentRouter.get(
       orderBy: { termId: 'desc' },
       include: { term: true },
     });
+    // Ranks are derived from the class's marks; m.rank is the legacy stored
+    // value, kept only as a fallback for rows written before that path existed.
+    const ranks = await classRanks(studentId, metas.map((m) => m.termId));
     res.json(
-      metas.map((m) => ({
-        id: m.termId,
-        name: m.term.name,
-        overallPct: Math.round(m.overallPct),
-        rank: m.rank,
-      })),
+      metas.map((m) => {
+        const r = ranks.get(m.termId);
+        return {
+          id: m.termId,
+          name: m.term.name,
+          overallPct: Math.round(m.overallPct),
+          rank: r?.rank ?? m.rank,
+          classSize: r?.outOf ?? null,
+        };
+      }),
     );
   }),
 );
@@ -269,15 +277,19 @@ parentRouter.get(
     }
     if (!termId) return res.json(null);
 
-    const [meta, results, term] = await Promise.all([
+    const [meta, results, term, ranks] = await Promise.all([
       prisma.resultMeta.findUnique({ where: { studentId_termId: { studentId, termId } } }),
       prisma.result.findMany({ where: { studentId, termId }, orderBy: { subject: 'asc' } }),
       prisma.term.findUnique({ where: { id: termId } }),
+      classRanks(studentId, [termId]),
     ]);
+    const rank = ranks.get(termId);
     res.json({
       term: term ? { id: term.id, name: term.name } : null,
       overallPct: meta?.overallPct ?? null,
-      rank: meta?.rank ?? null,
+      // Derived from the class's marks; meta.rank is the legacy stored fallback.
+      rank: rank?.rank ?? meta?.rank ?? null,
+      classSize: rank?.outOf ?? null,
       teacherComment: meta?.teacherComment ?? null,
       subjects: results.map((r) => ({
         subject: r.subject,

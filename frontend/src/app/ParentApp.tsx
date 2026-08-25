@@ -1439,7 +1439,11 @@ function ResultsParent({ studentId }: { studentId: number | null }) {
             />
             <StatCard
               value={results.rank != null ? ordinal(results.rank) : "—"}
-              label="Class rank"
+              label={
+                results.rank != null && results.classSize != null
+                  ? `Rank of ${results.classSize}`
+                  : "Class rank"
+              }
             />
             <StatCard
               value={overall != null ? gradeFor(overall) : "—"}

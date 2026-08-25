@@ -1692,3 +1692,16 @@
 2026-08-25 09:52:19 | CREATE | frontend/src/app/AdminApp.tsx            | 4162 |  +4162 | dirty
 2026-08-25 09:52:28 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -4162 | 
 2026-08-25 09:52:28 | CREATE | frontend/src/app/AdminApp.tsx            | 4163 |  +4163 | dirty
+2026-08-25 10:17:46 | CREATE | backend/src/lib/rank.ts                  |   86 |    +86 | 
+2026-08-25 10:17:50 | REMOVE | backend/src/routes/parent.ts             |    0 |   -410 | 
+2026-08-25 10:17:50 | CREATE | backend/src/routes/parent.ts             |  411 |   +411 | dirty
+2026-08-25 10:17:56 | REMOVE | backend/src/routes/parent.ts             |    0 |   -411 | 
+2026-08-25 10:17:56 | CREATE | backend/src/routes/parent.ts             |  418 |   +418 | dirty
+2026-08-25 10:18:04 | REMOVE | backend/src/routes/parent.ts             |    0 |   -418 | 
+2026-08-25 10:18:04 | CREATE | backend/src/routes/parent.ts             |  422 |   +422 | dirty
+2026-08-25 10:18:09 | REMOVE | frontend/src/api/parent.ts               |    0 |   -156 | 
+2026-08-25 10:18:09 | CREATE | frontend/src/api/parent.ts               |  159 |   +159 | dirty
+2026-08-25 10:22:22 | REMOVE | frontend/src/api/parent.ts               |    0 |   -159 | 
+2026-08-25 10:22:22 | CREATE | frontend/src/api/parent.ts               |  162 |   +162 | dirty
+2026-08-25 10:22:27 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |  -1491 | 
+2026-08-25 10:22:27 | CREATE | frontend/src/app/ParentApp.tsx           | 1495 |  +1495 | dirty
