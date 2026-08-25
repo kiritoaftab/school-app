@@ -1935,6 +1935,13 @@ function ClassesList({
 // ---------- CLASS DETAIL (live, 4 tabs) ----------
 type ClassTab = "students" | "teachers" | "subjects" | "exams";
 
+/** Unsaved edits to one teacher's row in the Teachers tab. */
+type TeacherRowDraft = { subjectIds: number[]; isClassTeacher: boolean };
+
+function sameIds(a: number[], b: number[]): boolean {
+  return a.length === b.length && [...a].sort().join() === [...b].sort().join();
+}
+
 function ClassDetail({
   klass,
   subjects,
@@ -1963,6 +1970,9 @@ function ClassDetail({
   const [draft, setDraft] = useState<StudentInput | null>(null);
   // teachers / exams
   const [clsTAddOpen, setClsTAddOpen] = useState(false);
+  // A teacher row is edited locally — subject chips and the class-teacher
+  // toggle only reach the server when that row's Save is pressed.
+  const [tDrafts, setTDrafts] = useState<Record<number, TeacherRowDraft>>({});
   const [examAddOpen, setExamAddOpen] = useState(false);
   const [newExam, setNewExam] = useState("");
   const [examAllSchool, setExamAllSchool] = useState(false);
@@ -1993,6 +2003,7 @@ function ClassDetail({
     setStudents(null);
     setClsTeachers(null);
     setExams(null);
+    setTDrafts({});
   }, [klassId]);
 
   useRevalidate(load, { revalidateOn: [load] });
@@ -2051,6 +2062,67 @@ function ClassDetail({
     } finally {
       setBusy(false);
     }
+  }
+
+  // --- teacher row drafts -------------------------------------------------
+  const serverRow = (t: ClassTeacher): TeacherRowDraft => ({
+    subjectIds: t.subjects.map((s) => s.id),
+    isClassTeacher: t.isClassTeacher,
+  });
+  const draftRow = (t: ClassTeacher): TeacherRowDraft =>
+    tDrafts[t.id] ?? serverRow(t);
+  const rowDirty = (t: ClassTeacher): boolean => {
+    const d = tDrafts[t.id];
+    if (!d) return false;
+    return (
+      !sameIds(d.subjectIds, serverRow(t).subjectIds) ||
+      d.isClassTeacher !== t.isClassTeacher
+    );
+  };
+  // A class has one class teacher, so a pending pick wins over what the server
+  // still says about everyone else — their row flips without needing a save.
+  const pendingCtId =
+    (clsTeachers ?? []).find(
+      (t) => tDrafts[t.id]?.isClassTeacher === true && !t.isClassTeacher,
+    )?.id ?? null;
+  const ctShown = (t: ClassTeacher): boolean =>
+    pendingCtId === null ? draftRow(t).isClassTeacher : t.id === pendingCtId;
+
+  function editRow(t: ClassTeacher, patch: Partial<TeacherRowDraft>) {
+    setTDrafts((prev) => {
+      const next = {
+        ...prev,
+        [t.id]: { ...(prev[t.id] ?? serverRow(t)), ...patch },
+      };
+      // Only one teacher may be the pending pick.
+      if (patch.isClassTeacher === true) {
+        for (const other of clsTeachers ?? []) {
+          if (other.id !== t.id && next[other.id]?.isClassTeacher)
+            next[other.id] = {
+              ...next[other.id],
+              isClassTeacher: other.isClassTeacher,
+            };
+        }
+      }
+      return next;
+    });
+  }
+
+  function clearRow(id: number) {
+    setTDrafts(({ [id]: _drop, ...rest }) => rest);
+  }
+
+  function saveRow(t: ClassTeacher, classId: number) {
+    const d = tDrafts[t.id];
+    if (!d) return;
+    const srv = serverRow(t);
+    const ctChanged = d.isClassTeacher !== t.isClassTeacher;
+    run(async () => {
+      if (!sameIds(d.subjectIds, srv.subjectIds))
+        await setClassSubjects(t.id, classId, d.subjectIds);
+      if (ctChanged) await setClassTeacher(t.id, classId, d.isClassTeacher);
+      clearRow(t.id);
+    }, ctChanged);
   }
 
   function switchTab(t: ClassTab) {
@@ -2428,7 +2500,9 @@ function ClassDetail({
             )}
 
             {clsTeachers.map((t) => {
-              const onIds = t.subjects.map((s) => s.id);
+              const onIds = draftRow(t).subjectIds;
+              const isCT = ctShown(t);
+              const dirty = rowDirty(t);
               return (
                 <Card key={t.id} className="p-3 mb-2.25">
                   <div className="flex items-center gap-2.5 mb-2.25">
@@ -2437,26 +2511,23 @@ function ClassDetail({
                     </b>
                     <button
                       disabled={busy}
-                      onClick={() =>
-                        run(
-                          () =>
-                            setClassTeacher(t.id, klass.id, !t.isClassTeacher),
-                          true,
-                        )
-                      }
+                      onClick={() => editRow(t, { isClassTeacher: !isCT })}
                       className={cx(
                         "px-2.5 py-1.5 rounded-[9px] text-[10.5px] font-bold border-[1.5px] flex-none",
-                        t.isClassTeacher
+                        isCT
                           ? "border-green bg-green text-white"
                           : "border-[#dbe5db] bg-white text-green",
                       )}
                     >
-                      {t.isClassTeacher ? "Class teacher ✓" : "Make CT"}
+                      {isCT ? "Class teacher ✓" : "Make CT"}
                     </button>
                     <ConfirmIconButton
                       disabled={busy}
                       onConfirm={() =>
-                        run(() => unassignClass(t.id, klass.id), true)
+                        run(async () => {
+                          await unassignClass(t.id, klass.id);
+                          clearRow(t.id);
+                        }, true)
                       }
                       label={t.name}
                       className="w-7 h-7 rounded-[9px] bg-[#f6ecec] text-danger text-[16px] flex-none"
@@ -2466,7 +2537,10 @@ function ClassDetail({
                     Subjects taught here
                   </div>
                   <div className="flex gap-1.5 flex-wrap">
-                    {chipSubjects(subjects, onIds).map((su) => {
+                    {chipSubjects(subjects, [
+                      ...onIds,
+                      ...t.subjects.map((s) => s.id),
+                    ]).map((su) => {
                       const on = onIds.includes(su.id);
                       // The last subject can't be toggled off — that would mean
                       // no assignment at all, which is what × is for.
@@ -2484,15 +2558,11 @@ function ClassDetail({
                                 : undefined
                           }
                           onClick={() =>
-                            run(() =>
-                              setClassSubjects(
-                                t.id,
-                                klass.id,
-                                on
-                                  ? onIds.filter((x) => x !== su.id)
-                                  : [...onIds, su.id],
-                              ),
-                            )
+                            editRow(t, {
+                              subjectIds: on
+                                ? onIds.filter((x) => x !== su.id)
+                                : [...onIds, su.id],
+                            })
                           }
                           className={cx(
                             "px-2.5 py-1 rounded-lg text-[10.5px] font-semibold border",
@@ -2509,6 +2579,27 @@ function ClassDetail({
                       );
                     })}
                   </div>
+                  {dirty && (
+                    <div className="flex items-center gap-2 mt-2.5 pt-2.5 border-t border-line">
+                      <div className="flex-1 min-w-0 text-[11px] text-muted">
+                        Unsaved changes
+                      </div>
+                      <button
+                        disabled={busy}
+                        onClick={() => clearRow(t.id)}
+                        className="px-2.5 py-1.5 rounded-[9px] text-[11px] font-semibold border border-line bg-white text-muted flex-none"
+                      >
+                        Undo
+                      </button>
+                      <button
+                        disabled={busy}
+                        onClick={() => saveRow(t, klass.id)}
+                        className="px-3 py-1.5 rounded-[9px] text-[11px] font-bold bg-green text-white flex-none disabled:opacity-60"
+                      >
+                        Save
+                      </button>
+                    </div>
+                  )}
                 </Card>
               );
             })}

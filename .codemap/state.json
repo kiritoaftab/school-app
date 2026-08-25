@@ -1,8 +1,275 @@
 {
-  "updated_at": "2026-08-25T08:42:52.102344+05:30",
+  "updated_at": "2026-08-25T09:25:35.239972+05:30",
   "file_count": 118,
   "hubs": [],
   "importers": {},
   "imports": {},
-  "recent_events": null
+  "recent_events": [
+    {
+      "time": "2026-08-25T09:23:39.709277+05:30",
+      "op": "REMOVE",
+      "path": "frontend/src/app/AdminApp.tsx",
+      "lang": "typescript",
+      "delta": -3988,
+      "size_delta": -136264
+    },
+    {
+      "time": "2026-08-25T09:23:39.70996+05:30",
+      "op": "CREATE",
+      "path": "frontend/src/app/AdminApp.tsx",
+      "lang": "typescript",
+      "lines": 3991,
+      "delta": 3991,
+      "size_delta": 136487,
+      "dirty": true
+    },
+    {
+      "time": "2026-08-25T09:23:41.225588+05:30",
+      "op": "REMOVE",
+      "path": "frontend/src/app/AdminApp.tsx",
+      "lang": "typescript",
+      "delta": -3991,
+      "size_delta": -136487
+    },
+    {
+      "time": "2026-08-25T09:23:41.227261+05:30",
+      "op": "CREATE",
+      "path": "frontend/src/app/AdminApp.tsx",
+      "lang": "typescript",
+      "lines": 3992,
+      "delta": 3992,
+      "size_delta": 136507,
+      "dirty": true
+    },
+    {
+      "time": "2026-08-25T09:23:46.917156+05:30",
+      "op": "REMOVE",
+      "path": "frontend/src/app/AdminApp.tsx",
+      "lang": "typescript",
+      "delta": -3992,
+      "size_delta": -136507
+    },
+    {
+      "time": "2026-08-25T09:23:46.918685+05:30",
+      "op": "CREATE",
+      "path": "frontend/src/app/AdminApp.tsx",
+      "lang": "typescript",
+      "lines": 3999,
+      "delta": 3999,
+      "size_delta": 136783,
+      "dirty": true
+    },
+    {
+      "time": "2026-08-25T09:24:00.43107+05:30",
+      "op": "REMOVE",
+      "path": "frontend/src/app/AdminApp.tsx",
+      "lang": "typescript",
+      "delta": -3999,
+      "size_delta": -136783
+    },
+    {
+      "time": "2026-08-25T09:24:00.432207+05:30",
+      "op": "CREATE",
+      "path": "frontend/src/app/AdminApp.tsx",
+      "lang": "typescript",
+      "lines": 4057,
+      "delta": 4057,
+      "size_delta": 138855,
+      "dirty": true
+    },
+    {
+      "time": "2026-08-25T09:24:11.833397+05:30",
+      "op": "REMOVE",
+      "path": "frontend/src/app/AdminApp.tsx",
+      "lang": "typescript",
+      "delta": -4057,
+      "size_delta": -138855
+    },
+    {
+      "time": "2026-08-25T09:24:11.834316+05:30",
+      "op": "CREATE",
+      "path": "frontend/src/app/AdminApp.tsx",
+      "lang": "typescript",
+      "lines": 4057,
+      "delta": 4057,
+      "size_delta": 138853,
+      "dirty": true
+    },
+    {
+      "time": "2026-08-25T09:24:28.513612+05:30",
+      "op": "REMOVE",
+      "path": "frontend/src/app/AdminApp.tsx",
+      "lang": "typescript",
+      "delta": -4057,
+      "size_delta": -138853
+    },
+    {
+      "time": "2026-08-25T09:24:28.514856+05:30",
+      "op": "CREATE",
+      "path": "frontend/src/app/AdminApp.tsx",
+      "lang": "typescript",
+      "lines": 4056,
+      "delta": 4056,
+      "size_delta": 138829,
+      "dirty": true
+    },
+    {
+      "time": "2026-08-25T09:24:33.71411+05:30",
+      "op": "REMOVE",
+      "path": "frontend/src/app/AdminApp.tsx",
+      "lang": "typescript",
+      "delta": -4056,
+      "size_delta": -138829
+    },
+    {
+      "time": "2026-08-25T09:24:33.715607+05:30",
+      "op": "CREATE",
+      "path": "frontend/src/app/AdminApp.tsx",
+      "lang": "typescript",
+      "lines": 4059,
+      "delta": 4059,
+      "size_delta": 138933,
+      "dirty": true
+    },
+    {
+      "time": "2026-08-25T09:24:38.252838+05:30",
+      "op": "REMOVE",
+      "path": "frontend/src/app/AdminApp.tsx",
+      "lang": "typescript",
+      "delta": -4059,
+      "size_delta": -138933
+    },
+    {
+      "time": "2026-08-25T09:24:38.253954+05:30",
+      "op": "CREATE",
+      "path": "frontend/src/app/AdminApp.tsx",
+      "lang": "typescript",
+      "lines": 4055,
+      "delta": 4055,
+      "size_delta": 138782,
+      "dirty": true
+    },
+    {
+      "time": "2026-08-25T09:24:56.537005+05:30",
+      "op": "REMOVE",
+      "path": "frontend/src/app/AdminApp.tsx",
+      "lang": "typescript",
+      "delta": -4055,
+      "size_delta": -138782
+    },
+    {
+      "time": "2026-08-25T09:24:56.538037+05:30",
+      "op": "CREATE",
+      "path": "frontend/src/app/AdminApp.tsx",
+      "lang": "typescript",
+      "lines": 4076,
+      "delta": 4076,
+      "size_delta": 139793,
+      "dirty": true
+    },
+    {
+      "time": "2026-08-25T09:25:06.516448+05:30",
+      "op": "REMOVE",
+      "path": "frontend/src/app/AdminApp.tsx",
+      "lang": "typescript",
+      "delta": -4076,
+      "size_delta": -139793
+    },
+    {
+      "time": "2026-08-25T09:25:06.517406+05:30",
+      "op": "CREATE",
+      "path": "frontend/src/app/AdminApp.tsx",
+      "lang": "typescript",
+      "lines": 4079,
+      "delta": 4079,
+      "size_delta": 139833,
+      "dirty": true
+    },
+    {
+      "time": "2026-08-25T09:25:18.599888+05:30",
+      "op": "REMOVE",
+      "path": "frontend/src/app/AdminApp.tsx",
+      "lang": "typescript",
+      "delta": -4079,
+      "size_delta": -139833
+    },
+    {
+      "time": "2026-08-25T09:25:18.601076+05:30",
+      "op": "CREATE",
+      "path": "frontend/src/app/AdminApp.tsx",
+      "lang": "typescript",
+      "lines": 4079,
+      "delta": 4079,
+      "size_delta": 139850,
+      "dirty": true
+    },
+    {
+      "time": "2026-08-25T09:25:27.186768+05:30",
+      "op": "REMOVE",
+      "path": "frontend/src/app/AdminApp.tsx",
+      "lang": "typescript",
+      "delta": -4079,
+      "size_delta": -139850
+    },
+    {
+      "time": "2026-08-25T09:25:27.187842+05:30",
+      "op": "CREATE",
+      "path": "frontend/src/app/AdminApp.tsx",
+      "lang": "typescript",
+      "lines": 4079,
+      "delta": 4079,
+      "size_delta": 139850,
+      "dirty": true
+    },
+    {
+      "time": "2026-08-25T09:25:31.675857+05:30",
+      "op": "REMOVE",
+      "path": "frontend/src/app/AdminApp.tsx",
+      "lang": "typescript",
+      "delta": -4079,
+      "size_delta": -139850
+    },
+    {
+      "time": "2026-08-25T09:25:31.676838+05:30",
+      "op": "CREATE",
+      "path": "frontend/src/app/AdminApp.tsx",
+      "lang": "typescript",
+      "lines": 4079,
+      "delta": 4079,
+      "size_delta": 139848,
+      "dirty": true
+    },
+    {
+      "time": "2026-08-25T09:25:35.207318+05:30",
+      "op": "REMOVE",
+      "path": "frontend/src/app/AdminApp.tsx",
+      "lang": "typescript",
+      "delta": -4079,
+      "size_delta": -139848
+    },
+    {
+      "time": "2026-08-25T09:25:35.208573+05:30",
+      "op": "CREATE",
+      "path": "frontend/src/app/AdminApp.tsx",
+      "lang": "typescript",
+      "lines": 4079,
+      "delta": 4079,
+      "size_delta": 139858,
+      "dirty": true
+    }
+  ],
+  "working_set": {
+    "files": {
+      "frontend/src/app/AdminApp.tsx": {
+        "path": "frontend/src/app/AdminApp.tsx",
+        "first_touch": "2026-08-25T09:25:35.239545+05:30",
+        "last_touch": "2026-08-25T09:25:35.239545+05:30",
+        "edit_count": 1,
+        "net_delta": 4079,
+        "is_hub": false,
+        "importers": 0
+      }
+    },
+    "started_at": "2026-08-25T09:20:51.252203+05:30"
+  }
 }
