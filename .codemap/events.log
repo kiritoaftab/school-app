@@ -1448,3 +1448,175 @@
 2026-07-28 23:55:45 | REMOVE | backend/src/routes/gallery.ts            |    0 |   -227 | 
 2026-07-28 23:55:45 | CREATE | backend/src/routes/gallery.ts            |  228 |   +228 | dirty
 2026-07-28 23:55:45 | CREATE | backend/src/routes/gallery.ts            |  228 |   +228 | dirty
+2026-07-30 01:07:48 | CREATE | frontend/src/lib/useResource.ts          |  222 |   +222 | 
+2026-07-30 01:07:48 | CREATE | frontend/src/lib/useResource.ts          |  222 |   +222 | 
+2026-07-30 01:08:02 | REMOVE | frontend/src/lib/useResource.ts          |    0 |   -222 | 
+2026-07-30 01:08:02 | REMOVE | frontend/src/lib/useResource.ts          |    0 |   -222 | 
+2026-07-30 01:08:02 | CREATE | frontend/src/lib/useResource.ts          |  221 |   +221 | 
+2026-07-30 01:08:02 | CREATE | frontend/src/lib/useResource.ts          |  221 |   +221 | 
+2026-07-30 01:08:08 | REMOVE | frontend/src/lib/useResource.ts          |    0 |   -221 | 
+2026-07-30 01:08:08 | REMOVE | frontend/src/lib/useResource.ts          |    0 |   -221 | 
+2026-07-30 01:08:08 | CREATE | frontend/src/lib/useResource.ts          |  223 |   +223 | 
+2026-07-30 01:08:08 | CREATE | frontend/src/lib/useResource.ts          |  223 |   +223 | 
+2026-07-30 01:08:39 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |  -1519 | 
+2026-07-30 01:08:39 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |  -1519 | 
+2026-07-30 01:08:39 | CREATE | frontend/src/app/ParentApp.tsx           | 1511 |  +1511 | dirty
+2026-07-30 01:08:39 | CREATE | frontend/src/app/ParentApp.tsx           | 1511 |  +1511 | dirty
+2026-07-30 01:08:46 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |  -1511 | 
+2026-07-30 01:08:46 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |  -1511 | 
+2026-07-30 01:08:46 | CREATE | frontend/src/app/ParentApp.tsx           | 1519 |  +1519 | dirty
+2026-07-30 01:08:46 | CREATE | frontend/src/app/ParentApp.tsx           | 1519 |  +1519 | dirty
+2026-07-30 01:08:59 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |  -1519 | 
+2026-07-30 01:08:59 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |  -1519 | 
+2026-07-30 01:08:59 | CREATE | frontend/src/app/ParentApp.tsx           | 1521 |  +1521 | dirty
+2026-07-30 01:08:59 | CREATE | frontend/src/app/ParentApp.tsx           | 1521 |  +1521 | dirty
+2026-07-30 01:09:07 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |  -1521 | 
+2026-07-30 01:09:07 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |  -1521 | 
+2026-07-30 01:09:07 | CREATE | frontend/src/app/ParentApp.tsx           | 1523 |  +1523 | dirty
+2026-07-30 01:09:07 | CREATE | frontend/src/app/ParentApp.tsx           | 1523 |  +1523 | dirty
+2026-07-30 01:09:08 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |  -1523 | 
+2026-07-30 01:09:08 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |  -1523 | 
+2026-07-30 01:09:08 | CREATE | frontend/src/app/ParentApp.tsx           | 1523 |  +1523 | dirty
+2026-07-30 01:09:08 | CREATE | frontend/src/app/ParentApp.tsx           | 1523 |  +1523 | dirty
+2026-07-30 01:09:19 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |  -1523 | 
+2026-07-30 01:09:19 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |  -1523 | 
+2026-07-30 01:09:19 | CREATE | frontend/src/app/ParentApp.tsx           | 1507 |  +1507 | dirty
+2026-07-30 01:09:19 | CREATE | frontend/src/app/ParentApp.tsx           | 1507 |  +1507 | dirty
+2026-07-30 01:09:23 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |  -1507 | 
+2026-07-30 01:09:23 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |  -1507 | 
+2026-07-30 01:09:24 | CREATE | frontend/src/app/ParentApp.tsx           | 1512 |  +1512 | dirty
+2026-07-30 01:09:24 | CREATE | frontend/src/app/ParentApp.tsx           | 1512 |  +1512 | dirty
+2026-07-30 01:09:31 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |  -1512 | 
+2026-07-30 01:09:31 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |  -1512 | 
+2026-07-30 01:09:31 | CREATE | frontend/src/app/ParentApp.tsx           | 1506 |  +1506 | dirty
+2026-07-30 01:09:31 | CREATE | frontend/src/app/ParentApp.tsx           | 1506 |  +1506 | dirty
+2026-07-30 01:09:42 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |  -1506 | 
+2026-07-30 01:09:42 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |  -1506 | 
+2026-07-30 01:09:42 | CREATE | frontend/src/app/ParentApp.tsx           | 1491 |  +1491 | dirty
+2026-07-30 01:09:42 | CREATE | frontend/src/app/ParentApp.tsx           | 1491 |  +1491 | dirty
+2026-07-30 01:10:31 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1359 | 
+2026-07-30 01:10:31 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1359 | 
+2026-07-30 01:10:31 | CREATE | frontend/src/app/TeacherApp.tsx          | 1350 |  +1350 | dirty
+2026-07-30 01:10:31 | CREATE | frontend/src/app/TeacherApp.tsx          | 1350 |  +1350 | dirty
+2026-07-30 01:10:49 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1350 | 
+2026-07-30 01:10:49 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1350 | 
+2026-07-30 01:10:49 | CREATE | frontend/src/app/TeacherApp.tsx          | 1347 |  +1347 | dirty
+2026-07-30 01:10:49 | CREATE | frontend/src/app/TeacherApp.tsx          | 1347 |  +1347 | dirty
+2026-07-30 01:10:58 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1347 | 
+2026-07-30 01:10:58 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1347 | 
+2026-07-30 01:10:58 | CREATE | frontend/src/app/TeacherApp.tsx          | 1342 |  +1342 | dirty
+2026-07-30 01:10:58 | CREATE | frontend/src/app/TeacherApp.tsx          | 1342 |  +1342 | dirty
+2026-07-30 01:11:04 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1342 | 
+2026-07-30 01:11:04 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1342 | 
+2026-07-30 01:11:04 | CREATE | frontend/src/app/TeacherApp.tsx          | 1351 |  +1351 | dirty
+2026-07-30 01:11:04 | CREATE | frontend/src/app/TeacherApp.tsx          | 1351 |  +1351 | dirty
+2026-07-30 01:11:10 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1351 | 
+2026-07-30 01:11:10 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1351 | 
+2026-07-30 01:11:10 | CREATE | frontend/src/app/TeacherApp.tsx          | 1355 |  +1355 | dirty
+2026-07-30 01:11:10 | CREATE | frontend/src/app/TeacherApp.tsx          | 1355 |  +1355 | dirty
+2026-07-30 01:11:18 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1355 | 
+2026-07-30 01:11:18 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1355 | 
+2026-07-30 01:11:18 | CREATE | frontend/src/app/TeacherApp.tsx          | 1358 |  +1358 | dirty
+2026-07-30 01:11:18 | CREATE | frontend/src/app/TeacherApp.tsx          | 1358 |  +1358 | dirty
+2026-07-30 01:11:26 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1358 | 
+2026-07-30 01:11:26 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1358 | 
+2026-07-30 01:11:26 | CREATE | frontend/src/app/TeacherApp.tsx          | 1365 |  +1365 | dirty
+2026-07-30 01:11:26 | CREATE | frontend/src/app/TeacherApp.tsx          | 1365 |  +1365 | dirty
+2026-07-30 01:11:37 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1365 | 
+2026-07-30 01:11:37 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1365 | 
+2026-07-30 01:11:37 | CREATE | frontend/src/app/TeacherApp.tsx          | 1367 |  +1367 | dirty
+2026-07-30 01:11:37 | CREATE | frontend/src/app/TeacherApp.tsx          | 1367 |  +1367 | dirty
+2026-07-30 01:11:57 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1367 | 
+2026-07-30 01:11:57 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1367 | 
+2026-07-30 01:11:57 | CREATE | frontend/src/app/TeacherApp.tsx          | 1373 |  +1373 | dirty
+2026-07-30 01:11:57 | CREATE | frontend/src/app/TeacherApp.tsx          | 1373 |  +1373 | dirty
+2026-07-30 01:12:02 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1373 | 
+2026-07-30 01:12:02 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1373 | 
+2026-07-30 01:12:02 | CREATE | frontend/src/app/TeacherApp.tsx          | 1374 |  +1374 | dirty
+2026-07-30 01:12:02 | CREATE | frontend/src/app/TeacherApp.tsx          | 1374 |  +1374 | dirty
+2026-07-30 01:12:09 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1374 | 
+2026-07-30 01:12:09 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1374 | 
+2026-07-30 01:12:09 | CREATE | frontend/src/app/TeacherApp.tsx          | 1373 |  +1373 | dirty
+2026-07-30 01:12:09 | CREATE | frontend/src/app/TeacherApp.tsx          | 1373 |  +1373 | dirty
+2026-07-30 01:12:22 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1373 | 
+2026-07-30 01:12:22 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1373 | 
+2026-07-30 01:12:22 | CREATE | frontend/src/app/TeacherApp.tsx          | 1375 |  +1375 | dirty
+2026-07-30 01:12:22 | CREATE | frontend/src/app/TeacherApp.tsx          | 1375 |  +1375 | dirty
+2026-07-30 01:12:30 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1375 | 
+2026-07-30 01:12:30 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1375 | 
+2026-07-30 01:12:30 | CREATE | frontend/src/app/TeacherApp.tsx          | 1367 |  +1367 | dirty
+2026-07-30 01:12:30 | CREATE | frontend/src/app/TeacherApp.tsx          | 1367 |  +1367 | dirty
+2026-07-30 01:12:43 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1367 | 
+2026-07-30 01:12:43 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1367 | 
+2026-07-30 01:12:43 | CREATE | frontend/src/app/TeacherApp.tsx          | 1365 |  +1365 | dirty
+2026-07-30 01:12:43 | CREATE | frontend/src/app/TeacherApp.tsx          | 1365 |  +1365 | dirty
+2026-07-30 01:12:47 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1365 | 
+2026-07-30 01:12:47 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1365 | 
+2026-07-30 01:12:47 | CREATE | frontend/src/app/TeacherApp.tsx          | 1369 |  +1369 | dirty
+2026-07-30 01:12:47 | CREATE | frontend/src/app/TeacherApp.tsx          | 1369 |  +1369 | dirty
+2026-07-30 01:13:31 | REMOVE | frontend/src/lib/useResource.ts          |    0 |   -223 | 
+2026-07-30 01:13:31 | REMOVE | frontend/src/lib/useResource.ts          |    0 |   -223 | 
+2026-07-30 01:13:31 | CREATE | frontend/src/lib/useResource.ts          |  227 |   +227 | 
+2026-07-30 01:13:31 | CREATE | frontend/src/lib/useResource.ts          |  227 |   +227 | 
+2026-07-30 01:13:35 | REMOVE | frontend/src/lib/useResource.ts          |    0 |   -227 | 
+2026-07-30 01:13:35 | REMOVE | frontend/src/lib/useResource.ts          |    0 |   -227 | 
+2026-07-30 01:13:35 | CREATE | frontend/src/lib/useResource.ts          |  227 |   +227 | 
+2026-07-30 01:13:35 | CREATE | frontend/src/lib/useResource.ts          |  227 |   +227 | 
+2026-07-30 01:13:53 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3981 | 
+2026-07-30 01:13:53 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3981 | 
+2026-07-30 01:13:53 | CREATE | frontend/src/app/AdminApp.tsx            | 3983 |  +3983 | dirty
+2026-07-30 01:13:53 | CREATE | frontend/src/app/AdminApp.tsx            | 3983 |  +3983 | dirty
+2026-07-30 01:14:04 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3983 | 
+2026-07-30 01:14:04 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3983 | 
+2026-07-30 01:14:04 | CREATE | frontend/src/app/AdminApp.tsx            | 3984 |  +3984 | dirty
+2026-07-30 01:14:04 | CREATE | frontend/src/app/AdminApp.tsx            | 3984 |  +3984 | dirty
+2026-07-30 01:14:13 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3984 | 
+2026-07-30 01:14:13 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3984 | 
+2026-07-30 01:14:13 | CREATE | frontend/src/app/AdminApp.tsx            | 3992 |  +3992 | dirty
+2026-07-30 01:14:13 | CREATE | frontend/src/app/AdminApp.tsx            | 3992 |  +3992 | dirty
+2026-07-30 01:14:18 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3992 | 
+2026-07-30 01:14:18 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3992 | 
+2026-07-30 01:14:18 | CREATE | frontend/src/app/AdminApp.tsx            | 3992 |  +3992 | dirty
+2026-07-30 01:14:18 | CREATE | frontend/src/app/AdminApp.tsx            | 3992 |  +3992 | dirty
+2026-07-30 01:14:28 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3992 | 
+2026-07-30 01:14:28 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3992 | 
+2026-07-30 01:14:28 | CREATE | frontend/src/app/AdminApp.tsx            | 4001 |  +4001 | dirty
+2026-07-30 01:14:28 | CREATE | frontend/src/app/AdminApp.tsx            | 4001 |  +4001 | dirty
+2026-07-30 01:14:36 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -4001 | 
+2026-07-30 01:14:36 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -4001 | 
+2026-07-30 01:14:36 | CREATE | frontend/src/app/AdminApp.tsx            | 3991 |  +3991 | dirty
+2026-07-30 01:14:36 | CREATE | frontend/src/app/AdminApp.tsx            | 3991 |  +3991 | dirty
+2026-07-30 01:14:52 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3991 | 
+2026-07-30 01:14:52 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3991 | 
+2026-07-30 01:14:52 | CREATE | frontend/src/app/AdminApp.tsx            | 3992 |  +3992 | dirty
+2026-07-30 01:14:52 | CREATE | frontend/src/app/AdminApp.tsx            | 3992 |  +3992 | dirty
+2026-07-30 01:15:07 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3992 | 
+2026-07-30 01:15:07 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -3992 | 
+2026-07-30 01:15:07 | CREATE | frontend/src/app/AdminApp.tsx            | 3994 |  +3994 | dirty
+2026-07-30 01:15:07 | CREATE | frontend/src/app/AdminApp.tsx            | 3994 |  +3994 | dirty
+2026-07-30 01:15:16 | REMOVE | frontend/src/app/Albums.tsx              |    0 |   -709 | 
+2026-07-30 01:15:16 | REMOVE | frontend/src/app/Albums.tsx              |    0 |   -709 | 
+2026-07-30 01:15:16 | CREATE | frontend/src/app/Albums.tsx              |  709 |   +709 | dirty
+2026-07-30 01:15:16 | CREATE | frontend/src/app/Albums.tsx              |  709 |   +709 | dirty
+2026-07-30 01:15:23 | REMOVE | frontend/src/app/Albums.tsx              |    0 |   -709 | 
+2026-07-30 01:15:23 | REMOVE | frontend/src/app/Albums.tsx              |    0 |   -709 | 
+2026-07-30 01:15:23 | CREATE | frontend/src/app/Albums.tsx              |  699 |   +699 | dirty
+2026-07-30 01:15:23 | CREATE | frontend/src/app/Albums.tsx              |  699 |   +699 | dirty
+2026-07-30 01:15:50 | REMOVE | frontend/src/app/Albums.tsx              |    0 |   -699 | 
+2026-07-30 01:15:50 | REMOVE | frontend/src/app/Albums.tsx              |    0 |   -699 | 
+2026-07-30 01:15:50 | CREATE | frontend/src/app/Albums.tsx              |  700 |   +700 | dirty
+2026-07-30 01:15:50 | CREATE | frontend/src/app/Albums.tsx              |  700 |   +700 | dirty
+2026-08-06 13:13:58 | CREATE | python/file_rename.py                    |    0 |        | 
+2026-08-06 13:13:58 | CREATE | python/file_rename.py                    |    0 |        | 
+2026-08-06 13:14:12 | WRITE  | python/file_rename.py                    |    1 |     +1 | 
+2026-08-06 13:15:40 | WRITE  | python/file_rename.py                    |    7 |     +6 | 
+2026-08-06 13:17:16 | WRITE  | python/file_rename.py                    |   12 |     +5 | 
+2026-08-06 13:18:31 | WRITE  | python/file_rename.py                    |   17 |     +5 | 
+2026-08-06 13:20:11 | WRITE  | python/file_rename.py                    |   24 |     +7 | 
+2026-08-06 13:21:16 | WRITE  | python/file_rename.py                    |   26 |     +2 | 
+2026-08-06 13:24:19 | WRITE  | python/file_rename.py                    |   31 |     +5 | 
+2026-08-06 13:28:40 | WRITE  | python/file_rename.py                    |   44 |    +13 | 
+2026-08-06 13:28:47 | WRITE  | python/file_rename.py                    |   44 |        | 
+2026-08-06 13:31:21 | WRITE  | python/file_rename.py                    |   36 |     -8 | 
+2026-08-06 13:32:13 | WRITE  | python/file_rename.py                    |   36 |        | 
+2026-08-06 13:35:11 | WRITE  | python/file_rename.py                    |   36 |        | 

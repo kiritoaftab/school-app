@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
 import {
@@ -73,6 +73,7 @@ import {
   type TabDef,
 } from "./kit";
 import { apiError, apiErrorText, describeUsage } from "../api/client";
+import { useRevalidate } from "../lib/useResource";
 import { NotificationsScreen } from "./SharedScreens";
 import {
   AlbumScreen,
@@ -270,50 +271,74 @@ export function AdminApp() {
   }, []);
 
   // Fetch the open teacher's assignments; refetch whenever a different one opens.
-  useEffect(() => {
-    if (screen !== "staffDetail" || activeTeacherId === null) return;
-    let stale = false;
-    setTeacherDetail(null);
+  const teacherDetailRun = useRef(0);
+  const loadTeacherDetail = useCallback(async () => {
+    if (activeTeacherId === null) return;
+    const run = ++teacherDetailRun.current;
     setTeacherDetailError(null);
-    getTeacher(activeTeacherId)
-      .then((d) => {
-        if (!stale) setTeacherDetail(d);
-      })
-      .catch(() => {
-        if (!stale)
-          setTeacherDetailError("Couldn't load this teacher's assignments.");
-      });
-    return () => {
-      stale = true;
-    };
-  }, [screen, activeTeacherId]);
+    try {
+      const d = await getTeacher(activeTeacherId);
+      if (run === teacherDetailRun.current) setTeacherDetail(d);
+    } catch {
+      if (run === teacherDetailRun.current)
+        setTeacherDetailError("Couldn't load this teacher's assignments.");
+    }
+  }, [activeTeacherId]);
+
+  // Clear the previous teacher's assignments so they never show under another
+  // teacher's name while the new ones load.
+  useEffect(() => {
+    teacherDetailRun.current++;
+    setTeacherDetail(null);
+  }, [activeTeacherId]);
+
+  useRevalidate(loadTeacherDetail, {
+    active: screen === "staffDetail" && activeTeacherId !== null,
+    revalidateOn: [loadTeacherDetail],
+  });
 
   // After a mutation: assignments changed, and so may a class's class teacher.
+  // Goes through `loadTeacherDetail` so it claims the latest run — otherwise a
+  // fetch already in flight could land on top and undo what was just saved.
   const refreshTeacherDetail = useCallback(async () => {
     if (activeTeacherId === null) return;
-    const [d] = await Promise.all([getTeacher(activeTeacherId), loadClasses()]);
-    setTeacherDetail(d);
-  }, [activeTeacherId, loadClasses]);
+    await Promise.all([loadTeacherDetail(), loadClasses()]);
+  }, [activeTeacherId, loadTeacherDetail, loadClasses]);
 
   // The detail view refetches so ack counts are current, not list-stale.
-  useEffect(() => {
-    if (screen !== "notice" || activeNoticeId === null) return;
-    let stale = false;
-    setNoticeDetail(null);
-    getNotice(activeNoticeId)
-      .then((n) => {
-        if (!stale) setNoticeDetail(n);
-      })
-      .catch(() => {
-        /* the board still shows the list copy */
-      });
-    return () => {
-      stale = true;
-    };
-  }, [screen, activeNoticeId]);
+  const noticeDetailRun = useRef(0);
+  const loadNoticeDetail = useCallback(async () => {
+    if (activeNoticeId === null) return;
+    const run = ++noticeDetailRun.current;
+    try {
+      const n = await getNotice(activeNoticeId);
+      if (run === noticeDetailRun.current) setNoticeDetail(n);
+    } catch {
+      /* the board still shows the list copy */
+    }
+  }, [activeNoticeId]);
 
-  // Load live data whenever the admin lands on a screen that needs it.
   useEffect(() => {
+    noticeDetailRun.current++;
+    setNoticeDetail(null);
+  }, [activeNoticeId]);
+
+  // Polled: acknowledgements land while the notice is open, and the count on
+  // screen is the whole reason an admin opens it.
+  useRevalidate(loadNoticeDetail, {
+    active: screen === "notice" && activeNoticeId !== null,
+    revalidateOn: [loadNoticeDetail],
+    pollMs: 60_000,
+  });
+
+  // Everything the screen in front of the admin needs.
+  //
+  // Deliberately unguarded: this used to skip the fetch when the state was
+  // already non-null, which made every screen load once per login and go stale
+  // from then on. Each screen keeps rendering its last answer while the new one
+  // is in flight (every screen below tests `loading && data === null`), so
+  // refetching on entry costs a request and shows no spinner.
+  const loadForScreen = useCallback(() => {
     // Add-Teacher needs live classes + subjects to build its assignment picker.
     // Staff Detail needs classes for its "assign a class" picker; Class Detail
     // needs the class itself, the subject chips, and the teacher picker.
@@ -323,6 +348,8 @@ export function AdminApp() {
       "classDetail",
       "staffAdd",
       "staffDetail",
+      // Compose needs classes for its audience picker.
+      "noticeCompose",
     ];
     const needsSubjects = [
       "classes",
@@ -332,36 +359,30 @@ export function AdminApp() {
       "staffDetail",
     ];
     const needsTeachers = ["staff", "staffDetail", "classAdd", "classDetail"];
-    if (needsClasses.includes(screen) && apiClasses === null) loadClasses();
-    if (needsSubjects.includes(screen) && apiSubjects === null) loadSubjects();
-    if (needsTeachers.includes(screen) && apiTeachers === null) loadTeachers();
+    if (needsClasses.includes(screen)) loadClasses();
+    if (needsSubjects.includes(screen)) loadSubjects();
+    if (needsTeachers.includes(screen)) loadTeachers();
     // The School tab loads only the half that's on screen.
-    if (screen === "school" && schoolTab === "notices" && apiNotices === null)
-      loadNotices();
-    if (screen === "school" && schoolTab === "calendar" && apiEvents === null)
-      loadEvents();
-    // Compose needs classes for its audience picker.
-    if (screen === "noticeCompose" && apiClasses === null) loadClasses();
-    if (screen === "home" && dashboard === null) loadDashboard();
-    if (screen === "adminAtt" && attOverview === null) loadAttOverview();
+    if (screen === "school" && schoolTab === "notices") loadNotices();
+    if (screen === "school" && schoolTab === "calendar") loadEvents();
+    if (screen === "home") loadDashboard();
+    if (screen === "adminAtt") loadAttOverview();
   }, [
     screen,
     schoolTab,
-    dashboard,
     loadDashboard,
-    attOverview,
     loadAttOverview,
-    apiClasses,
     loadClasses,
-    apiSubjects,
     loadSubjects,
-    apiTeachers,
     loadTeachers,
-    apiNotices,
     loadNotices,
-    apiEvents,
     loadEvents,
   ]);
+
+  // Runs on every screen change, and again whenever the tab is refocused —
+  // an admin who left the dashboard open overnight shouldn't be reading
+  // yesterday's numbers.
+  useRevalidate(loadForScreen, { revalidateOn: [loadForScreen] });
 
   const name = user?.name ?? "Sridevi Menon";
   const activeApiTeacher =
@@ -369,27 +390,17 @@ export function AdminApp() {
   const activeApiKlass =
     apiClasses?.find((c) => c.id === activeKlassId) ?? null;
 
-  // The drilled-into class refetches whenever a different one is opened.
+  // The drilled-into class refetches whenever a different one is opened, and
+  // again on entry — `loadAttClass` above is the same fetch, reused by the
+  // mutations on this screen.
   useEffect(() => {
-    if (screen !== "adminAttClass" || attClassId === null) return;
-    let stale = false;
     setAttClassData(null);
-    setAttClassError(null);
-    setAttClassLoading(true);
-    getClassAttendance(attClassId)
-      .then((d) => {
-        if (!stale) setAttClassData(d);
-      })
-      .catch(() => {
-        if (!stale) setAttClassError("Couldn't load this class's attendance.");
-      })
-      .finally(() => {
-        if (!stale) setAttClassLoading(false);
-      });
-    return () => {
-      stale = true;
-    };
-  }, [screen, attClassId]);
+  }, [attClassId]);
+
+  useRevalidate(loadAttClass, {
+    active: screen === "adminAttClass" && attClassId !== null,
+    revalidateOn: [loadAttClass],
+  });
 
   function go(s: Screen) {
     setScreen(s);
@@ -1979,12 +1990,14 @@ function ClassDetail({
     }
   }, [klassId]);
 
+  // Clear the previous class before its replacement lands.
   useEffect(() => {
     setStudents(null);
     setClsTeachers(null);
     setExams(null);
-    load();
-  }, [load]);
+  }, [klassId]);
+
+  useRevalidate(load, { revalidateOn: [load] });
 
   if (!klass)
     return (

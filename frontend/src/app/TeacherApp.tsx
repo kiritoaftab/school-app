@@ -26,8 +26,24 @@ import {
   initialsOf, maskPhone,
   type CalEvent,
 } from './data';
+import { useResource, useRevalidate } from '../lib/useResource';
 
-type Screen = 'home' | 'attendance' | 'leaveNotes' | 'diary' | 'myClass' | 'results' | 'photos' | 'album' | 'notifs';
+// Stable empty fallbacks — a fresh [] each render would reset the resource.
+const EMPTY_CLASSES: TeacherKlass[] = [];
+const EMPTY_EVENTS: CalEvent[] = [];
+const EMPTY_LEAVES: TeacherLeave[] = [];
+const EMPTY_EXAMS: TeacherExam[] = [];
+const EMPTY_GRADABLE: GradableSubject[] = [];
+const EMPTY_STUDENTS: TeacherStudent[] = [];
+const EMPTY_ROSTER: RosterRow[] = [];
+const EMPTY_HOME_SUMMARY: { hwCount: number; exams: TeacherExam[] } = { hwCount: 0, exams: [] };
+const EMPTY_RESULTS: { students: ResultRow[]; readOnly: boolean; maxScore: number } = {
+  students: [],
+  readOnly: false,
+  maxScore: 100,
+};
+
+type Screen ='home' | 'attendance' | 'leaveNotes' | 'diary' | 'myClass' | 'results' | 'photos' | 'album' | 'notifs';
 const TOP_LEVEL: Screen[] = ['home', 'diary', 'results', 'myClass', 'photos'];
 
 /** The two halves of the My Class tab (calendar + roster live together). */
@@ -57,32 +73,23 @@ export function TeacherApp() {
   const photos = useAlbums('/teacher');
 
   // Live classes drive the switcher; the diary reads from them directly.
-  const [classes, setClasses] = useState<TeacherKlass[]>([]);
-  const [classesErr, setClassesErr] = useState('');
-  const [loadingClasses, setLoadingClasses] = useState(true);
   const [selClassId, setSelClassId] = useState<number | null>(null);
-  const [calEvents, setCalEvents] = useState<CalEvent[]>([]);
 
-  useEffect(() => {
-    let alive = true;
-    listMyClasses()
-      .then((cs) => {
-        if (!alive) return;
-        setClasses(cs);
-        setSelClassId((cur) => (cur != null && cs.some((c) => c.id === cur) ? cur : cs[0]?.id ?? null));
-      })
-      .catch(() => alive && setClassesErr('Could not load your classes.'))
-      .finally(() => alive && setLoadingClasses(false));
-    return () => { alive = false; };
-  }, []);
+  const classesRes = useResource(listMyClasses, EMPTY_CLASSES);
+  const classes = classesRes.data;
 
+  // Keep the switcher's selection valid as the list arrives, and as it changes
+  // under us — an assignment can be withdrawn between fetches.
   useEffect(() => {
-    let alive = true;
-    listEvents()
-      .then((evs) => alive && setCalEvents(evs.map(toCalEvent)))
-      .catch(() => alive && setCalEvents([]));
-    return () => { alive = false; };
-  }, []);
+    setSelClassId((cur) => (cur != null && classes.some((c) => c.id === cur) ? cur : classes[0]?.id ?? null));
+  }, [classes]);
+
+  const eventsRes = useResource(
+    () => listEvents().then((evs) => evs.map(toCalEvent)),
+    EMPTY_EVENTS,
+    { active: screen === 'myClass' && myClassTab === 'calendar', revalidateOn: [screen, myClassTab] },
+  );
+  const calEvents = eventsRes.data;
 
   const liveClass = classes.find((c) => c.id === selClassId) ?? null;
   // Leave notes only reach the class teacher, so they hang off that class —
@@ -90,26 +97,26 @@ export function TeacherApp() {
   const ctClass = classes.find((c) => c.isClassTeacher) ?? null;
 
   // ---- leave notes (class teacher only) ----
-  const [leaves, setLeaves] = useState<TeacherLeave[]>([]);
-  const [leavesLoading, setLeavesLoading] = useState(true);
-
-  useEffect(() => {
-    let alive = true;
-    listLeaves()
-      .then((l) => alive && setLeaves(l))
-      .catch(() => alive && setLeaves([]))
-      .finally(() => alive && setLeavesLoading(false));
-    return () => { alive = false; };
-  }, []);
+  // Home badges the unacknowledged count and the screen lists them, so this is
+  // polled: a parent applying for leave should surface without a refresh.
+  const leavesRes = useResource(listLeaves, EMPTY_LEAVES, {
+    active: screen === 'home' || screen === 'leaveNotes',
+    revalidateOn: [screen],
+    pollMs: 60_000,
+  });
+  const leaves = leavesRes.data;
+  const leavesLoading = leavesRes.loading;
 
   async function ackLeave(id: number) {
     const at = new Date().toISOString();
-    setLeaves((cur) => cur.map((l) => (l.id === id ? { ...l, status: 'APPROVED', acknowledgedAt: at } : l)));
+    const patch = (status: TeacherLeave['status'], acknowledgedAt: string | null) =>
+      leavesRes.setData((cur) => cur.map((l) => (l.id === id ? { ...l, status, acknowledgedAt } : l)));
+    patch('APPROVED', at);
     try {
       await acknowledgeLeave(id);
     } catch {
       // Put the note back in the "to acknowledge" pile so it isn't silently lost.
-      setLeaves((cur) => cur.map((l) => (l.id === id ? { ...l, status: 'SUBMITTED', acknowledgedAt: null } : l)));
+      patch('SUBMITTED', null);
     }
   }
 
@@ -117,9 +124,6 @@ export function TeacherApp() {
   const [teSubject, setTeSubject] = useState('');
   const [toast, setToast] = useState('');
   const [examErr, setExamErr] = useState('');
-
-  // Live examination catalogue for the selected class.
-  const [teExams, setTeExams] = useState<TeacherExam[]>([]);
 
   // Bridge to the screens that are still on mock data: they look classes up by
   // the "5B" style key, so derive it from the real grade/section.
@@ -137,25 +141,20 @@ export function TeacherApp() {
     : mockClass;
   const name = user?.name ?? 'Ms. Anjali Rao';
 
-  // Live exams for the selected class; keep the selected exam valid as it loads.
-  const reloadExams = useCallback(async () => {
-    if (liveClass == null) { setTeExams([]); return; }
-    const ex = await listClassExams(liveClass.id);
-    setTeExams(ex);
-    setTeExam((cur) => (ex.some((e) => String(e.id) === cur) ? cur : String(ex[0]?.id ?? '')));
-  }, [liveClass]);
+  // Live examination catalogue for the selected class. Another teacher of the
+  // same class can add an exam, so opening Marks refetches it.
+  const examsRes = useResource(
+    () => (liveClass == null ? Promise.resolve(EMPTY_EXAMS) : listClassExams(liveClass.id)),
+    EMPTY_EXAMS,
+    { key: [liveClass?.id ?? null], active: screen === 'results', revalidateOn: [screen] },
+  );
+  const teExams = examsRes.data;
+  const reloadExams = examsRes.reload;
+
+  // Keep the selected exam valid as the catalogue loads or changes.
   useEffect(() => {
-    let alive = true;
-    if (liveClass == null) { setTeExams([]); return; }
-    listClassExams(liveClass.id)
-      .then((ex) => {
-        if (!alive) return;
-        setTeExams(ex);
-        setTeExam((cur) => (ex.some((e) => String(e.id) === cur) ? cur : String(ex[0]?.id ?? '')));
-      })
-      .catch(() => alive && setTeExams([]));
-    return () => { alive = false; };
-  }, [liveClass?.id]);
+    setTeExam((cur) => (teExams.some((e) => String(e.id) === cur) ? cur : String(teExams[0]?.id ?? '')));
+  }, [teExams]);
 
   function go(s: Screen) {
     setScreen(s);
@@ -241,7 +240,11 @@ export function TeacherApp() {
             <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-2.5">Your classes</div>
             {classes.length === 0 && (
               <div className="py-4 text-center text-muted text-[12.5px]">
-                {loadingClasses ? 'Loading your classes…' : classesErr || 'No classes assigned to you yet.'}
+                {classesRes.loading
+                  ? 'Loading your classes…'
+                  : classesRes.error
+                    ? 'Could not load your classes.'
+                    : 'No classes assigned to you yet.'}
               </div>
             )}
             {classes.map((c) => {
@@ -318,7 +321,11 @@ export function TeacherApp() {
         </>
       )}
       {screen === 'diary' && (
-        <TeacherDiary klass={liveClass} loading={loadingClasses} error={classesErr} />
+        <TeacherDiary
+          klass={liveClass}
+          loading={classesRes.loading}
+          error={classesRes.error ? 'Could not load your classes.' : ''}
+        />
       )}
       {screen === 'results' && (
         <TeacherMarks
@@ -358,21 +365,24 @@ function TeacherHome({
   openRoster: () => void;
   openAcct: () => void;
 }) {
-  const [hwCount, setHwCount] = useState(0);
-  const [exams, setExams] = useState<TeacherExam[]>([]);
-
-  useEffect(() => {
-    let alive = true;
-    if (klass == null) { setHwCount(0); setExams([]); return; }
-    const today = new Date().toISOString().slice(0, 10);
-    listDiary(klass.id, today, today)
-      .then((w) => alive && setHwCount(w.entries.filter((e) => e.date === today).length))
-      .catch(() => alive && setHwCount(0));
-    listClassExams(klass.id)
-      .then((ex) => alive && setExams(ex))
-      .catch(() => alive && setExams([]));
-    return () => { alive = false; };
-  }, [klass?.id]);
+  // One resource for both counters so the home screen refreshes as a unit.
+  const summary = useResource(
+    async () => {
+      if (klass == null) return EMPTY_HOME_SUMMARY;
+      const today = ymd(new Date());
+      const [week, exams] = await Promise.all([
+        listDiary(klass.id, today, today),
+        listClassExams(klass.id),
+      ]);
+      return {
+        hwCount: week.entries.filter((e) => e.date === today).length,
+        exams,
+      };
+    },
+    EMPTY_HOME_SUMMARY,
+    { key: [klass?.id ?? null], pollMs: 60_000 },
+  );
+  const { hwCount, exams } = summary.data;
 
   const hour = new Date().getHours();
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening';
@@ -589,28 +599,36 @@ function TeacherAttendance({
   roleLabel: string;
   isClassTeacher: boolean;
 }) {
-  const [students, setStudents] = useState<RosterRow[]>([]);
   const [date, setDate] = useState('');
   const [absent, setAbsent] = useState<Set<number>>(new Set());
-  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [err, setErr] = useState('');
 
+  // No poll here: refetching under a half-marked register would throw away
+  // ticks the teacher hasn't saved yet. Opening the screen is enough.
+  const rosterRes = useResource(
+    () => (klassId == null ? Promise.resolve(EMPTY_ROSTER) : getClassRoster(klassId).then((r) => {
+      setDate(r.date);
+      return r.students;
+    })),
+    EMPTY_ROSTER,
+    { key: [klassId], onFocus: false },
+  );
+  const students = rosterRes.data;
+  const loading = rosterRes.loading;
+  const setStudents = rosterRes.setData;
+
+  // Seed the absentee ticks from whatever the register currently says.
   useEffect(() => {
-    if (klassId == null) { setStudents([]); return; }
-    let alive = true;
-    setLoading(true); setSaved(false);
-    getClassRoster(klassId)
-      .then((r) => {
-        if (!alive) return;
-        setStudents(r.students);
-        setDate(r.date);
-        setAbsent(new Set(r.students.filter((s) => s.status === 'ABSENT').map((s) => s.id)));
-      })
-      .catch(() => alive && setStudents([]))
-      .finally(() => alive && setLoading(false));
-    return () => { alive = false; };
+    setAbsent(new Set(students.filter((s) => s.status === 'ABSENT').map((s) => s.id)));
+  }, [students]);
+
+  // The "saved" badge belongs to the register in front of the teacher, so it
+  // clears when they switch to another class.
+  useEffect(() => {
+    setSaved(false);
+    setErr('');
   }, [klassId]);
 
   const total = students.length;
@@ -775,7 +793,8 @@ function TeacherDiary({ klass, loading, error }: { klass: TeacherKlass | null; l
     }
   }, [klass?.id, from, to]);
 
-  useEffect(() => { void load(); }, [load]);
+  // Two teachers share a class diary, so keep the week current while it's open.
+  useRevalidate(load, { pollMs: 60_000, revalidateOn: [load] });
 
   const dayEntries = entries.filter((e) => e.date === selDate);
   const countFor = (key: string) => entries.filter((e) => e.date === key).length;
@@ -1009,15 +1028,14 @@ function TeacherMarks({
   // The server also reports subjects that merely *have* marks under this exam —
   // an archived subject drops out of `classSubjects`, and without this its marks
   // would be printed on the parent's report card but unreachable here.
-  const [gradable, setGradable] = useState<GradableSubject[]>([]);
-  useEffect(() => {
-    if (klassId == null || termId == null) { setGradable([]); return; }
-    let alive = true;
-    listGradableSubjects(klassId, termId)
-      .then((d) => { if (alive) setGradable(d); })
-      .catch(() => { if (alive) setGradable([]); });
-    return () => { alive = false; };
-  }, [klassId, termId]);
+  const gradable = useResource(
+    () =>
+      klassId == null || termId == null
+        ? Promise.resolve(EMPTY_GRADABLE)
+        : listGradableSubjects(klassId, termId),
+    EMPTY_GRADABLE,
+    { key: [klassId, termId] },
+  ).data;
 
   const fallbackChoices: TeacherSubject[] = selectedExam?.subject ? [selectedExam.subject] : classSubjects;
   const subjectChoices: { id: number | null; name: string; archived?: boolean }[] =
@@ -1031,33 +1049,35 @@ function TeacherMarks({
   }, [teExam, choiceKey]);
 
   // Real roster + saved marks for the selected exam + subject.
-  const [rows, setRows] = useState<ResultRow[]>([]);
   const [draft, setDraft] = useState<Record<number, string>>({});
   const [maxScore, setMaxScore] = useState('100');
-  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Marks a teacher is halfway through typing must not be overwritten, so this
+  // one refetches on entry only — no focus refresh, no poll.
+  const resultsRes = useResource(
+    () =>
+      klassId == null || termId == null || !teSubject
+        ? Promise.resolve(EMPTY_RESULTS)
+        : listClassResults(klassId, termId, teSubject),
+    EMPTY_RESULTS,
+    { key: [klassId, termId, teSubject], onFocus: false },
+  );
+  const rows = resultsRes.data.students;
   // Set when the subject is archived or no longer taught: marks stay visible,
   // editing is off.
-  const [readOnly, setReadOnly] = useState(false);
+  const readOnly = resultsRes.data.readOnly;
+  const loading = resultsRes.loading;
 
+  // Reset the draft to what the server holds whenever a new sheet arrives.
   useEffect(() => {
-    if (klassId == null || termId == null || !teSubject) { setRows([]); setDraft({}); return; }
-    let alive = true;
-    setLoading(true);
-    listClassResults(klassId, termId, teSubject)
-      .then((data) => {
-        if (!alive) return;
-        setRows(data.students);
-        setReadOnly(data.readOnly);
-        setMaxScore(String(data.maxScore));
-        const d: Record<number, string> = {};
-        data.students.forEach((s) => { d[s.studentId] = s.score == null ? '' : String(s.score); });
-        setDraft(d);
-      })
-      .catch(() => { if (alive) { setRows([]); setDraft({}); setReadOnly(false); } })
-      .finally(() => { if (alive) setLoading(false); });
-    return () => { alive = false; };
-  }, [klassId, termId, teSubject]);
+    setMaxScore(String(resultsRes.data.maxScore));
+    const d: Record<number, string> = {};
+    resultsRes.data.students.forEach((s) => {
+      d[s.studentId] = s.score == null ? '' : String(s.score);
+    });
+    setDraft(d);
+  }, [resultsRes.data]);
 
   const maxNum = Math.max(1, parseInt(maxScore) || 100);
   function setMark(sid: number, raw: string) {
@@ -1240,8 +1260,6 @@ function TeacherStudents({
   roleLabel: string;
   isClassTeacher: boolean;
 }) {
-  const [students, setStudents] = useState<TeacherStudent[]>([]);
-  const [loading, setLoading] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [name, setName] = useState('');
   const [gName, setGName] = useState('');
@@ -1250,22 +1268,14 @@ function TeacherStudents({
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
 
-  const reload = useCallback(async () => {
-    if (klassId == null) { setStudents([]); return; }
-    const list = await listClassStudents(klassId);
-    setStudents(list);
-  }, [klassId]);
-
-  useEffect(() => {
-    let alive = true;
-    if (klassId == null) { setStudents([]); return; }
-    setLoading(true);
-    listClassStudents(klassId)
-      .then((list) => alive && setStudents(list))
-      .catch(() => alive && setStudents([]))
-      .finally(() => alive && setLoading(false));
-    return () => { alive = false; };
-  }, [klassId]);
+  const studentsRes = useResource(
+    () => (klassId == null ? Promise.resolve(EMPTY_STUDENTS) : listClassStudents(klassId)),
+    EMPTY_STUDENTS,
+    { key: [klassId] },
+  );
+  const students = studentsRes.data;
+  const loading = studentsRes.loading;
+  const reload = studentsRes.reload;
 
   const ready = name.trim().length > 0 && gPhone.replace(/\D/g, '').length === 10;
 

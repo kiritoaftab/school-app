@@ -14,6 +14,7 @@ import {
 } from '../api/gallery';
 import { ALBUM_TONES, GLYPH } from './data';
 import { Card, ConfirmIconButton, EmptyState, Glyph, SectionLabel, Spinner, cx } from './kit';
+import { useRevalidate } from '../lib/useResource';
 
 // Photo albums, shared by the admin, teacher and parent apps. Admins and
 // teachers get the full CRUD; parents pass `readOnly` for the same views.
@@ -87,27 +88,17 @@ export function useAlbums(base: GalleryBase) {
     }
   }, [base, openId]);
 
-  // Fetch the open album, and clear the previous one so its photos never flash.
+  // Clear the previous album so its photos never flash under the new title.
   useEffect(() => {
     setViewerAt(null);
-    if (openId === null) {
-      setDetail(null);
-      return;
-    }
-    let stale = false;
     setDetail(null);
     setDetailError(null);
-    getAlbum(base, openId)
-      .then((d) => {
-        if (!stale) setDetail(d);
-      })
-      .catch((e) => {
-        if (!stale) setDetailError(msgOf(e, "Couldn't load this album."));
-      });
-    return () => {
-      stale = true;
-    };
   }, [base, openId]);
+
+  useRevalidate(reloadDetail, {
+    active: openId !== null,
+    revalidateOn: [reloadDetail],
+  });
 
   /** Run a mutation, surfacing its error and refreshing the list afterwards. */
   const run = useCallback(
@@ -260,10 +251,10 @@ export function AlbumsScreen({
   const [form, setForm] = useState({ title: '', date: '' });
   const ready = form.title.trim().length > 0 && form.date.length === 10 && !busy;
 
-  // Load once on mount, and whenever a retry is asked for.
-  useEffect(() => {
-    if (albums === null && !loading && error === null) reload();
-  }, [albums, loading, error, reload]);
+  // This screen mounts when the Photos tab is opened, so loading on mount is
+  // loading on entry. Also refreshes when the app is resumed — the school
+  // posting an album is exactly what someone reopening this expects to see.
+  useRevalidate(reload, { revalidateOn: [reload] });
 
   async function save() {
     if (!ready) return;

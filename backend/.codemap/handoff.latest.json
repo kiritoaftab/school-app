@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "generated_at": "2026-07-30T01:58:25.0351+05:30",
+  "root": "/Users/aftab.ahmed/school-app/backend",
+  "branch": "main",
+  "base_ref": "main",
+  "prefix": {
+    "file_count": 41,
+    "hubs": []
+  },
+  "delta": {
+    "changed": [
+      {
+        "path": "frontend/src/app/AdminApp.tsx",
+        "status": "modified"
+      },
+      {
+        "path": "frontend/src/app/Albums.tsx",
+        "status": "modified"
+      },
+      {
+        "path": "frontend/src/app/ParentApp.tsx",
+        "status": "modified"
+      },
+      {
+        "path": "frontend/src/app/TeacherApp.tsx",
+        "status": "modified"
+      }
+    ],
+    "risk_files": [],
+    "recent_events": [],
+    "next_steps": [
+      "Run tests covering changed files before handoff."
+    ],
+    "open_questions": [
+      "Live watch state was unavailable; timeline may be incomplete.",
+      "Dependency graph context was unavailable; risk files may be incomplete."
+    ]
+  },
+  "prefix_hash": "ba0a2526837b6eca85d729e9248521779c3dd24ed70d1231e5f545e878cd6bc4",
+  "delta_hash": "4c89b8d3a15b7167756d7bcc4f8525a128c5f8cf90d792579a0b3f1d340ccfbc",
+  "combined_hash": "2f5a6bbde9b8b355197607b9c80c71298dc182c6f2287384d721cb0ddca3435b",
+  "metrics": {
+    "prefix_bytes": 27,
+    "delta_bytes": 516,
+    "total_bytes": 543,
+    "unchanged_bytes": 0,
+    "reuse_ratio": 0,
+    "prefix_reused": false,
+    "delta_reused": false
+  },
+  "agent_history": [
+    {
+      "agent_id": "claude-code",
+      "started_at": "2026-07-30T01:58:25.035102+05:30",
+      "ended_at": "2026-07-30T01:58:25.035102+05:30"
+    }
+  ],
+  "changed_files": [
+    "frontend/src/app/AdminApp.tsx",
+    "frontend/src/app/Albums.tsx",
+    "frontend/src/app/ParentApp.tsx",
+    "frontend/src/app/TeacherApp.tsx"
+  ],
+  "risk_files": [],
+  "recent_events": [],
+  "next_steps": [
+    "Run tests covering changed files before handoff."
+  ],
+  "open_questions": [
+    "Live watch state was unavailable; timeline may be incomplete.",
+    "Dependency graph context was unavailable; risk files may be incomplete."
+  ]
+}

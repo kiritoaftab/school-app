@@ -76,6 +76,19 @@ import {
   startOfWeek,
 } from "../lib/date";
 import { getDone, setDone } from "../lib/diaryDone";
+import { useResource } from "../lib/useResource";
+
+// Stable empty fallbacks — a fresh [] each render would reset the resource.
+const EMPTY_STUDENTS: ParentStudent[] = [];
+const EMPTY_DIARY: ParentDiaryEntry[] = [];
+const EMPTY_NOTICES: ParentNotice[] = [];
+const EMPTY_EVENTS: CalEvent[] = [];
+const EMPTY_LEAVES: ParentLeave[] = [];
+const EMPTY_TERMS: { id: number; name: string }[] = [];
+const EMPTY_ATTENDANCE: {
+  byDay: Record<number, AttendanceStatus>;
+  stats: { present: number; absent: number; percent: number };
+} = { byDay: {}, stats: { present: 0, absent: 0, percent: 0 } };
 
 type Screen =
   | "home"
@@ -160,53 +173,45 @@ export function ParentApp() {
   const [pickerOpen, setPickerOpen] = useState(false);
 
   // ---- children (switcher) ----
-  const [students, setStudents] = useState<ParentStudent[]>([]);
-  const [studentsErr, setStudentsErr] = useState("");
-  const [loadingStudents, setLoadingStudents] = useState(true);
   const [selStudentId, setSelStudentId] = useState<number | null>(null);
 
+  const studentsRes = useResource(listMyStudents, EMPTY_STUDENTS);
+  const students = studentsRes.data;
+
+  // Keep the selection valid as the list arrives (and as it changes under us —
+  // a child moved to another school drops out of a later fetch).
   useEffect(() => {
-    let alive = true;
-    listMyStudents()
-      .then((list) => {
-        if (!alive) return;
-        setStudents(list);
-        setSelStudentId((cur) =>
-          cur != null && list.some((s) => s.id === cur)
-            ? cur
-            : (list[0]?.id ?? null),
-        );
-      })
-      .catch(() => alive && setStudentsErr("Could not load your children."))
-      .finally(() => alive && setLoadingStudents(false));
-    return () => {
-      alive = false;
-    };
-  }, []);
+    setSelStudentId((cur) =>
+      cur != null && students.some((s) => s.id === cur)
+        ? cur
+        : (students[0]?.id ?? null),
+    );
+  }, [students]);
 
   const selStudent = students.find((s) => s.id === selStudentId) ?? null;
 
   // ---- diary (shared by Home "today" + Diary screen) ----
-  const [diary, setDiary] = useState<ParentDiaryEntry[]>([]);
-  const [diaryLoading, setDiaryLoading] = useState(false);
-  const [doneSet, setDoneSet] = useState<Set<number>>(new Set());
+  // Polled: a parent sitting on the diary should see homework appear without
+  // being told to pull down or refresh.
+  const diaryRes = useResource(
+    () =>
+      selStudentId == null
+        ? Promise.resolve(EMPTY_DIARY)
+        : listStudentDiary(selStudentId),
+    EMPTY_DIARY,
+    {
+      key: [selStudentId],
+      active: screen === "home" || screen === "diary",
+      revalidateOn: [screen],
+      pollMs: 60_000,
+    },
+  );
+  const diary = diaryRes.data;
 
+  // "Done" ticks are this phone's, not the server's.
+  const [doneSet, setDoneSet] = useState<Set<number>>(new Set());
   useEffect(() => {
-    if (selStudentId == null) {
-      setDiary([]);
-      setDoneSet(new Set());
-      return;
-    }
-    let alive = true;
-    setDiaryLoading(true);
-    setDoneSet(getDone(selStudentId));
-    listStudentDiary(selStudentId)
-      .then((d) => alive && setDiary(d))
-      .catch(() => alive && setDiary([]))
-      .finally(() => alive && setDiaryLoading(false));
-    return () => {
-      alive = false;
-    };
+    setDoneSet(selStudentId == null ? new Set() : getDone(selStudentId));
   }, [selStudentId]);
 
   const toggleDone = useCallback(
@@ -218,44 +223,46 @@ export function ParentApp() {
   );
 
   // ---- calendar events ----
-  const [calEvents, setCalEvents] = useState<CalEvent[]>([]);
-  useEffect(() => {
-    let alive = true;
-    listEvents()
-      .then((evs) => alive && setCalEvents(evs.map(toCalEvent)))
-      .catch(() => alive && setCalEvents([]));
-    return () => {
-      alive = false;
-    };
-  }, []);
+  const eventsRes = useResource(
+    () => listEvents().then((evs) => evs.map(toCalEvent)),
+    EMPTY_EVENTS,
+    {
+      active: screen === "home" || screen === "calendar",
+      revalidateOn: [screen],
+    },
+  );
+  const calEvents = eventsRes.data;
 
   // ---- notices (live) ----
   const schoolName = user?.school?.name ?? SCHOOL;
-  const [notices, setNotices] = useState<Notice[]>([]);
-  const [acked, setAcked] = useState<Record<string, boolean>>({});
   const [activeNoticeId, setActiveNoticeId] = useState("");
 
-  useEffect(() => {
-    let alive = true;
-    listNotices()
-      .then((list) => {
-        if (!alive) return;
-        setNotices(list.map((n) => toNotice(n, schoolName)));
-        setAcked(Object.fromEntries(list.map((n) => [String(n.id), n.acked])));
-      })
-      .catch(() => {
-        if (alive) {
-          setNotices([]);
-          setAcked({});
-        }
-      });
-    return () => {
-      alive = false;
-    };
-  }, [schoolName]);
+  const noticesRes = useResource(listNotices, EMPTY_NOTICES, {
+    active:
+      screen === "home" || screen === "noticeBoard" || screen === "notice",
+    revalidateOn: [screen],
+  });
+
+  const notices = useMemo(
+    () => noticesRes.data.map((n) => toNotice(n, schoolName)),
+    [noticesRes.data, schoolName],
+  );
+
+  // Acknowledgements the server hasn't confirmed yet, laid over what it sent.
+  // Keeping them separate means a refetch can't un-tick a notice the parent
+  // just read.
+  const [ackedLocal, setAckedLocal] = useState<Record<string, boolean>>({});
+  const acked = useMemo(() => {
+    const m: Record<string, boolean> = {};
+    noticesRes.data.forEach((n) => {
+      const id = String(n.id);
+      m[id] = ackedLocal[id] || n.acked;
+    });
+    return m;
+  }, [noticesRes.data, ackedLocal]);
 
   function acknowledge(id: string) {
-    setAcked((a) => ({ ...a, [id]: true }));
+    setAckedLocal((a) => ({ ...a, [id]: true }));
     ackNotice(Number(id)).catch(() => {
       /* optimistic; leave the tick on */
     });
@@ -364,9 +371,11 @@ export function ParentApp() {
             </div>
             {students.length === 0 && (
               <div className="py-4 text-center text-muted text-[12.5px]">
-                {loadingStudents
+                {studentsRes.loading
                   ? "Loading…"
-                  : studentsErr || "No children linked to your account yet."}
+                  : studentsRes.error
+                    ? "Could not load your children."
+                    : "No children linked to your account yet."}
               </div>
             )}
             {students.map((s) => {
@@ -495,7 +504,7 @@ export function ParentApp() {
           childName={childName}
           klassLabel={childKlass}
           diary={diary}
-          loading={diaryLoading}
+          loading={diaryRes.loading}
           doneSet={doneSet}
           toggleDone={toggleDone}
         />
@@ -996,42 +1005,26 @@ function AttendanceParent({
     d.setDate(1);
     return d;
   });
-  const [statusByDay, setStatusByDay] = useState<
-    Record<number, AttendanceStatus>
-  >({});
-  const [stats, setStats] = useState({ present: 0, absent: 0, percent: 0 });
-  const [loading, setLoading] = useState(false);
-
   const monthKey = ym(monthDate);
-  useEffect(() => {
-    if (studentId == null) {
-      setStatusByDay({});
-      setStats({ present: 0, absent: 0, percent: 0 });
-      return;
-    }
-    let alive = true;
-    setLoading(true);
-    getStudentAttendance(studentId, monthKey)
-      .then((a) => {
-        if (!alive) return;
-        const map: Record<number, AttendanceStatus> = {};
-        a.days.forEach((d) => {
-          map[new Date(`${d.date}T00:00:00`).getDate()] = d.status;
-        });
-        setStatusByDay(map);
-        setStats({ present: a.present, absent: a.absent, percent: a.percent });
-      })
-      .catch(() => {
-        if (alive) {
-          setStatusByDay({});
-          setStats({ present: 0, absent: 0, percent: 0 });
-        }
-      })
-      .finally(() => alive && setLoading(false));
-    return () => {
-      alive = false;
-    };
-  }, [studentId, monthKey]);
+
+  const attRes = useResource(
+    async () => {
+      if (studentId == null) return EMPTY_ATTENDANCE;
+      const a = await getStudentAttendance(studentId, monthKey);
+      const byDay: Record<number, AttendanceStatus> = {};
+      a.days.forEach((d) => {
+        byDay[new Date(`${d.date}T00:00:00`).getDate()] = d.status;
+      });
+      return {
+        byDay,
+        stats: { present: a.present, absent: a.absent, percent: a.percent },
+      };
+    },
+    EMPTY_ATTENDANCE,
+    { key: [studentId, monthKey] },
+  );
+  const { byDay: statusByDay, stats } = attRes.data;
+  const loading = attRes.loading;
 
   const year = monthDate.getFullYear();
   const month = monthDate.getMonth();
@@ -1269,24 +1262,18 @@ function LeaveParent({
 
 /** This year's leaves for the selected child, newest first. Hidden when empty. */
 function PastLeaves({ studentId }: { studentId: number | null }) {
-  const [leaves, setLeaves] = useState<ParentLeave[]>([]);
-
-  useEffect(() => {
-    if (studentId == null) {
-      setLeaves([]);
-      return;
-    }
-    let alive = true;
-    listMyLeaves()
-      .then(
-        (all) =>
-          alive && setLeaves(all.filter((l) => l.studentId === studentId)),
-      )
-      .catch(() => alive && setLeaves([]));
-    return () => {
-      alive = false;
-    };
-  }, [studentId]);
+  // Polled: the teacher acknowledging a note is exactly what a parent on this
+  // screen is waiting for.
+  const leavesRes = useResource(
+    async () => {
+      if (studentId == null) return EMPTY_LEAVES;
+      const all = await listMyLeaves();
+      return all.filter((l) => l.studentId === studentId);
+    },
+    EMPTY_LEAVES,
+    { key: [studentId], pollMs: 60_000 },
+  );
+  const leaves = leavesRes.data;
 
   const year = String(new Date().getFullYear());
   const thisYear = leaves.filter((l) => l.fromDate.slice(0, 4) === year);
@@ -1343,51 +1330,36 @@ function PastLeaves({ studentId }: { studentId: number | null }) {
 
 // ---------- RESULTS (report card) ----------
 function ResultsParent({ studentId }: { studentId: number | null }) {
-  const [terms, setTerms] = useState<{ id: number; name: string }[]>([]);
   const [selTermId, setSelTermId] = useState<number | null>(null);
-  const [termsLoading, setTermsLoading] = useState(false);
 
-  const [results, setResults] = useState<StudentResults | null>(null);
-  const [resultsLoading, setResultsLoading] = useState(false);
+  const termsRes = useResource(
+    () =>
+      studentId == null ? Promise.resolve(EMPTY_TERMS) : listStudentTerms(studentId),
+    EMPTY_TERMS,
+    { key: [studentId] },
+  );
+  const terms = termsRes.data;
+  const termsLoading = termsRes.loading;
 
+  // Keep the chosen exam valid as the catalogue loads or changes.
   useEffect(() => {
-    if (studentId == null) {
-      setTerms([]);
-      setSelTermId(null);
-      return;
-    }
-    let alive = true;
-    setTermsLoading(true);
-    listStudentTerms(studentId)
-      .then((t) => {
-        if (!alive) return;
-        setTerms(t);
-        setSelTermId((cur) =>
-          cur != null && t.some((x) => x.id === cur) ? cur : (t[0]?.id ?? null),
-        );
-      })
-      .catch(() => alive && setTerms([]))
-      .finally(() => alive && setTermsLoading(false));
-    return () => {
-      alive = false;
-    };
-  }, [studentId]);
+    setSelTermId((cur) =>
+      cur != null && terms.some((x) => x.id === cur)
+        ? cur
+        : (terms[0]?.id ?? null),
+    );
+  }, [terms]);
 
-  useEffect(() => {
-    if (studentId == null || selTermId == null) {
-      setResults(null);
-      return;
-    }
-    let alive = true;
-    setResultsLoading(true);
-    getStudentResults(studentId, selTermId)
-      .then((r) => alive && setResults(r))
-      .catch(() => alive && setResults(null))
-      .finally(() => alive && setResultsLoading(false));
-    return () => {
-      alive = false;
-    };
-  }, [studentId, selTermId]);
+  const resultsRes = useResource(
+    () =>
+      studentId == null || selTermId == null
+        ? Promise.resolve(null)
+        : getStudentResults(studentId, selTermId),
+    null as StudentResults | null,
+    { key: [studentId, selTermId] },
+  );
+  const results = resultsRes.data;
+  const resultsLoading = resultsRes.loading;
 
   if (termsLoading) {
     return (
