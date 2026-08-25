@@ -1113,6 +1113,9 @@ function TeacherMarks({
   const [draft, setDraft] = useState<Record<number, string>>({});
   const [maxScore, setMaxScore] = useState('100');
   const [saving, setSaving] = useState(false);
+  // A saved sheet is reopened only through the confirm step below.
+  const [editing, setEditing] = useState(false);
+  const [confirmEdit, setConfirmEdit] = useState(false);
 
   // Marks a teacher is halfway through typing must not be overwritten, so this
   // one refetches on entry only — no focus refresh, no poll.
@@ -1130,15 +1133,36 @@ function TeacherMarks({
   const readOnly = resultsRes.data.readOnly;
   const loading = resultsRes.loading;
 
+  /** The typed-in boxes as the server's saved marks. */
+  function draftOf(students: ResultRow[]): Record<number, string> {
+    const d: Record<number, string> = {};
+    students.forEach((s) => {
+      d[s.studentId] = s.score == null ? '' : String(s.score);
+    });
+    return d;
+  }
+
   // Reset the draft to what the server holds whenever a new sheet arrives.
   useEffect(() => {
     setMaxScore(String(resultsRes.data.maxScore));
-    const d: Record<number, string> = {};
-    resultsRes.data.students.forEach((s) => {
-      d[s.studentId] = s.score == null ? '' : String(s.score);
-    });
-    setDraft(d);
+    setDraft(draftOf(resultsRes.data.students));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [resultsRes.data]);
+
+  // Switching exam, subject or class means a different sheet, which locks again.
+  useEffect(() => {
+    setEditing(false);
+    setConfirmEdit(false);
+  }, [klassId, termId, teSubject]);
+
+  // Any mark on the server means this sheet has been submitted. Read from the
+  // fetched sheet rather than the draft, so the lock survives leaving the
+  // screen and comes back the same after a refresh.
+  const submitted = resultsRes.data.students.some((s) => s.score != null);
+  // `readOnly` is the server's hard lock (archived subject) — no edit button for
+  // that one. This is the soft lock: reopenable, but only on purpose.
+  const locked = !readOnly && submitted && !editing;
+  const editable = !readOnly && !locked;
 
   const maxNum = Math.max(1, parseInt(maxScore) || 100);
   function setMark(sid: number, raw: string) {
@@ -1155,6 +1179,13 @@ function TeacherMarks({
   const marksAvg = entered ? `${Math.round((sum / entered / maxNum) * 100)}%` : '—';
   const allEntered = rows.length > 0 && rows.every((r) => (draft[r.studentId] ?? '') !== '');
 
+  /** Abandon an edit: drop the typed changes, go back to the saved sheet. */
+  function cancelEdit() {
+    setMaxScore(String(resultsRes.data.maxScore));
+    setDraft(draftOf(resultsRes.data.students));
+    setEditing(false);
+  }
+
   async function save() {
     if (klassId == null || termId == null || !teSubject) return;
     setSaving(true);
@@ -1168,6 +1199,11 @@ function TeacherMarks({
           return { studentId: r.studentId, score: raw === '' ? null : parseInt(raw) };
         }),
       });
+      // `submitted` reads the fetched sheet, so pull the saved marks back before
+      // dropping out of edit mode — otherwise a first save would land back on an
+      // unlocked sheet for as long as the refetch takes.
+      await resultsRes.reload();
+      setEditing(false);
       setToast('saved');
       setTimeout(() => setToast(''), 2500);
     } catch {
@@ -1265,7 +1301,7 @@ function TeacherMarks({
             <StatCard value={marksAvg} label="Class avg" dark />
             <StatCard value={entered} label={`of ${rows.length} in`} />
             <div className="flex-1 bg-white border-[1.5px] border-line rounded-[16px] px-2 py-2.5 text-center">
-              <input inputMode="numeric" disabled={readOnly} value={maxScore} onChange={(e) => setMaxScore(e.target.value.replace(/[^0-9]/g, '').slice(0, 3))} className="w-full text-center font-serif text-[22px] leading-none text-green bg-transparent outline-none disabled:opacity-60" />
+              <input inputMode="numeric" disabled={!editable} value={maxScore} onChange={(e) => setMaxScore(e.target.value.replace(/[^0-9]/g, '').slice(0, 3))} className="w-full text-center font-serif text-[22px] leading-none text-green bg-transparent outline-none disabled:opacity-60" />
               <div className="text-[10px] uppercase text-muted font-semibold mt-1">Max</div>
             </div>
           </div>
@@ -1280,7 +1316,7 @@ function TeacherMarks({
                 <div key={r.studentId} className="flex items-center gap-2.5 py-2 border-t border-[#f0f2ee] first:border-t-0">
                   <span className="w-5 text-[11px] text-muted font-semibold flex-none">{i + 1}</span>
                   <span className="flex-1 text-[13px] font-semibold truncate">{r.name}</span>
-                  <input type="number" disabled={readOnly} value={draft[r.studentId] ?? ''} onChange={(e) => setMark(r.studentId, e.target.value)} placeholder="—" className="w-[50px] text-center px-1 py-2 border-[1.5px] border-line rounded-[10px] text-[13px] font-semibold bg-white box-border disabled:bg-mist disabled:text-muted" />
+                  <input type="number" disabled={!editable} value={draft[r.studentId] ?? ''} onChange={(e) => setMark(r.studentId, e.target.value)} placeholder="—" className="w-[50px] text-center px-1 py-2 border-[1.5px] border-line rounded-[10px] text-[13px] font-semibold bg-white box-border disabled:bg-mist disabled:text-muted" />
                   <span className="text-[11px] text-[#b7bfb6] flex-none w-6">/{maxNum}</span>
                 </div>
               ))}
@@ -1295,11 +1331,45 @@ function TeacherMarks({
               <b className="font-semibold">{teSubject}</b> is archived, or is no longer assigned to you.
               These marks stay on the report card — they just can't be changed here.
             </div>
+          ) : locked ? (
+            <>
+              <div className="mb-3">
+                <InfoNote>Marks for <b className="font-semibold">{teSubject}</b> have been saved. Parents can see them on the report card — tap edit below to correct them.</InfoNote>
+              </div>
+              {confirmEdit ? (
+                <Card className="p-3.5">
+                  <div className="text-[13px] font-bold mb-1">Edit these marks?</div>
+                  <p className="text-[12px] text-muted leading-[1.5] mb-3">
+                    This sheet is already saved. Saving again replaces it, and parents will see the corrected marks.
+                  </p>
+                  <div className="flex gap-2">
+                    <OutlineButton onClick={() => setConfirmEdit(false)}>Cancel</OutlineButton>
+                    <PrimaryButton onClick={() => { setConfirmEdit(false); setEditing(true); }}>Yes, edit</PrimaryButton>
+                  </div>
+                </Card>
+              ) : (
+                <OutlineButton onClick={() => setConfirmEdit(true)} disabled={rows.length === 0}>Edit marks</OutlineButton>
+              )}
+            </>
           ) : (
             <>
-              <PrimaryButton onClick={save} disabled={saving || rows.length === 0}>
-                {saving ? 'Saving…' : 'Save marks'}
-              </PrimaryButton>
+              {editing && (
+                <div className="mb-3">
+                  <InfoNote tone="amber">Editing a saved sheet. Save to replace the marks on the report card.</InfoNote>
+                </div>
+              )}
+              {editing ? (
+                <div className="flex gap-2">
+                  <OutlineButton onClick={cancelEdit} disabled={saving}>Cancel</OutlineButton>
+                  <PrimaryButton onClick={save} disabled={saving || rows.length === 0}>
+                    {saving ? 'Saving…' : 'Update marks'}
+                  </PrimaryButton>
+                </div>
+              ) : (
+                <PrimaryButton onClick={save} disabled={saving || rows.length === 0}>
+                  {saving ? 'Saving…' : 'Save marks'}
+                </PrimaryButton>
+              )}
               <div className="text-center text-[11px] text-muted mt-2.5 leading-[1.4]">Saved marks are visible to parents in each student's report card. Leave a box blank to clear that mark.</div>
             </>
           )}

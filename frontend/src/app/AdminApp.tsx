@@ -1001,7 +1001,7 @@ function AdminHome({
         </Card>
       )}
 
-      {data && data.pendingLeaves > 0 && (
+      {/* {data && data.pendingLeaves > 0 && (
         <Card className="p-[15px] mb-3 flex items-center gap-[13px]">
           <div className="w-11 h-11 rounded-[14px] bg-[#fbf3e2] grid place-items-center flex-none text-[#a9761b]">
             <Glyph d={GLYPH.diary} size={21} stroke={1.9} />
@@ -1014,7 +1014,7 @@ function AdminHome({
             <small className="text-muted text-[11.5px]">Awaiting review</small>
           </div>
         </Card>
-      )}
+      )} */}
 
       <div
         onClick={() => go("staff")}
@@ -1300,9 +1300,7 @@ function StaffDetail({
       await fn();
       await onRefresh();
     } catch (e) {
-      setActionError(
-        apiErrorText(e, "That didn't save. Please try again."),
-      );
+      setActionError(apiErrorText(e, "That didn't save. Please try again."));
     } finally {
       setBusyKlassId(null);
     }
@@ -2049,9 +2047,7 @@ function ClassDetail({
       await load();
       if (alsoClasses) await onClassesChanged();
     } catch (e) {
-      setError(
-        apiErrorText(e, "That didn't save. Please try again."),
-      );
+      setError(apiErrorText(e, "That didn't save. Please try again."));
     } finally {
       setBusy(false);
     }
@@ -2529,8 +2525,8 @@ function ClassDetail({
           <>
             <div className="text-[10px] tracking-[0.13em] uppercase font-semibold text-muted mb-2.5">
               {liveSubjects(subjects).length}{" "}
-              {liveSubjects(subjects).length === 1 ? "subject" : "subjects"}{" "}
-              · school-wide
+              {liveSubjects(subjects).length === 1 ? "subject" : "subjects"} ·
+              school-wide
             </div>
             {liveSubjects(subjects).length === 0 ? (
               <div className="text-center text-muted text-[12.5px] py-5">
@@ -3229,85 +3225,85 @@ function SubjectManager({
             subjects.map((s) => (
               <Card key={s.id} className="p-[13px] mb-2.25">
                 <div className="flex gap-3 items-center">
-                <div className="w-[42px] h-[42px] rounded-[13px] bg-mist grid place-items-center flex-none text-green">
-                  <Glyph d={GLYPH.results} size={20} stroke={1.9} />
-                </div>
-                {editId === s.id ? (
-                  <>
-                    <input
-                      autoFocus
-                      value={editName}
-                      onChange={(e) => setEditName(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") saveEdit(s.id);
-                        if (e.key === "Escape") setEditId(null);
-                      }}
-                      className={cx(inputCls, "flex-1 min-w-0")}
-                    />
-                    <button
-                      onClick={() => saveEdit(s.id)}
-                      disabled={busy}
-                      className="text-green flex-none"
-                      aria-label="Save"
-                    >
-                      <Glyph d={GLYPH.check} size={20} stroke={2} />
-                    </button>
-                    <button
-                      onClick={() => setEditId(null)}
-                      className="text-muted flex-none text-[12px] font-semibold"
-                    >
-                      Cancel
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <div className="flex-1 min-w-0">
-                      <b
-                        className={cx(
-                          "text-[14px] font-bold block truncate",
-                          s.archivedAt && "text-muted",
-                        )}
-                      >
-                        {s.name}
-                      </b>
-                      {s.archivedAt && (
-                        <small className="text-[10.5px] text-muted">
-                          Archived · still on old report cards
-                        </small>
-                      )}
-                    </div>
-                    {s.archivedAt ? (
+                  <div className="w-[42px] h-[42px] rounded-[13px] bg-mist grid place-items-center flex-none text-green">
+                    <Glyph d={GLYPH.results} size={20} stroke={1.9} />
+                  </div>
+                  {editId === s.id ? (
+                    <>
+                      <input
+                        autoFocus
+                        value={editName}
+                        onChange={(e) => setEditName(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") saveEdit(s.id);
+                          if (e.key === "Escape") setEditId(null);
+                        }}
+                        className={cx(inputCls, "flex-1 min-w-0")}
+                      />
                       <button
-                        onClick={() => restore(s.id)}
+                        onClick={() => saveEdit(s.id)}
                         disabled={busy}
-                        className="px-3 h-8 rounded-[9px] border border-[#dbe5db] bg-white text-green text-[11.5px] font-semibold flex-none disabled:opacity-60"
+                        className="text-green flex-none"
+                        aria-label="Save"
                       >
-                        Restore
+                        <Glyph d={GLYPH.check} size={20} stroke={2} />
                       </button>
-                    ) : (
-                      <>
+                      <button
+                        onClick={() => setEditId(null)}
+                        className="text-muted flex-none text-[12px] font-semibold"
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <div className="flex-1 min-w-0">
+                        <b
+                          className={cx(
+                            "text-[14px] font-bold block truncate",
+                            s.archivedAt && "text-muted",
+                          )}
+                        >
+                          {s.name}
+                        </b>
+                        {s.archivedAt && (
+                          <small className="text-[10.5px] text-muted">
+                            Archived · still on old report cards
+                          </small>
+                        )}
+                      </div>
+                      {s.archivedAt ? (
                         <button
-                          onClick={() => {
-                            setEditId(s.id);
-                            setEditName(s.name);
-                          }}
-                          className="text-muted flex-none"
-                          aria-label="Rename"
-                        >
-                          <Glyph d={GLYPH.edit} size={18} stroke={1.9} />
-                        </button>
-                        <ConfirmIconButton
-                          onConfirm={() => remove(s.id)}
+                          onClick={() => restore(s.id)}
                           disabled={busy}
-                          label={s.name}
-                          className="w-8 h-8 rounded-[9px] text-danger flex-none"
+                          className="px-3 h-8 rounded-[9px] border border-[#dbe5db] bg-white text-green text-[11.5px] font-semibold flex-none disabled:opacity-60"
                         >
-                          <Glyph d={GLYPH.trash} size={18} stroke={1.9} />
-                        </ConfirmIconButton>
-                      </>
-                    )}
-                  </>
-                )}
+                          Restore
+                        </button>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => {
+                              setEditId(s.id);
+                              setEditName(s.name);
+                            }}
+                            className="text-muted flex-none"
+                            aria-label="Rename"
+                          >
+                            <Glyph d={GLYPH.edit} size={18} stroke={1.9} />
+                          </button>
+                          <ConfirmIconButton
+                            onConfirm={() => remove(s.id)}
+                            disabled={busy}
+                            label={s.name}
+                            className="w-8 h-8 rounded-[9px] text-danger flex-none"
+                          >
+                            <Glyph d={GLYPH.trash} size={18} stroke={1.9} />
+                          </ConfirmIconButton>
+                        </>
+                      )}
+                    </>
+                  )}
                 </div>
                 {blocked?.id === s.id && (
                   <div className="mt-2.5 rounded-[11px] border border-[#ecd8ab] bg-[#fbf3e2] px-3 py-2.5 text-[11.5px] leading-[1.55] text-[#8a6d1f]">
@@ -3819,9 +3815,7 @@ function AdminCalendar({
       setAdding(false);
       setEditId(null);
     } catch (e) {
-      setActionError(
-        apiErrorText(e, "That didn't save. Please try again."),
-      );
+      setActionError(apiErrorText(e, "That didn't save. Please try again."));
     } finally {
       setBusy(false);
     }
