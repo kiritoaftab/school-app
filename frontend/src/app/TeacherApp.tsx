@@ -2,8 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import {
-  AppHeader, BottomSheet, Card, Chip, ConfirmIconButton, EmptyState, Glyph, InfoNote, PrimaryButton,
-  Shell, StatCard, cx, type TabDef,
+  AppHeader, BottomSheet, Card, Chip, ConfirmIconButton, EmptyState, Glyph, InfoNote, OutlineButton,
+  PrimaryButton, Shell, StatCard, cx, type TabDef,
 } from './kit';
 import { apiErrorText } from '../api/client';
 import {
@@ -591,6 +591,21 @@ const attStatusLabel = (s: AttendanceStatus | null) =>
 const attStatusBadge = (s: AttendanceStatus | null) =>
   s === 'ABSENT' ? 'bg-[#f6ecec] text-danger' : s === 'LATE' ? 'bg-gold-soft text-[#8a6d1f]' : 'bg-mist text-success';
 
+/** The register as the server has it — no toggles, one status badge per row. */
+function SavedRegister({ students }: { students: RosterRow[] }) {
+  return (
+    <Card className="px-3.5 py-1.5">
+      {students.map((r, i) => (
+        <div key={r.id} className="flex items-center gap-[11px] py-2.5 border-t border-[#f0f2ee] first:border-t-0">
+          <span className="w-[22px] text-[11px] text-muted font-semibold flex-none">{i + 1}</span>
+          <span className="flex-1 text-[13px] font-semibold truncate">{r.name}</span>
+          <span className={cx('text-[11px] font-bold px-2.5 py-1 rounded-lg flex-none', attStatusBadge(r.status))}>{attStatusLabel(r.status)}</span>
+        </div>
+      ))}
+    </Card>
+  );
+}
+
 function TeacherAttendance({
   klassId, label, roleLabel, isClassTeacher,
 }: {
@@ -602,8 +617,11 @@ function TeacherAttendance({
   const [date, setDate] = useState('');
   const [absent, setAbsent] = useState<Set<number>>(new Set());
   const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
   const [err, setErr] = useState('');
+  // Today's register is submitted once. Reopening it is deliberate: `editing`
+  // is only set through the confirm step below, never by landing on the screen.
+  const [editing, setEditing] = useState(false);
+  const [confirmEdit, setConfirmEdit] = useState(false);
 
   // No poll here: refetching under a half-marked register would throw away
   // ticks the teacher hasn't saved yet. Opening the screen is enough.
@@ -624,19 +642,23 @@ function TeacherAttendance({
     setAbsent(new Set(students.filter((s) => s.status === 'ABSENT').map((s) => s.id)));
   }, [students]);
 
-  // The "saved" badge belongs to the register in front of the teacher, so it
-  // clears when they switch to another class.
+  // The "saved" badge and the unlocked register both belong to the class in
+  // front of the teacher, so switching class re-locks and starts clean.
   useEffect(() => {
-    setSaved(false);
     setErr('');
+    setEditing(false);
+    setConfirmEdit(false);
   }, [klassId]);
 
   const total = students.length;
+  // A status on any row means today's register has been submitted. The roster
+  // endpoint returns today's marks, so this survives leaving and re-entering
+  // the screen — the lock is not just in-memory state from this visit.
+  const submitted = students.some((s) => s.status != null);
+  const savedAbsentCount = students.filter((s) => s.status === 'ABSENT').length;
 
   // Subject teachers get a read-only register.
   if (!isClassTeacher) {
-    const taken = students.some((s) => s.status != null);
-    const absentCount = students.filter((s) => s.status === 'ABSENT').length;
     return (
       <div className="px-[15px] py-4 pb-6">
         <div className="mb-3">
@@ -644,30 +666,24 @@ function TeacherAttendance({
         </div>
         {total === 0 ? (
           <div className="text-center text-muted text-[12.5px] py-8">{loading ? 'Loading roster…' : 'No students in this class yet.'}</div>
-        ) : !taken ? (
+        ) : !submitted ? (
           <div className="text-center text-muted text-[12.5px] py-8">Attendance not marked yet for today.</div>
         ) : (
           <>
             <div className="flex gap-2.5 mb-3">
-              <StatCard value={total - absentCount} label="Present" valueColor="text-success" />
-              <StatCard value={absentCount} label="Absent" valueColor="text-danger" />
+              <StatCard value={total - savedAbsentCount} label="Present" valueColor="text-success" />
+              <StatCard value={savedAbsentCount} label="Absent" valueColor="text-danger" />
             </div>
-            <Card className="px-3.5 py-1.5">
-              {students.map((r, i) => (
-                <div key={r.id} className="flex items-center gap-[11px] py-2.5 border-t border-[#f0f2ee] first:border-t-0">
-                  <span className="w-[22px] text-[11px] text-muted font-semibold flex-none">{i + 1}</span>
-                  <span className="flex-1 text-[13px] font-semibold truncate">{r.name}</span>
-                  <span className={cx('text-[11px] font-bold px-2.5 py-1 rounded-lg flex-none', attStatusBadge(r.status))}>{attStatusLabel(r.status)}</span>
-                </div>
-              ))}
-            </Card>
+            <SavedRegister students={students} />
           </>
         )}
       </div>
     );
   }
 
-  // Class teacher: markable register (default present, toggle absentees).
+  // Class teacher: markable register (default present, toggle absentees),
+  // locked once submitted until they confirm they want to change it.
+  const locked = submitted && !editing;
   const absentCount = absent.size;
   function toggle(sid: number, present: boolean) {
     setAbsent((s) => {
@@ -675,7 +691,12 @@ function TeacherAttendance({
       if (present) n.delete(sid); else n.add(sid);
       return n;
     });
-    setSaved(false);
+  }
+  /** Abandon an edit: drop the unsaved ticks and go back to the saved register. */
+  function cancelEdit() {
+    setAbsent(new Set(students.filter((s) => s.status === 'ABSENT').map((s) => s.id)));
+    setEditing(false);
+    setErr('');
   }
   async function save() {
     if (klassId == null || total === 0 || saving) return;
@@ -687,7 +708,8 @@ function TeacherAttendance({
         students.map((s) => ({ studentId: s.id, status: absent.has(s.id) ? 'ABSENT' : 'PRESENT' as AttendanceStatus })),
       );
       setStudents((prev) => prev.map((s) => ({ ...s, status: (absent.has(s.id) ? 'ABSENT' : 'PRESENT') as AttendanceStatus })));
-      setSaved(true);
+      // Every row now has a status, so this re-locks the register.
+      setEditing(false);
     } catch {
       setErr("Couldn't save the register. Please try again.");
     } finally {
@@ -699,12 +721,44 @@ function TeacherAttendance({
     <div className="px-[15px] py-4 pb-6">
       {total === 0 ? (
         <div className="text-center text-muted text-[12.5px] py-8">{loading ? 'Loading roster…' : 'No students in this class yet.'}</div>
+      ) : locked ? (
+        <>
+          <div className="mb-3">
+            <InfoNote>Today's attendance has been submitted. Parents can see it now — tap edit below if you need to correct it.</InfoNote>
+          </div>
+          <div className="flex gap-2.5 mb-3">
+            <StatCard value={total - savedAbsentCount} label="Present" valueColor="text-success" />
+            <StatCard value={savedAbsentCount} label="Absent" valueColor="text-danger" />
+          </div>
+          <div className="mb-3">
+            <SavedRegister students={students} />
+          </div>
+          {confirmEdit ? (
+            <Card className="p-3.5">
+              <div className="text-[13px] font-bold mb-1">Edit today's attendance?</div>
+              <p className="text-[12px] text-muted leading-[1.5] mb-3">
+                The register is already submitted. Saving again replaces it, and parents will see the corrected version.
+              </p>
+              <div className="flex gap-2">
+                <OutlineButton onClick={() => setConfirmEdit(false)}>Cancel</OutlineButton>
+                <PrimaryButton onClick={() => { setConfirmEdit(false); setEditing(true); }}>Yes, edit</PrimaryButton>
+              </div>
+            </Card>
+          ) : (
+            <OutlineButton onClick={() => setConfirmEdit(true)}>Edit attendance</OutlineButton>
+          )}
+        </>
       ) : (
         <>
+          {editing && (
+            <div className="mb-3">
+              <InfoNote tone="amber">Editing a submitted register. Save to replace what parents can see.</InfoNote>
+            </div>
+          )}
           <div className="flex items-center gap-2.5 mb-3">
             <StatCard value={total - absentCount} label="Present" valueColor="text-success" />
             <StatCard value={absentCount} label="Absent" valueColor="text-danger" />
-            <button onClick={() => { setAbsent(new Set()); setSaved(false); }} className="flex-1 bg-mist rounded-2xl px-2 py-3 text-green font-semibold text-[11.5px] leading-tight">Mark all present</button>
+            <button onClick={() => setAbsent(new Set())} className="flex-1 bg-mist rounded-2xl px-2 py-3 text-green font-semibold text-[11.5px] leading-tight">Mark all present</button>
           </div>
           <Card className="px-3.5 py-1.5 mb-3">
             {students.map((r, i) => {
@@ -722,7 +776,14 @@ function TeacherAttendance({
             })}
           </Card>
           {err && <div className="text-[11.5px] text-danger font-semibold mb-2">{err}</div>}
-          <PrimaryButton onClick={save} disabled={saving}>{saving ? 'Saving…' : saved ? '✓ Register saved' : 'Save register'}</PrimaryButton>
+          {editing ? (
+            <div className="flex gap-2">
+              <OutlineButton onClick={cancelEdit} disabled={saving}>Cancel</OutlineButton>
+              <PrimaryButton onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Update register'}</PrimaryButton>
+            </div>
+          ) : (
+            <PrimaryButton onClick={save} disabled={saving}>{saving ? 'Saving…' : 'Save register'}</PrimaryButton>
+          )}
         </>
       )}
     </div>
