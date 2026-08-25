@@ -2,12 +2,7 @@ import { Navigate } from 'react-router-dom';
 import type { ReactNode } from 'react';
 import { useAuth, type Role } from './AuthContext';
 import { Spinner } from '../app/kit';
-
-const homeFor: Record<Role, string> = {
-  PARENT: '/app',
-  TEACHER: '/teacher',
-  ADMIN: '/admin',
-};
+import { homeFor } from '../app/routes';
 
 export function RequireRole({ role, children }: { role: Role; children: ReactNode }) {
   const { user, loading } = useAuth();

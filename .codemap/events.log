@@ -1705,3 +1705,54 @@
 2026-08-25 10:22:22 | CREATE | frontend/src/api/parent.ts               |  162 |   +162 | dirty
 2026-08-25 10:22:27 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |  -1491 | 
 2026-08-25 10:22:27 | CREATE | frontend/src/app/ParentApp.tsx           | 1495 |  +1495 | dirty
+2026-08-25 12:56:32 | CREATE | frontend/src/app/routes.ts               |  362 |   +362 | 
+2026-08-25 12:56:38 | REMOVE | frontend/src/App.tsx                     |    0 |    -20 | 
+2026-08-25 12:56:38 | CREATE | frontend/src/App.tsx                     |   23 |    +23 | dirty
+2026-08-25 12:56:43 | REMOVE | frontend/src/auth/guards.tsx             |    0 |    -26 | 
+2026-08-25 12:56:43 | CREATE | frontend/src/auth/guards.tsx             |   21 |    +21 | dirty
+2026-08-25 12:56:48 | REMOVE | frontend/src/auth/AuthContext.tsx        |    0 |   -130 | 
+2026-08-25 12:56:48 | CREATE | frontend/src/auth/AuthContext.tsx        |  124 |   +124 | dirty
+2026-08-25 12:56:52 | REMOVE | frontend/src/auth/AuthContext.tsx        |    0 |   -124 | 
+2026-08-25 12:56:52 | CREATE | frontend/src/auth/AuthContext.tsx        |  125 |   +125 | dirty
+2026-08-25 12:57:00 | REMOVE | frontend/src/pages/LoginPage.tsx         |    0 |   -276 | 
+2026-08-25 12:57:00 | CREATE | frontend/src/pages/LoginPage.tsx         |  271 |   +271 | dirty
+2026-08-25 12:57:10 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |  -1495 | 
+2026-08-25 12:57:10 | CREATE | frontend/src/app/ParentApp.tsx           | 1502 |  +1502 | dirty
+2026-08-25 12:57:15 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |  -1502 | 
+2026-08-25 12:57:15 | CREATE | frontend/src/app/ParentApp.tsx           | 1487 |  +1487 | dirty
+2026-08-25 12:57:20 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |  -1487 | 
+2026-08-25 12:57:20 | CREATE | frontend/src/app/ParentApp.tsx           | 1491 |  +1491 | dirty
+2026-08-25 12:57:24 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |  -1491 | 
+2026-08-25 12:57:24 | CREATE | frontend/src/app/ParentApp.tsx           | 1491 |  +1491 | dirty
+2026-08-25 12:57:30 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |  -1491 | 
+2026-08-25 12:57:30 | CREATE | frontend/src/app/ParentApp.tsx           | 1491 |  +1491 | dirty
+2026-08-25 12:57:34 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |  -1491 | 
+2026-08-25 12:57:34 | CREATE | frontend/src/app/ParentApp.tsx           | 1488 |  +1488 | dirty
+2026-08-25 12:57:38 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |  -1488 | 
+2026-08-25 12:57:38 | CREATE | frontend/src/app/ParentApp.tsx           | 1485 |  +1485 | dirty
+2026-08-25 12:57:43 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |  -1485 | 
+2026-08-25 12:57:43 | CREATE | frontend/src/app/ParentApp.tsx           | 1482 |  +1482 | dirty
+2026-08-25 12:57:48 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |  -1482 | 
+2026-08-25 12:57:48 | CREATE | frontend/src/app/ParentApp.tsx           | 1488 |  +1488 | dirty
+2026-08-25 12:57:59 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |  -1488 | 
+2026-08-25 12:57:59 | CREATE | frontend/src/app/ParentApp.tsx           | 1490 |  +1490 | dirty
+2026-08-25 12:58:23 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |  -1490 | 
+2026-08-25 12:58:23 | CREATE | frontend/src/app/ParentApp.tsx           | 1501 |  +1501 | dirty
+2026-08-25 12:58:28 | REMOVE | frontend/src/app/ParentApp.tsx           |    0 |  -1501 | 
+2026-08-25 12:58:28 | CREATE | frontend/src/app/ParentApp.tsx           | 1503 |  +1503 | dirty
+2026-08-25 12:58:47 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1500 | 
+2026-08-25 12:58:47 | CREATE | frontend/src/app/TeacherApp.tsx          | 1504 |  +1504 | dirty
+2026-08-25 12:58:53 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1504 | 
+2026-08-25 12:58:53 | CREATE | frontend/src/app/TeacherApp.tsx          | 1498 |  +1498 | dirty
+2026-08-25 12:58:59 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1498 | 
+2026-08-25 12:58:59 | CREATE | frontend/src/app/TeacherApp.tsx          | 1508 |  +1508 | dirty
+2026-08-25 12:59:05 | REMOVE | frontend/src/app/TeacherApp.tsx          |    0 |  -1508 | 
+2026-08-25 12:59:05 | CREATE | frontend/src/app/TeacherApp.tsx          | 1513 |  +1513 | dirty
+2026-08-25 12:59:20 | WRITE  | frontend/src/app/TeacherApp.tsx          | 1515 |     +2 | dirty
+2026-08-25 12:59:42 | WRITE  | frontend/src/app/AdminApp.tsx            | 4159 |     -4 | dirty
+2026-08-25 12:59:54 | WRITE  | frontend/src/app/AdminApp.tsx            | 4175 |    +16 | dirty
+2026-08-25 13:00:09 | WRITE  | frontend/src/app/AdminApp.tsx            | 4151 |    -24 | dirty
+2026-08-25 13:00:46 | WRITE  | frontend/src/app/AdminApp.tsx            | 4154 |     +3 | dirty
+2026-08-25 13:01:29 | WRITE  | frontend/src/app/AdminApp.tsx            | 4166 |    +12 | dirty
+2026-08-25 13:04:11 | WRITE  | frontend/src/app/ParentApp.tsx           | 1503 |        | dirty
+2026-08-25 13:04:38 | WRITE  | frontend/src/app/AdminApp.tsx            | 4168 |     +2 | dirty

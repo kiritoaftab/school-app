@@ -4,12 +4,7 @@ import { api } from "../api/client";
 import { useAuth, type Role } from "../auth/AuthContext";
 import { Glyph } from "../app/kit";
 import { GLYPH, maskPhone } from "../app/data";
-
-const homeFor: Record<Role, string> = {
-  PARENT: "/app",
-  TEACHER: "/teacher",
-  ADMIN: "/admin",
-};
+import { homeFor } from "../app/routes";
 
 const roleLabel: Record<Role, string> = {
   PARENT: "Parent",

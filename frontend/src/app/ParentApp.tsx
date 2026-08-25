@@ -1,12 +1,21 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
+import {
+  PARENT_TOP_LEVEL,
+  parentPath,
+  parseParent,
+  type ParentRoute,
+  type ParentScreen as Screen,
+} from "./routes";
 import {
   Card,
   Chip,
+  EmptyState,
   Glyph,
   PrimaryButton,
   SectionLabel,
+  Spinner,
   StatCard,
   SuccessScreen,
   cx,
@@ -90,21 +99,6 @@ const EMPTY_ATTENDANCE: {
   stats: { present: number; absent: number; percent: number };
 } = { byDay: {}, stats: { present: 0, absent: 0, percent: 0 } };
 
-type Screen =
-  | "home"
-  | "attendance"
-  | "leave"
-  | "diary"
-  | "calendar"
-  | "results"
-  | "photos"
-  | "album"
-  | "noticeBoard"
-  | "notice"
-  | "notifs";
-
-const TOP_LEVEL: Screen[] = ["home", "diary", "calendar", "results", "photos"];
-
 /** Map a backend event ('YYYY-MM-DD' + title/description) to the calendar's shape. */
 function toCalEvent(e: {
   title: string;
@@ -165,11 +159,21 @@ export function ParentApp() {
   const { user, logout, profiles, switchProfile } = useAuth();
   const navigate = useNavigate();
 
-  const [screen, setScreen] = useState<Screen>("home");
+  // The URL is the screen. `route` carries the ids the path names; everything
+  // else on this component is data, not navigation.
+  const route = parseParent(useParams()["*"] ?? "");
+  const screen = route.screen;
+
   const [acctOpen, setAcctOpen] = useState(false);
   const [switchErr, setSwitchErr] = useState("");
-  // The school gallery, read-only for parents.
+  // The school gallery, read-only for parents. Which album is open is the
+  // URL's business, so mirror it in rather than letting the hook own it.
   const photos = useAlbums("/parent");
+  const setOpenAlbum = photos.setOpenId;
+  useEffect(() => {
+    setOpenAlbum(route.albumId);
+  }, [route.albumId, setOpenAlbum]);
+
   const [pickerOpen, setPickerOpen] = useState(false);
 
   // ---- children (switcher) ----
@@ -235,7 +239,7 @@ export function ParentApp() {
 
   // ---- notices (live) ----
   const schoolName = user?.school?.name ?? SCHOOL;
-  const [activeNoticeId, setActiveNoticeId] = useState("");
+  const activeNoticeId = route.noticeId ?? "";
 
   const noticesRes = useResource(listNotices, EMPTY_NOTICES, {
     active:
@@ -273,8 +277,8 @@ export function ParentApp() {
   // ---- leave ----
   const [leaveSent, setLeaveSent] = useState(false);
 
-  function go(s: Screen) {
-    setScreen(s);
+  function go(s: Screen, p: Partial<ParentRoute> = {}) {
+    navigate(parentPath({ ...p, screen: s }));
     setPickerOpen(false);
   }
 
@@ -319,7 +323,9 @@ export function ParentApp() {
     sub = schoolName.toUpperCase();
   }
 
-  const topLevel = TOP_LEVEL.includes(screen);
+  const topLevel = PARENT_TOP_LEVEL.includes(screen);
+  // Deliberately not navigate(-1): on a cold deep link there is no history to
+  // pop and Back would leave the app. This always names a real parent.
   const onBack = topLevel
     ? undefined
     : () =>
@@ -333,7 +339,7 @@ export function ParentApp() {
   const activeKey =
     screen === "album"
       ? "photos"
-      : TOP_LEVEL.includes(screen)
+      : PARENT_TOP_LEVEL.includes(screen)
         ? screen
         : "home";
 
@@ -473,10 +479,7 @@ export function ParentApp() {
           go={go}
           openSwitcher={() => setPickerOpen(true)}
           profileCount={profiles.length}
-          openNotice={(id) => {
-            setActiveNoticeId(id);
-            go("notice");
-          }}
+          openNotice={(id) => go("notice", { noticeId: id })}
         />
       )}
       {screen === "attendance" && (
@@ -515,10 +518,7 @@ export function ParentApp() {
         <AlbumsScreen
           gallery={photos}
           readOnly
-          onOpen={(id) => {
-            photos.setOpenId(id);
-            go("album");
-          }}
+          onOpen={(id) => go("album", { albumId: id })}
         />
       )}
       {screen === "album" && <AlbumScreen gallery={photos} readOnly />}
@@ -527,20 +527,28 @@ export function ParentApp() {
           role="parent"
           notices={notices}
           acked={acked}
-          onOpen={(id) => {
-            setActiveNoticeId(id);
-            go("notice");
-          }}
+          onOpen={(id) => go("notice", { noticeId: id })}
         />
       )}
-      {screen === "notice" && activeNotice && (
-        <NoticeDetailScreen
-          notice={activeNotice}
-          acked={!!acked[activeNoticeId]}
-          showAck
-          onAcknowledge={() => acknowledge(activeNoticeId)}
-        />
-      )}
+      {/* Reachable cold now (/app/notices/5), so the list may not have
+          arrived yet — don't render a blank frame while it does. */}
+      {screen === "notice" &&
+        (activeNotice ? (
+          <NoticeDetailScreen
+            notice={activeNotice}
+            acked={!!acked[activeNoticeId]}
+            showAck
+            onAcknowledge={() => acknowledge(activeNoticeId)}
+          />
+        ) : noticesRes.loading ? (
+          <Spinner />
+        ) : (
+          <div className="px-[15px] py-4">
+            <EmptyState icon={GLYPH.notices} title="Notice not available">
+              It may have been taken down, or the link is out of date.
+            </EmptyState>
+          </div>
+        ))}
       {screen === "notifs" && <NotificationsScreen />}
     </Shell>
   );

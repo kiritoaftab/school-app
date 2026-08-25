@@ -1,6 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
+import {
+  TEACHER_TOP_LEVEL, teacherPath, parseTeacher,
+  type TeacherRoute, type MyClassTab, type TeacherScreen as Screen,
+} from './routes';
 import {
   AppHeader, BottomSheet, Card, Chip, ConfirmIconButton, EmptyState, Glyph, InfoNote, OutlineButton,
   PrimaryButton, Shell, StatCard, cx, type TabDef,
@@ -43,12 +47,6 @@ const EMPTY_RESULTS: { students: ResultRow[]; readOnly: boolean; maxScore: numbe
   maxScore: 100,
 };
 
-type Screen ='home' | 'attendance' | 'leaveNotes' | 'diary' | 'myClass' | 'results' | 'photos' | 'album' | 'notifs';
-const TOP_LEVEL: Screen[] = ['home', 'diary', 'results', 'myClass', 'photos'];
-
-/** The two halves of the My Class tab (calendar + roster live together). */
-type MyClassTab = 'calendar' | 'students';
-
 const MONTH_ABBR = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC'];
 /** Map a backend event ('YYYY-MM-DD' + title/description) to the calendar's shape. */
 function toCalEvent(e: { title: string; description: string | null; date: string }): CalEvent {
@@ -66,11 +64,21 @@ export function TeacherApp() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  const [screen, setScreen] = useState<Screen>('home');
-  const [myClassTab, setMyClassTab] = useState<MyClassTab>('students');
+  // The URL is the screen. `route` carries what the path names; everything
+  // else on this component is data, not navigation.
+  const route = parseTeacher(useParams()['*'] ?? '');
+  const screen = route.screen;
+  const myClassTab = route.myClassTab;
+
   const [pickerOpen, setPickerOpen] = useState(false);
   const [acctOpen, setAcctOpen] = useState(false);
+
+  // Which album is open is the URL's business, so mirror it into the hook.
   const photos = useAlbums('/teacher');
+  const setOpenAlbum = photos.setOpenId;
+  useEffect(() => {
+    setOpenAlbum(route.albumId);
+  }, [route.albumId, setOpenAlbum]);
 
   // Live classes drive the switcher; the diary reads from them directly.
   const [selClassId, setSelClassId] = useState<number | null>(null);
@@ -156,9 +164,14 @@ export function TeacherApp() {
     setTeExam((cur) => (teExams.some((e) => String(e.id) === cur) ? cur : String(teExams[0]?.id ?? '')));
   }, [teExams]);
 
-  function go(s: Screen) {
-    setScreen(s);
+  function go(s: Screen, p: Partial<TeacherRoute> = {}) {
+    navigate(teacherPath({ ...p, screen: s }));
     setPickerOpen(false);
+  }
+
+  /** Sub-tabs are linkable but don't stack history — Back exits the screen. */
+  function goMyClassTab(t: MyClassTab) {
+    navigate(teacherPath({ screen: 'myClass', myClassTab: t }), { replace: true });
   }
 
   // ---- exam catalogue mutations (any teacher of the class) ----
@@ -202,7 +215,9 @@ export function TeacherApp() {
   else if (screen === 'leaveNotes') { title = 'Leave Notes'; sub = `${ctClass?.label ?? curClass.label} · CLASS TEACHER`.toUpperCase(); }
   else if (screen === 'notifs') { title = 'Notifications'; sub = SCHOOL.toUpperCase(); }
 
-  const topLevel = TOP_LEVEL.includes(screen);
+  const topLevel = TEACHER_TOP_LEVEL.includes(screen);
+  // Deliberately not navigate(-1): on a cold deep link there is no history to
+  // pop and Back would leave the app. This always names a real parent.
   const onBack = topLevel ? undefined : () => go(screen === 'album' ? 'photos' : 'home');
   const activeKey = screen === 'album' ? 'photos' : topLevel ? screen : 'home';
   // The roster is class-scoped, so it keeps the switcher; the calendar is school-wide.
@@ -272,7 +287,7 @@ export function TeacherApp() {
           name={name} klass={liveClass} classCount={classes.length}
           leaves={leaves} showLeaves={ctClass != null}
           go={go}
-          openRoster={() => { setMyClassTab('students'); go('myClass'); }}
+          openRoster={() => go('myClass', { myClassTab: 'students' })}
           openAcct={() => setAcctOpen(true)}
         />
       )}
@@ -297,7 +312,7 @@ export function TeacherApp() {
               ] as { key: MyClassTab; label: string }[]).map((h) => (
                 <button
                   key={h.key}
-                  onClick={() => setMyClassTab(h.key)}
+                  onClick={() => goMyClassTab(h.key)}
                   className={cx(
                     'flex-1 py-2.25 rounded-[10px] text-[12.5px] font-bold',
                     myClassTab === h.key ? 'bg-green text-white' : 'text-muted',
@@ -339,7 +354,7 @@ export function TeacherApp() {
       {screen === 'photos' && (
         <AlbumsScreen
           gallery={photos}
-          onOpen={(id) => { photos.setOpenId(id); go('album'); }}
+          onOpen={(id) => go('album', { albumId: id })}
         />
       )}
       {screen === 'album' && (

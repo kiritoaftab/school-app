@@ -1,43 +1,11 @@
 {
-  "changed": [
-    {
-      "path": "frontend/src/app/AdminApp.tsx",
-      "hash": "4defc096f3471aebb5dcec2a37d6a36463ab71bfd52381b6f06f28c733198a40",
-      "size": 136154,
-      "status": "modified"
-    },
-    {
-      "path": "frontend/src/app/Albums.tsx",
-      "hash": "5ab547bb2c971fe82d06c240636e9edd98e1caa1a17cbef9a8ff436f2fd9540d",
-      "size": 23248,
-      "status": "modified"
-    },
-    {
-      "path": "frontend/src/app/ParentApp.tsx",
-      "hash": "37216efc9e1cdd18a9af533ab81b0fb713ec9c316a58f0c949a5d8d94e3ce780",
-      "size": 47821,
-      "status": "modified"
-    },
-    {
-      "path": "frontend/src/app/TeacherApp.tsx",
-      "hash": "41a23c226d5c2ad505522215b51a60369a6d4c2dab5434657b54bfac46df5fd2",
-      "size": 63581,
-      "status": "modified"
-    },
-    {
-      "path": "frontend/src/lib/useResource.ts",
-      "hash": "f74afd9d0c62f01b8e8da38e229e6899eb6cf504c1cde70ac890a8c3fd0b7d56",
-      "size": 7368,
-      "status": "untracked"
-    }
-  ],
+  "changed": [],
   "risk_files": [],
   "recent_events": [],
-  "next_steps": [
-    "Run tests covering changed files before handoff."
-  ],
+  "next_steps": [],
   "open_questions": [
-    "Dependency graph context was unavailable; risk files may be incomplete.",
-    "No recent timeline events matched the lookback window."
+    "No changed files detected vs main. Confirm the base ref and branch state.",
+    "Live watch state was unavailable; timeline may be incomplete.",
+    "Dependency graph context was unavailable; risk files may be incomplete."
   ]
 }

@@ -7,6 +7,7 @@ import {
 } from 'react';
 import { api } from '../api/client';
 import { storage } from '../lib/storage';
+import { homeFor } from '../app/routes';
 
 export type Role = 'PARENT' | 'TEACHER' | 'ADMIN';
 
@@ -35,12 +36,6 @@ export interface Profile {
 
 /** Roles this app can render. A SUPER_ADMIN row belongs to the other console. */
 const APP_ROLES: Role[] = ['PARENT', 'TEACHER', 'ADMIN'];
-
-const homeFor: Record<Role, string> = {
-  PARENT: '/app',
-  TEACHER: '/teacher',
-  ADMIN: '/admin',
-};
 
 interface AuthState {
   user: AuthUser | null;

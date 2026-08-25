@@ -1,5 +1,14 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
+import {
+  ADMIN_TOP_LEVEL,
+  adminPath,
+  parseAdmin,
+  type AdminRoute,
+  type AdminScreen as Screen,
+  type ClassTab,
+  type SchoolTab,
+} from "./routes";
 import { useAuth } from "../auth/AuthContext";
 import {
   listClasses,
@@ -98,47 +107,34 @@ import {
   maskPhone,
 } from "./data";
 
-type Screen =
-  | "home"
-  | "staff"
-  | "staffDetail"
-  | "staffAdd"
-  | "classes"
-  | "classDetail"
-  | "classAdd"
-  | "adminAtt"
-  | "adminAttClass"
-  | "school"
-  | "notice"
-  | "noticeCompose"
-  | "photos"
-  | "album"
-  | "notifs";
-
-/** The two halves of the School tab (notices + calendar live together). */
-type SchoolTab = "notices" | "calendar";
-
 export function AdminApp() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
 
-  const [screen, setScreen] = useState<Screen>("home");
-  const [schoolTab, setSchoolTab] = useState<SchoolTab>("notices");
-  const [acctOpen, setAcctOpen] = useState(false);
-  const [activeTeacherId, setActiveTeacherId] = useState<number | null>(null);
-  const [activeKlassId, setActiveKlassId] = useState<number | null>(null);
-  const [attClassId, setAttClassId] = useState<number | null>(null);
+  // The URL is the screen. `route` carries every id the path names; everything
+  // else on this component is data, not navigation.
+  const route = parseAdmin(useParams()["*"] ?? "");
+  const screen = route.screen;
+  const schoolTab = route.schoolTab;
+  const activeTeacherId = route.teacherId;
+  const activeKlassId = screen === "classDetail" ? route.klassId : null;
+  const attClassId = screen === "adminAttClass" ? route.klassId : null;
+  const activeNoticeId = route.noticeId;
 
+  const [acctOpen, setAcctOpen] = useState(false);
+
+  // Which album is open is the URL's business, so mirror it into the hook.
   const photos = useAlbums("/admin");
+  const setOpenAlbum = photos.setOpenId;
+  useEffect(() => {
+    setOpenAlbum(route.albumId);
+  }, [route.albumId, setOpenAlbum]);
 
   // Live notices & events.
   const [apiNotices, setApiNotices] = useState<AdminNotice[] | null>(null);
   const [noticesLoading, setNoticesLoading] = useState(false);
   const [noticesError, setNoticesError] = useState<string | null>(null);
-  const [activeNoticeId, setActiveNoticeId] = useState<number | null>(null);
   const [noticeDetail, setNoticeDetail] = useState<AdminNotice | null>(null);
-  // Set when opening compose in edit mode; null means a fresh notice.
-  const [editingNotice, setEditingNotice] = useState<AdminNotice | null>(null);
   const [apiEvents, setApiEvents] = useState<AdminEvent[] | null>(null);
   const [eventsLoading, setEventsLoading] = useState(false);
   const [eventsError, setEventsError] = useState<string | null>(null);
@@ -332,7 +328,9 @@ export function AdminApp() {
   // Polled: acknowledgements land while the notice is open, and the count on
   // screen is the whole reason an admin opens it.
   useRevalidate(loadNoticeDetail, {
-    active: screen === "notice" && activeNoticeId !== null,
+    active:
+      (screen === "notice" || screen === "noticeCompose") &&
+      activeNoticeId !== null,
     revalidateOn: [loadNoticeDetail],
     pollMs: 60_000,
   });
@@ -370,6 +368,9 @@ export function AdminApp() {
     if (needsTeachers.includes(screen)) loadTeachers();
     // The School tab loads only the half that's on screen.
     if (screen === "school" && schoolTab === "notices") loadNotices();
+    // Compose is reachable cold at /admin/notices/:id/edit, where the list is
+    // what tells us the id is real.
+    if (screen === "noticeCompose") loadNotices();
     if (screen === "school" && schoolTab === "calendar") loadEvents();
     if (screen === "home") loadDashboard();
     if (screen === "adminAtt") loadAttOverview();
@@ -408,9 +409,27 @@ export function AdminApp() {
     revalidateOn: [loadAttClass],
   });
 
-  function go(s: Screen) {
-    setScreen(s);
+  function go(
+    s: Screen,
+    p: Partial<AdminRoute> = {},
+    opts?: { replace?: boolean },
+  ) {
+    navigate(adminPath({ ...p, screen: s }), opts);
   }
+
+  /** Sub-tabs are linkable but don't stack history — Back exits the screen. */
+  function goClassTab(t: ClassTab) {
+    navigate(adminPath({ ...route, classTab: t }), { replace: true });
+  }
+
+  // Compose doubles as create and edit; the URL says which, and the notice
+  // itself is looked up rather than handed over, so a refresh keeps the form.
+  const editingNotice =
+    screen === "noticeCompose" && activeNoticeId !== null
+      ? ((noticeDetail?.id === activeNoticeId
+          ? noticeDetail
+          : apiNotices?.find((n) => n.id === activeNoticeId)) ?? null)
+      : null;
 
   // header
   let title = user?.school?.name ?? "My School Space";
@@ -469,8 +488,7 @@ export function AdminApp() {
     ).toUpperCase();
   }
 
-  const TOP: Screen[] = ["home", "staff", "classes", "school", "photos"];
-  const topLevel = TOP.includes(screen);
+  const topLevel = ADMIN_TOP_LEVEL.includes(screen);
   const backTo: Record<string, Screen> = {
     staffDetail: "staff",
     staffAdd: "staff",
@@ -483,6 +501,8 @@ export function AdminApp() {
     album: "photos",
     notifs: "home",
   };
+  // Deliberately not navigate(-1): on a cold deep link there is no history to
+  // pop and Back would leave the app. This map always names a real parent.
   const onBack = topLevel ? undefined : () => go(backTo[screen] || "home");
 
   const activeKey = ["staff", "staffDetail", "staffAdd"].includes(screen)
@@ -549,10 +569,7 @@ export function AdminApp() {
           error={dashError}
           onRetry={loadDashboard}
           go={go}
-          openSchool={(t) => {
-            setSchoolTab(t);
-            go("school");
-          }}
+          openSchool={(t) => go("school", { schoolTab: t })}
           openAcct={() => setAcctOpen(true)}
         />
       )}
@@ -563,10 +580,7 @@ export function AdminApp() {
           error={staffError}
           onRetry={loadTeachers}
           onAdd={() => go("staffAdd")}
-          onOpen={(id) => {
-            setActiveTeacherId(id);
-            go("staffDetail");
-          }}
+          onOpen={(id) => go("staffDetail", { teacherId: id })}
         />
       )}
       {screen === "staffDetail" && (
@@ -598,10 +612,7 @@ export function AdminApp() {
           error={classesError}
           onRetry={loadClasses}
           onAdd={() => go("classAdd")}
-          onOpen={(id) => {
-            setActiveKlassId(id);
-            go("classDetail");
-          }}
+          onOpen={(id) => go("classDetail", { klassId: id })}
         />
       )}
       {screen === "classDetail" && (
@@ -610,6 +621,8 @@ export function AdminApp() {
           subjects={apiSubjects}
           allTeachers={apiTeachers}
           onClassesChanged={loadClasses}
+          tab={route.classTab}
+          onTab={goClassTab}
         />
       )}
       {screen === "adminAtt" && (
@@ -618,10 +631,7 @@ export function AdminApp() {
           loading={attOverviewLoading}
           error={attOverviewError}
           onRetry={loadAttOverview}
-          onOpen={(id) => {
-            setAttClassId(id);
-            go("adminAttClass");
-          }}
+          onOpen={(id) => go("adminAttClass", { klassId: id })}
         />
       )}
       {screen === "adminAttClass" && (
@@ -647,19 +657,13 @@ export function AdminApp() {
       {screen === "school" && (
         <AdminSchoolTab
           tab={schoolTab}
-          onTab={setSchoolTab}
+          onTab={(t) => go("school", { schoolTab: t })}
           notices={apiNotices}
           noticesLoading={noticesLoading}
           noticesError={noticesError}
           onRetryNotices={loadNotices}
-          onOpenNotice={(id) => {
-            setActiveNoticeId(id);
-            go("notice");
-          }}
-          onCompose={() => {
-            setEditingNotice(null);
-            go("noticeCompose");
-          }}
+          onOpenNotice={(id) => go("notice", { noticeId: id })}
+          onCompose={() => go("noticeCompose")}
           events={apiEvents}
           eventsLoading={eventsLoading}
           eventsError={eventsError}
@@ -674,38 +678,37 @@ export function AdminApp() {
             apiNotices?.find((n) => n.id === activeNoticeId) ??
             null
           }
-          onEdit={() => {
-            setEditingNotice(
-              noticeDetail ??
-                apiNotices?.find((n) => n.id === activeNoticeId) ??
-                null,
-            );
-            go("noticeCompose");
-          }}
+          onEdit={() => go("noticeCompose", { noticeId: activeNoticeId })}
           onDeleted={async () => {
             await loadNotices();
-            go("school");
+            // Replace, so Back can't return to a notice that no longer exists.
+            go("school", {}, { replace: true });
           }}
         />
       )}
-      {screen === "noticeCompose" && (
-        <NoticeCompose
-          editing={editingNotice}
-          classes={apiClasses}
-          onDone={async () => {
-            setEditingNotice(null);
-            await loadNotices();
-            go("school");
-          }}
-        />
-      )}
+      {screen === "noticeCompose" &&
+        (activeNoticeId === null || editingNotice ? (
+          <NoticeCompose
+            editing={editingNotice}
+            classes={apiClasses}
+            onDone={async () => {
+              await loadNotices();
+              go("school");
+            }}
+          />
+        ) : noticesLoading || apiNotices === null ? (
+          <Spinner />
+        ) : (
+          <div className="px-[15px] py-4">
+            <EmptyState icon={GLYPH.notices} title="Notice not available">
+              It may have been deleted, or the link is out of date.
+            </EmptyState>
+          </div>
+        ))}
       {screen === "photos" && (
         <AlbumsScreen
           gallery={photos}
-          onOpen={(id) => {
-            photos.setOpenId(id);
-            go("album");
-          }}
+          onOpen={(id) => go("album", { albumId: id })}
         />
       )}
       {screen === "album" && <AlbumScreen gallery={photos} />}
@@ -1990,8 +1993,6 @@ function ClassesList({
 }
 
 // ---------- CLASS DETAIL (live, 4 tabs) ----------
-type ClassTab = "students" | "teachers" | "subjects" | "exams";
-
 /** Unsaved edits to one teacher's row in the Teachers tab. */
 type TeacherRowDraft = { subjectIds: number[]; isClassTeacher: boolean };
 
@@ -2004,13 +2005,17 @@ function ClassDetail({
   subjects,
   allTeachers,
   onClassesChanged,
+  tab,
+  onTab,
 }: {
   klass: AdminKlass | null;
   subjects: AdminSubject[] | null;
   allTeachers: AdminTeacher[] | null;
   onClassesChanged: () => void | Promise<void>;
+  /** Which tab is open — comes from the URL, so it survives a refresh. */
+  tab: ClassTab;
+  onTab: (t: ClassTab) => void;
 }) {
-  const [tab, setTab] = useState<ClassTab>("students");
   const [students, setStudents] = useState<ClassStudent[] | null>(null);
   const [clsTeachers, setClsTeachers] = useState<ClassTeacher[] | null>(null);
   const [exams, setExams] = useState<ClassExam[] | null>(null);
@@ -2195,7 +2200,7 @@ function ClassDetail({
   }
 
   function switchTab(t: ClassTab) {
-    setTab(t);
+    onTab(t);
     setAddStudentOpen(false);
     setStudEditId(null);
     setClsTAddOpen(false);
