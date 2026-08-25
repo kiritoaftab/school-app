@@ -53,6 +53,60 @@ adminRouter.post('/users', ah(async (req, res) => {
   res.status(201).json({ id: user.id, name: user.name, phone: user.phone, role: user.role });
 }));
 
+/**
+ * A subject in a class has exactly one teacher.
+ *
+ * The unique index on (klassId, subjectId) is the real guarantee; this runs
+ * first so the admin is told *who* holds the slot instead of being shown a
+ * database error. `exceptTeacherId` skips the teacher being edited — rewriting
+ * their own chips must not collide with the rows about to be replaced.
+ */
+type SubjectClash = {
+  klassId: number;
+  klassLabel: string;
+  subjectId: number;
+  subjectName: string;
+  teacherId: number;
+  teacherName: string;
+};
+async function assertSubjectsFree(
+  schoolId: number,
+  pairs: { klassId: number; subjectId: number }[],
+  exceptTeacherId?: number,
+): Promise<void> {
+  if (!pairs.length) return;
+  const taken = await prisma.teachingAssignment.findMany({
+    where: {
+      schoolId,
+      ...(exceptTeacherId != null ? { teacherId: { not: exceptTeacherId } } : {}),
+      OR: pairs.map((p) => ({ klassId: p.klassId, subjectId: p.subjectId })),
+    },
+    include: {
+      teacher: { select: { id: true, name: true } },
+      subject: { select: { id: true, name: true } },
+      klass: { select: { grade: true, section: true } },
+    },
+  });
+  if (!taken.length) return;
+
+  const conflicts: SubjectClash[] = taken.map((a) => ({
+    klassId: a.klassId,
+    klassLabel: `${a.klass.grade}-${a.klass.section}`,
+    subjectId: a.subjectId,
+    subjectName: a.subject.name,
+    teacherId: a.teacher.id,
+    teacherName: a.teacher.name,
+  }));
+  const [first] = conflicts;
+  throw new HttpError(
+    409,
+    conflicts.length === 1
+      ? `${first.teacherName} already teaches ${first.subjectName} in ${first.klassLabel}.`
+      : `${conflicts.length} of those subjects are already taught by someone else.`,
+    { code: 'SUBJECT_TAKEN', conflicts },
+  );
+}
+
 // --- Teachers (user + class/subject assignments + class-teacher, in one shot) ---
 const teacherCreateSchema = z.object({
   name: z.string().min(1),
@@ -94,6 +148,7 @@ adminRouter.post('/teachers', ah(async (req, res) => {
       if (!seen.has(key)) { seen.add(key); rows.push({ klassId: a.klassId, subjectId }); }
     }
   }
+  await assertSubjectsFree(schoolId, rows);
 
   const teacher = await prisma.$transaction(async (tx) => {
     const user = await tx.user.create({ data: { schoolId, name: data.name.trim(), phone, role: 'TEACHER' } });
@@ -180,6 +235,8 @@ adminRouter.put('/teachers/:id/assignments/:klassId', ah(async (req, res) => {
   if (subjects.length !== wanted.length) {
     throw new HttpError(404, 'A selected subject was not found in this school');
   }
+
+  await assertSubjectsFree(schoolId, subjects.map((s) => ({ klassId, subjectId: s.id })), teacherId);
 
   const before = await prisma.teachingAssignment.findMany({
     where: { schoolId, teacherId, klassId },

@@ -1648,3 +1648,47 @@
 2026-08-25 09:25:31 | CREATE | frontend/src/app/AdminApp.tsx            | 4079 |  +4079 | dirty
 2026-08-25 09:25:35 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -4079 | 
 2026-08-25 09:25:35 | CREATE | frontend/src/app/AdminApp.tsx            | 4079 |  +4079 | dirty
+2026-08-25 09:43:50 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1516 | 
+2026-08-25 09:43:50 | CREATE | backend/src/routes/admin.ts              | 1570 |  +1570 | dirty
+2026-08-25 09:43:58 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1570 | 
+2026-08-25 09:43:58 | CREATE | backend/src/routes/admin.ts              | 1571 |  +1571 | dirty
+2026-08-25 09:44:06 | REMOVE | backend/src/routes/admin.ts              |    0 |  -1571 | 
+2026-08-25 09:44:06 | CREATE | backend/src/routes/admin.ts              | 1573 |  +1573 | dirty
+2026-08-25 09:45:01 | REMOVE | frontend/src/api/client.ts               |    0 |    -94 | 
+2026-08-25 09:45:01 | CREATE | frontend/src/api/client.ts               |  115 |   +115 | dirty
+2026-08-25 09:45:06 | REMOVE | frontend/src/api/client.ts               |    0 |   -115 | 
+2026-08-25 09:45:06 | CREATE | frontend/src/api/client.ts               |  116 |   +116 | dirty
+2026-08-25 09:45:25 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -4079 | 
+2026-08-25 09:45:25 | CREATE | frontend/src/app/AdminApp.tsx            | 4085 |  +4085 | dirty
+2026-08-25 09:45:38 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -4085 | 
+2026-08-25 09:45:38 | CREATE | frontend/src/app/AdminApp.tsx            | 4122 |  +4122 | dirty
+2026-08-25 09:45:52 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -4122 | 
+2026-08-25 09:45:52 | CREATE | frontend/src/app/AdminApp.tsx            | 4126 |  +4126 | dirty
+2026-08-25 09:45:59 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -4126 | 
+2026-08-25 09:45:59 | CREATE | frontend/src/app/AdminApp.tsx            | 4127 |  +4127 | dirty
+2026-08-25 09:46:15 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -4127 | 
+2026-08-25 09:46:15 | CREATE | frontend/src/app/AdminApp.tsx            | 4134 |  +4134 | dirty
+2026-08-25 09:46:25 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -4134 | 
+2026-08-25 09:46:25 | CREATE | frontend/src/app/AdminApp.tsx            | 4139 |  +4139 | dirty
+2026-08-25 09:46:31 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -4139 | 
+2026-08-25 09:46:31 | CREATE | frontend/src/app/AdminApp.tsx            | 4139 |  +4139 | dirty
+2026-08-25 09:46:43 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -4139 | 
+2026-08-25 09:46:43 | CREATE | frontend/src/app/AdminApp.tsx            | 4145 |  +4145 | dirty
+2026-08-25 09:46:53 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -4145 | 
+2026-08-25 09:46:53 | CREATE | frontend/src/app/AdminApp.tsx            | 4148 |  +4148 | dirty
+2026-08-25 09:47:02 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -4148 | 
+2026-08-25 09:47:02 | CREATE | frontend/src/app/AdminApp.tsx            | 4153 |  +4153 | dirty
+2026-08-25 09:47:17 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -4153 | 
+2026-08-25 09:47:17 | CREATE | frontend/src/app/AdminApp.tsx            | 4154 |  +4154 | dirty
+2026-08-25 09:47:33 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -4154 | 
+2026-08-25 09:47:33 | CREATE | frontend/src/app/AdminApp.tsx            | 4158 |  +4158 | dirty
+2026-08-25 09:47:43 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -4158 | 
+2026-08-25 09:47:43 | CREATE | frontend/src/app/AdminApp.tsx            | 4159 |  +4159 | dirty
+2026-08-25 09:47:52 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -4159 | 
+2026-08-25 09:47:52 | CREATE | frontend/src/app/AdminApp.tsx            | 4160 |  +4160 | dirty
+2026-08-25 09:52:07 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -4160 | 
+2026-08-25 09:52:07 | CREATE | frontend/src/app/AdminApp.tsx            | 4161 |  +4161 | dirty
+2026-08-25 09:52:19 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -4161 | 
+2026-08-25 09:52:19 | CREATE | frontend/src/app/AdminApp.tsx            | 4162 |  +4162 | dirty
+2026-08-25 09:52:28 | REMOVE | frontend/src/app/AdminApp.tsx            |    0 |  -4162 | 
+2026-08-25 09:52:28 | CREATE | frontend/src/app/AdminApp.tsx            | 4163 |  +4163 | dirty

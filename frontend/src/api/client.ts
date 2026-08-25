@@ -38,6 +38,27 @@ export interface ApiError {
   code?: string;
   action?: 'ARCHIVE' | 'NONE';
   usage?: Record<string, number>;
+  /** `SUBJECT_TAKEN`: who already teaches the subject the admin just picked. */
+  conflicts?: SubjectClash[];
+}
+
+/** One (class, subject) slot that another teacher already holds. */
+export interface SubjectClash {
+  klassId: number;
+  klassLabel: string;
+  subjectId: number;
+  subjectName: string;
+  teacherId: number;
+  teacherName: string;
+}
+
+function parseConflicts(v: unknown): SubjectClash[] | undefined {
+  if (!Array.isArray(v)) return undefined;
+  const out = v.filter(
+    (c): c is SubjectClash =>
+      !!c && typeof c === 'object' && typeof (c as SubjectClash).teacherName === 'string',
+  );
+  return out.length ? out : undefined;
 }
 
 export function apiError(e: unknown, fallback: string): ApiError {
@@ -50,6 +71,7 @@ export function apiError(e: unknown, fallback: string): ApiError {
         code: typeof d.code === 'string' ? d.code : undefined,
         action: d.action === 'ARCHIVE' || d.action === 'NONE' ? d.action : undefined,
         usage: d.usage && typeof d.usage === 'object' ? (d.usage as Record<string, number>) : undefined,
+        conflicts: parseConflicts(d.conflicts),
       };
     }
   }

@@ -207,6 +207,9 @@ model TeachingAssignment {
   subject Subject @relation(fields: [subjectId], references: [id], onDelete: Restrict)
 
   @@unique([teacherId, klassId, subjectId])
+  // A subject in a class has one teacher, so the admin always knows who to ask
+  // about it. Archiving a teacher deletes their rows, freeing the slot.
+  @@unique([klassId, subjectId])
   @@index([schoolId])
   @@index([klassId])
   @@index([teacherId])

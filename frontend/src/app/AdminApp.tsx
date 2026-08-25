@@ -69,10 +69,16 @@ import {
   Shell,
   Spinner,
   SuccessScreen,
+  BottomSheet,
   cx,
   type TabDef,
 } from "./kit";
-import { apiError, apiErrorText, describeUsage } from "../api/client";
+import {
+  apiError,
+  apiErrorText,
+  describeUsage,
+  type SubjectClash,
+} from "../api/client";
 import { useRevalidate } from "../lib/useResource";
 import { NotificationsScreen } from "./SharedScreens";
 import {
@@ -1138,6 +1144,48 @@ function chipSubjects(
   return (all ?? []).filter((s) => !s.archivedAt || onIds.includes(s.id));
 }
 
+/** "Priya Sharma" -> "Priya". Enough to identify a colleague on a chip. */
+function firstNameOf(name: string): string {
+  return name.trim().split(/\s+/)[0] ?? name;
+}
+
+/**
+ * The server refused an assignment because someone else teaches that subject
+ * in that class. Name them — "already taken" on its own leaves the admin with
+ * nowhere to go, and the next step is usually to go and free it up.
+ */
+function SubjectTakenSheet({
+  conflicts,
+  onClose,
+}: {
+  conflicts: SubjectClash[] | null;
+  onClose: () => void;
+}) {
+  return (
+    <BottomSheet open={!!conflicts} onClose={onClose}>
+      <div className="text-[15px] font-bold mb-1">Subject already taken</div>
+      <div className="text-[12.5px] text-muted mb-3">
+        A subject is taught by one teacher in a class. Free it there first, then
+        assign it here.
+      </div>
+      {(conflicts ?? []).map((c) => (
+        <Card
+          key={`${c.klassId}:${c.subjectId}`}
+          className="p-3 mb-2 rounded-[13px]"
+        >
+          <div className="text-[13px] font-bold mb-0.5">{c.subjectName}</div>
+          <div className="text-[12px] text-muted">
+            Class {c.klassLabel} · taught by <b className="text-ink">{c.teacherName}</b>
+          </div>
+        </Card>
+      ))}
+      <PrimaryButton className="mt-2" onClick={onClose}>
+        Got it
+      </PrimaryButton>
+    </BottomSheet>
+  );
+}
+
 /** Subjects that may be added to something new. Never an archived one. */
 function liveSubjects(all: AdminSubject[] | null): AdminSubject[] {
   return (all ?? []).filter((s) => !s.archivedAt);
@@ -1276,6 +1324,7 @@ function StaffDetail({
   // Keyed by the class row being mutated, so only that row shows as busy.
   const [busyKlassId, setBusyKlassId] = useState<number | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [clash, setClash] = useState<SubjectClash[] | null>(null);
 
   if (!teacher)
     return (
@@ -1300,7 +1349,11 @@ function StaffDetail({
       await fn();
       await onRefresh();
     } catch (e) {
-      setActionError(apiErrorText(e, "That didn't save. Please try again."));
+      const err = apiError(e, "That didn't save. Please try again.");
+      // This screen can't know who else teaches a subject in that class, so
+      // the server's answer is the only place that name comes from.
+      if (err.code === "SUBJECT_TAKEN" && err.conflicts) setClash(err.conflicts);
+      else setActionError(apiErrorText(e, "That didn't save. Please try again."));
     } finally {
       setBusyKlassId(null);
     }
@@ -1324,6 +1377,7 @@ function StaffDetail({
 
   return (
     <div className="px-[15px] py-4 pb-6">
+      <SubjectTakenSheet conflicts={clash} onClose={() => setClash(null)} />
       <Card className="p-[18px] mb-3 text-center">
         <div
           className="w-[60px] h-[60px] rounded-[18px] grid place-items-center text-green font-bold text-[19px] mx-auto mb-3"
@@ -1562,6 +1616,7 @@ function StaffAdd({
   const [ctId, setCtId] = useState<number | "">("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [clash, setClash] = useState<SubjectClash[] | null>(null);
 
   const phoneDigits = phone.replace(/\D/g, "");
   const ready =
@@ -1627,10 +1682,11 @@ function StaffAdd({
       setAddedName(name.trim());
       setSent(true);
     } catch (e) {
-      setError(
-        (e as { response?: { data?: { error?: string } } }).response?.data
-          ?.error ?? "Couldn't add the teacher. Please try again.",
-      );
+      const err = apiError(e, "Couldn't add the teacher. Please try again.");
+      // Nothing was created — the server checks the whole grid before writing,
+      // so the form stays filled in and only the clashing picks need changing.
+      if (err.code === "SUBJECT_TAKEN" && err.conflicts) setClash(err.conflicts);
+      else setError(err.error);
       setSubmitting(false);
     }
   }
@@ -1647,6 +1703,7 @@ function StaffAdd({
 
   return (
     <div className="px-[15px] py-4 pb-6">
+      <SubjectTakenSheet conflicts={clash} onClose={() => setClash(null)} />
       <Field label="Full name">
         <input
           value={name}
@@ -1959,6 +2016,7 @@ function ClassDetail({
   const [exams, setExams] = useState<ClassExam[] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [clash, setClash] = useState<SubjectClash[] | null>(null);
 
   // students form
   const [addStudentOpen, setAddStudentOpen] = useState(false);
@@ -2042,6 +2100,13 @@ function ClassDetail({
   // Joining a class means teaching something in it, so a live subject has to
   // exist to seed the assignment with. Archived ones cannot be assigned.
   const firstLiveSubject = liveSubjects(subjects)[0] ?? null;
+  // One teacher per subject per class, so the seed has to be a subject nobody
+  // in this class teaches yet — and so does every chip offered below.
+  const takenBy = new Map<number, ClassTeacher>();
+  for (const t of clsTeachers ?? [])
+    for (const s of t.subjects) takenBy.set(s.id, t);
+  const firstFreeSubject =
+    liveSubjects(subjects).find((s) => !takenBy.has(s.id)) ?? null;
   const phoneDigits = gPhone.replace(/\D/g, "");
   const ready =
     newStudent.trim().length > 0 &&
@@ -2058,7 +2123,11 @@ function ClassDetail({
       await load();
       if (alsoClasses) await onClassesChanged();
     } catch (e) {
-      setError(apiErrorText(e, "That didn't save. Please try again."));
+      const err = apiError(e, "That didn't save. Please try again.");
+      // A taken subject gets the sheet, which names who holds it, rather than
+      // a red line the admin can do nothing with.
+      if (err.code === "SUBJECT_TAKEN" && err.conflicts) setClash(err.conflicts);
+      else setError(apiErrorText(e, "That didn't save. Please try again."));
     } finally {
       setBusy(false);
     }
@@ -2176,6 +2245,7 @@ function ClassDetail({
 
   return (
     <div className="px-[15px] py-4 pb-6">
+      <SubjectTakenSheet conflicts={clash} onClose={() => setClash(null)} />
       <Card className="p-3.5 mb-3 flex items-center gap-[11px]">
         <div className="w-[38px] h-[38px] rounded-[11px] bg-mist grid place-items-center flex-none text-green">
           <Glyph d={GLYPH.staff} size={19} stroke={1.9} />
@@ -2458,6 +2528,11 @@ function ClassDetail({
                     Add a subject to the school first — a teacher joins a class
                     by teaching something in it.
                   </div>
+                ) : firstFreeSubject == null ? (
+                  <div className="text-[12px] text-[#8a6d1f] bg-[#fbf3e2] border border-[#ecd8ab] rounded-[11px] px-3 py-2.5">
+                    Every subject in this class already has a teacher. Free one
+                    up below before adding another teacher here.
+                  </div>
                 ) : availableTeachers.length === 0 ? (
                   <div className="text-[12.5px] text-muted px-0.5 py-1">
                     Every teacher is already in this class.
@@ -2470,7 +2545,7 @@ function ClassDetail({
                       onClick={() =>
                         run(async () => {
                           await setClassSubjects(t.id, klass.id, [
-                            firstLiveSubject.id,
+                            firstFreeSubject.id,
                           ]);
                           setClsTAddOpen(false);
                         })
@@ -2546,16 +2621,22 @@ function ClassDetail({
                       // no assignment at all, which is what × is for.
                       const locked = on && onIds.length === 1;
                       const archived = !!su.archivedAt;
+                      // Held by a colleague in this class: not offered at all,
+                      // so the 409 sheet stays a backstop rather than routine.
+                      const holder = takenBy.get(su.id);
+                      const taken = !!holder && holder.id !== t.id;
                       return (
                         <button
                           key={su.id}
-                          disabled={busy || locked}
+                          disabled={busy || locked || taken}
                           title={
-                            locked
-                              ? "A teacher needs at least one subject here — use × to remove them"
-                              : archived
-                                ? "Archived subject — you can remove it, but not add it back"
-                                : undefined
+                            taken
+                              ? `${holder!.name} teaches ${su.name} in this class`
+                              : locked
+                                ? "A teacher needs at least one subject here — use × to remove them"
+                                : archived
+                                  ? "Archived subject — you can remove it, but not add it back"
+                                  : undefined
                           }
                           onClick={() =>
                             editRow(t, {
@@ -2568,13 +2649,16 @@ function ClassDetail({
                             "px-2.5 py-1 rounded-lg text-[10.5px] font-semibold border",
                             archived
                               ? "border-[#dbe5db] bg-mist text-muted line-through"
-                              : on
-                                ? "border-green bg-green text-white"
-                                : "border-[#dbe5db] bg-white text-green",
+                              : taken
+                                ? "border-[#e6e9e5] bg-mist text-[#9aa39b]"
+                                : on
+                                  ? "border-green bg-green text-white"
+                                  : "border-[#dbe5db] bg-white text-green",
                             locked && "opacity-70",
                           )}
                         >
                           {su.name}
+                          {taken && ` · ${firstNameOf(holder!.name)}`}
                         </button>
                       );
                     })}
